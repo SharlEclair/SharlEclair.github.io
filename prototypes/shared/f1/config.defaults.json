@@ -1,0 +1,145 @@
+{
+  "scroll": {
+    "endVH": 3.45,
+    "smoothing": 0.1
+  },
+  "car": {
+    "modelPath": "/models/f1-car.glb",
+    "scale": 0.605,
+    "rotationX": 12.91476311,
+    "rotationY": 90.86046808,
+    "rotationZ": -11.52704964,
+    "positionX": 0.72,
+    "positionY": -0.14,
+    "positionZ": 0.05,
+    "autoCenter": true,
+    "centerMode": "ground",
+    "finish": "glossy",
+    "color": "#252429",
+    "roughness": 1,
+    "metalness": 1,
+    "clearcoat": 0.615,
+    "clearcoatRoughness": 0.18,
+    "envMapIntensity": 0.75,
+    "environment": false,
+    "keepOriginalMaterials": false
+  },
+  "camera": {
+    "start": {
+      "position": {
+        "x": -10.12,
+        "y": 28.9,
+        "z": -3.18
+      },
+      "target": {
+        "x": 0.29,
+        "y": -8.235,
+        "z": -1.45
+      },
+      "fov": 34.1,
+      "rotation": {
+        "x": 14.6,
+        "y": 2.1,
+        "z": -35.4
+      }
+    },
+    "end": {
+      "position": {
+        "x": -4.91,
+        "y": 2.02,
+        "z": -3.18
+      },
+      "target": {
+        "x": 0.29,
+        "y": 8.09,
+        "z": 0.29
+      },
+      "fov": 55,
+      "rotation": {
+        "x": -54.1,
+        "y": 2.1,
+        "z": -22.9
+      }
+    },
+    "trajectoryShape": 0.0800000000000001,
+    "trajectoryLift": 0,
+    "trajectoryArcPos": 0.51,
+    "trajectoryOrbit": 102,
+    "trajectoryTargetShape": 0.0100000000000002,
+    "trajectoryTargetArcPos": 0.505,
+    "trajectoryEase": "linear",
+    "trajectoryTargetEase": "linear",
+    "trajectoryArcDivisions": 80,
+    "carLock": 1,
+    "rotationOrder": "XYZ",
+    "dutchAngle": 15,
+    "dutchStart": 0,
+    "dutchEnd": 1
+  },
+  "airflow": {
+    "lateralSpread": 24,
+    "lineLength": 30,
+    "cycleLength": 60,
+    "countLines": 550,
+    "sheetCount": 3,
+    "sheetSpread": 0,
+    "sheetPhaseJitter": 0.57,
+    "flowSpeed": 1.7,
+    "microOscillation": 0.02,
+    "lineThickness": 2.66,
+    "opacity": 0.36,
+    "timeSeed": 60,
+    "additive": true,
+    "verticalSpread": 2.25,
+    "depthStart": 0.72,
+    "depthEnd": 0.9,
+    "depthSharpness": 2,
+    "influenceSplay": 0.42,
+    "influenceLateral": 6.03,
+    "influenceUpstream": 2.76,
+    "influenceWake": 1.66,
+    "carCenter": {
+      "x": 1.29,
+      "y": 0,
+      "z": 0
+    },
+    "carHalf": {
+      "x": 2.43,
+      "y": 1.96,
+      "z": 0.62
+    },
+    "bandWidth": 1.2,
+    "bandStrength": 1,
+    "violetMix": 0.92,
+    "groundY": 0,
+    "groundClamp": 1,
+    "groundSoftness": 1.4,
+    "turbStart": 0.85,
+    "turbEnd": 0.815,
+    "turbStrength": 0.15,
+    "turbVertical": 1.27,
+    "turbLateral": 0.62,
+    "turbFreqX": 5.6,
+    "turbFreqX2": 0.75,
+    "turbFreqZ": 3.95,
+    "turbFreqZ2": 4.5,
+    "turbSpeed": 3.85,
+    "turbPhaseSpread": 3,
+    "turbLocalise": 0.8,
+    "turbWakeMix": 0.27,
+    "vortexStart": 0.13,
+    "vortexEnd": 1,
+    "vortexSpin": 0,
+    "vortexTwist": 0,
+    "vortexCoreY": -5,
+    "vortexCoreZ": 1.99,
+    "vortexRadiusGain": 0,
+    "influenceBackFactor": 0.85,
+    "wakeStartOffset": 0,
+    "wakeLength": 7,
+    "wakeLateral": 0.31,
+    "wakeLateralGain": 2.03,
+    "wakeLiftTarget": 0.25,
+    "wakeLift": 0.3
+  }
+}

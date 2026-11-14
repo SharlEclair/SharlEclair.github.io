@@ -1,0 +1,554 @@
+/* ============================================================
+   F1 × CURRENTS
+   Global / WebGL presentation layer
+   ============================================================ */
+
+
+/* ============================================================
+   RESET
+   ============================================================ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  margin: 0;
+  padding: 0;
+
+  width: 100%;
+  min-height: 100%;
+
+  background: #1d1720;
+
+  overflow-x: hidden;
+  scroll-behavior: auto;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+
+  width: 100%;
+  min-height: 100vh;
+
+  background:
+    linear-gradient(
+      180deg,
+      #322736 0%,
+      #1d1720 100%
+    );
+
+  color: #cba6c3;
+
+  overflow-x: hidden;
+
+  font-family:
+    Inter,
+    Helvetica,
+    Arial,
+    sans-serif;
+
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+
+/* ============================================================
+   THREE.JS CANVAS
+   ============================================================ */
+
+canvas {
+  display: block;
+
+  width: 100%;
+  height: 100%;
+
+  margin: 0;
+  padding: 0;
+
+  outline: none;
+
+  touch-action: none;
+}
+
+
+/*
+ * main.js currently appends the renderer canvas directly
+ * to <body>.
+ *
+ * Keep it fixed so the WebGL scene itself does not physically
+ * scroll with the document.
+ */
+
+body > canvas {
+  position: fixed;
+
+  inset: 0;
+
+  width: 100vw;
+  height: 100vh;
+
+  z-index: 0;
+
+  pointer-events: none;
+}
+
+
+/* ============================================================
+   WEBGL CONTAINER
+   ============================================================ */
+
+/*
+ * If your HTML has a dedicated canvas container, these rules
+ * also support it.
+ */
+
+#canvas-container,
+#webgl-container,
+.webgl-container {
+  position: fixed;
+
+  inset: 0;
+
+  width: 100%;
+  height: 100vh;
+
+  overflow: hidden;
+
+  z-index: 0;
+
+  pointer-events: none;
+}
+
+
+/* ============================================================
+   EXPERIENCE WRAPPER
+   ============================================================ */
+
+#app,
+.app,
+.experience {
+  position: relative;
+
+  width: 100%;
+  min-height: 100vh;
+
+  overflow-x: clip;
+}
+
+
+/* ============================================================
+   SCROLL SPACE
+   ============================================================ */
+
+/*
+ * The WebGL camera uses:
+ *
+ *     window.scrollY / window.innerHeight
+ *
+ * and locks at 2.19vh.
+ *
+ * This means the document needs enough vertical space for the
+ * user to actually reach that value.
+ *
+ * 2.19vh = approximately 2.19 viewport heights of scrolling.
+ *
+ * This section gives the scene a comfortable scroll range
+ * without tying the animation to the entire document height.
+ */
+
+.f1-currents-section,
+#f1-currents,
+.f1-visual {
+  position: relative;
+
+  width: 100%;
+
+  min-height: 330vh;
+
+  overflow-x: clip;
+}
+
+
+/*
+ * If your existing HTML uses a generic scene wrapper instead,
+ * this prevents accidental clipping of the page's scroll area.
+ */
+
+.scene-section {
+  position: relative;
+
+  width: 100%;
+  min-height: 330vh;
+
+  overflow-x: clip;
+}
+
+
+/* ============================================================
+   CONTENT / UI LAYER
+   ============================================================ */
+
+.content,
+.overlay,
+.ui-layer {
+  position: relative;
+
+  z-index: 2;
+
+  width: 100%;
+
+  pointer-events: none;
+}
+
+
+/*
+ * Elements that need to remain interactive can opt back in.
+ */
+
+.content a,
+.content button,
+.content input,
+.content textarea,
+.content select,
+.content [role="button"],
+.overlay a,
+.overlay button,
+.ui-layer a,
+.ui-layer button {
+  pointer-events: auto;
+}
+
+
+/* ============================================================
+   OPTIONAL HERO / TITLE
+   ============================================================ */
+
+.f1-currents-title {
+  position: relative;
+
+  z-index: 3;
+
+  width: min(
+    90vw,
+    1200px
+  );
+
+  margin: 0 auto;
+
+  padding-top: 8vh;
+
+  color: #cba6c3;
+
+  font-size: clamp(
+    3rem,
+    8vw,
+    9rem
+  );
+
+  font-weight: 500;
+
+  line-height: 0.9;
+
+  letter-spacing: -0.055em;
+
+  pointer-events: none;
+}
+
+
+/* ============================================================
+   OPTIONAL INTRO COPY
+   ============================================================ */
+
+.f1-currents-intro {
+  position: relative;
+
+  z-index: 3;
+
+  width: min(
+    90vw,
+    620px
+  );
+
+  margin-left: 5vw;
+
+  margin-top: 4vh;
+
+  color: #a0a0a2;
+
+  font-size: clamp(
+    0.85rem,
+    1.1vw,
+    1rem
+  );
+
+  line-height: 1.6;
+
+  letter-spacing: 0.01em;
+
+  pointer-events: none;
+}
+
+
+/* ============================================================
+   SMALL LABELS
+   ============================================================ */
+
+.f1-currents-label {
+  position: relative;
+
+  z-index: 3;
+
+  display: inline-block;
+
+  color: #886593;
+
+  font-size: 0.7rem;
+
+  font-weight: 500;
+
+  line-height: 1;
+
+  letter-spacing: 0.16em;
+
+  text-transform: uppercase;
+
+  pointer-events: none;
+}
+
+
+/* ============================================================
+   SCROLL INDICATOR
+   ============================================================ */
+
+.scroll-indicator {
+  position: fixed;
+
+  left: 50%;
+
+  bottom: 2rem;
+
+  transform:
+    translateX(-50%);
+
+  z-index: 4;
+
+  color: #a0a0a2;
+
+  font-size: 0.65rem;
+
+  font-weight: 500;
+
+  letter-spacing: 0.16em;
+
+  text-transform: uppercase;
+
+  opacity: 0.7;
+
+  pointer-events: none;
+}
+
+
+/* ============================================================
+   DECORATIVE UI LINE
+   ============================================================ */
+
+.f1-line {
+  width: 100%;
+
+  height: 1px;
+
+  background: rgba(
+    203,
+    166,
+    195,
+    0.18
+  );
+}
+
+
+/* ============================================================
+   PERFORMANCE / RENDERING
+   ============================================================ */
+
+img,
+svg,
+canvas,
+video {
+  max-width: 100%;
+}
+
+
+/*
+ * Prevent accidental text selection over the immersive
+ * visual layer.
+ */
+
+canvas {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+
+/* ============================================================
+   MOBILE
+   ============================================================ */
+
+@media (max-width: 768px) {
+
+  body {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .f1-currents-section,
+  #f1-currents,
+  .f1-visual,
+  .scene-section {
+    min-height: 300vh;
+  }
+
+  .f1-currents-title {
+    width: 88vw;
+
+    margin-left: 6vw;
+    margin-right: 6vw;
+
+    padding-top: 6vh;
+
+    font-size: clamp(
+      2.7rem,
+      13vw,
+      5rem
+    );
+  }
+
+  .f1-currents-intro {
+    width: 78vw;
+
+    margin-left: 6vw;
+
+    font-size: 0.85rem;
+  }
+
+  .scroll-indicator {
+    bottom: 1.25rem;
+
+    font-size: 0.58rem;
+  }
+}
+
+
+/* ============================================================
+   SMALL MOBILE
+   ============================================================ */
+
+@media (max-width: 480px) {
+
+  .f1-currents-section,
+  #f1-currents,
+  .f1-visual,
+  .scene-section {
+    min-height: 280vh;
+  }
+
+  .f1-currents-title {
+    padding-top: 5vh;
+
+    font-size: 2.7rem;
+  }
+
+  .f1-currents-intro {
+    width: 82vw;
+
+    margin-left: 6vw;
+
+    line-height: 1.55;
+  }
+}
+
+
+/* ============================================================
+   REDUCED MOTION
+   ============================================================ */
+
+/*
+ * The Three.js animation itself is controlled by JavaScript,
+ * so this only affects CSS transitions/scroll behavior.
+ */
+
+@media (prefers-reduced-motion: reduce) {
+
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+
+/* ============================================================
+   SAFE AREA SUPPORT
+   ============================================================ */
+
+@supports (
+  padding:
+    env(safe-area-inset-top)
+) {
+
+  .f1-currents-title {
+    padding-top:
+      max(
+        5vh,
+        env(safe-area-inset-top)
+      );
+  }
+
+  .scroll-indicator {
+    bottom:
+      max(
+        1.25rem,
+        env(safe-area-inset-bottom)
+      );
+  }
+}
+
+
+/* ============================================================
+   HORIZONTAL OVERFLOW PROTECTION
+   ============================================================ */
+
+html,
+body,
+#app,
+.app,
+.experience,
+.f1-currents-section,
+#f1-currents,
+.f1-visual,
+.scene-section {
+  max-width: 100%;
+}
+
+
+/* ============================================================
+   SELECTION
+   ============================================================ */
+
+::selection {
+  background: #886593;
+
+  color: #1d1720;
+}
+
+
+/* ============================================================
+   FOCUS
+   ============================================================ */
+
+:focus-visible {
+  outline: 1px solid #cba6c3;
+
+  outline-offset: 4px;
+}

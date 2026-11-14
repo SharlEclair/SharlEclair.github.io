@@ -1,0 +1,13 @@
+# Read-only references (each is its own git repo) and large source imagery
+/f1-three-test/
+/transit-animation/
+/transit-animation-reference/
+
+node_modules/
+dist/
+.venv/
+.cache/
+.logs/
+*.log
+prototypes/.shots/
+.claude/settings.local.json

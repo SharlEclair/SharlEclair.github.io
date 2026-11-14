@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>F1 × Currents</title>
+    <style>
+      html, body { margin: 0; padding: 0; width: 100%; background: #1d1720; color: #cba6c3;
+        font-family: Inter, Helvetica, Arial, sans-serif; overflow-x: hidden; }
+      #webgl { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; z-index: 0; pointer-events: none; }
+      #scroll-container { position: relative; z-index: 1; pointer-events: none; }
+    </style>
+  </head>
+  <body>
+    <canvas id="webgl"></canvas>
+    <div id="scroll-container"></div>
+    <script type="module" src="/shared/f1/main.js"></script>
+  </body>
+</html>
