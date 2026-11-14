@@ -1,4 +1,6 @@
 import * as THREE from 'three'
+import { viewport } from '../core/viewport.js'
+import { LOOK } from '../look.js'
 import { config, palette } from '../config.js'
 import { time } from '../core/time.js'
 import { scroll } from '../core/scroll.js'
@@ -453,8 +455,9 @@ export function createAirflow(scene) {
     u_colorBase:         { value: new THREE.Color(palette.laminar) },
     u_colorViolet:       { value: new THREE.Color(palette.violet) },
     u_colorSeparation:   { value: new THREE.Color(palette.separation) },
-    u_colorVortex:       { value: new THREE.Color(palette.vortex) },
-    u_colorBand:         { value: new THREE.Color(palette.band) },
+    // HDR gains (look.js): these two accents are what the bloom pass picks up.
+    u_colorVortex:       { value: new THREE.Color(palette.vortex).multiplyScalar(LOOK.vortexGain) },
+    u_colorBand:         { value: new THREE.Color(palette.band).multiplyScalar(LOOK.bandGain) },
     u_bandStrength:      { value: a.bandStrength },
     u_opacity:           { value: a.opacity },
   }
@@ -565,5 +568,5 @@ export function updateAirflow(field, camera) {
   // equals d * 2*tan(fov/2) / viewportHeightPixels.
   const fovRad = (camera.fov * Math.PI) / 180
   u.u_projScale.value =
-    (2.0 * Math.tan(fovRad * 0.5)) / window.innerHeight
+    (2.0 * Math.tan(fovRad * 0.5)) / viewport.height
 }

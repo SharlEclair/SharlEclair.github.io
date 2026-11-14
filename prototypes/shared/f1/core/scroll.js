@@ -1,6 +1,7 @@
 import { config } from '../config.js'
 import { clamp } from '../utils/math.js'
 import { time } from './time.js'
+import { viewport } from './viewport.js'
 
 export const scroll = {
   rawY: 0,
@@ -24,13 +25,42 @@ const TAIL_VH = 0.5
 // always reflects the current setting.
 export function layoutScrollSpace() {
   const el = document.querySelector('#scroll-container')
-  if (!el) return
+  if (!el || progressSource) return
   const h = window.innerHeight * (config.scroll.endVH + 1 + TAIL_VH)
   el.style.height = `${h}px`
 }
 
+// When the scene is embedded in a page, the page owns the scroll maths and hands
+// over a `() => number` (0..1). With a source set, window.scrollY is never read
+// and the standalone #scroll-container layout is not touched.
+let progressSource = null
+let progressOverride = null
+
+export function setProgressSource(fn) {
+  progressSource = typeof fn === 'function' ? fn : null
+}
+
+// Force a progress value (verification, reduced-motion posters). null releases it.
+export function setProgressOverride(value) {
+  progressOverride = typeof value === 'number' && Number.isFinite(value) ? clamp(value, 0, 1) : null
+  if (progressOverride !== null) {
+    scroll.target = progressOverride
+    scroll.progress = progressOverride
+  }
+}
+
+function readSource() {
+  if (progressOverride !== null) return progressOverride
+  const value = Number(progressSource())
+  return Number.isFinite(value) ? clamp(value, 0, 1) : 0
+}
+
 export function initScroll() {
   const onScroll = () => {
+    if (progressSource || progressOverride !== null) {
+      scroll.target = readSource()
+      return
+    }
     scroll.rawY = window.scrollY
     scroll.vh = scroll.rawY / window.innerHeight
     scroll.target = clamp(scroll.vh / config.scroll.endVH, 0, 1)
@@ -63,6 +93,14 @@ export function refreshScrollSpace() {
 }
 
 export function updateScroll() {
+  // An external source is polled here, once per frame, rather than on the scroll
+  // event: the host page may derive it from a smoothed scroll of its own.
+  if (progressOverride !== null) {
+    scroll.target = progressOverride
+    scroll.progress = progressOverride
+    return
+  }
+  if (progressSource) scroll.target = readSource()
   // Frame-rate independent exponential smoothing.
   // Smoothing factor 0.10 -> ~100 ms time constant.
   const k = 1 - Math.exp(-time.delta / config.scroll.smoothing)

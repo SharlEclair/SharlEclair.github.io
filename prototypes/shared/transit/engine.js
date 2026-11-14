@@ -19,14 +19,18 @@
  */
 import * as THREE from 'three';
 import { config, createGui } from './config.js';
-import { createCity } from './scene/city.js';
+import { createCity, fadeEase } from './scene/city.js';
 import { createGround } from './scene/ground.js';
 import { createLandmarks } from './scene/landmarks.js';
 import { createCameraRig } from './scene/camera-rig.js';
 import { createSearchLayer } from './scene/search-paths.js';
+import { createCircuit } from './scene/circuit.js';
+import { createEndpoints } from './scene/endpoints.js';
+import { createPost } from './post.js';
 import { astarTrace } from './data/astar-trace.js';
 import {
   flashBandResponse,
+  flashEnvelope,
   flashStrike,
   flashWavePeak,
   flashWavePeakAt,
@@ -297,18 +301,64 @@ function fingerprint(objects) {
  * @param {HTMLElement} [options.hudProgress] readout element, written only when its text changes
  * @returns {Promise<object>} the engine handle, with the docs/07 Â§2 hooks already installed
  */
-export async function startEngine({ canvas, stage, hero, hudProgress }) {
+export async function startEngine({
+  canvas,
+  stage,
+  hero,
+  hudProgress,
+  /** Mount the lil-gui tuning panel. Off when the animation is embedded in a page. */
+  gui = true,
+  /** Optional `() => number` (0..1). When given it replaces the built-in scroll mapping entirely. */
+  progressSource = null,
+  /** Device-pixel-ratio cap. Bloom cost scales with pixels, so this is the main performance lever. */
+  maxPixelRatio = 1.5,
+  /** Optional DOM element positioned over the Albert Park circuit each frame (a text label). */
+  label = null
+}) {
   // ------------------------------------------------------------------------- renderer
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: false });
-  renderer.setPixelRatio(1); // pinned: Step 5 baselines must be machine-stable
-  renderer.toneMapping = THREE.NoToneMapping;
+  const pixelRatio = Math.min(window.devicePixelRatio || 1, maxPixelRatio);
+  renderer.setPixelRatio(pixelRatio);
+  // Applied once, by the composer's OutputPass (post.js). ACES keeps the saturated gold of the
+  // frontier while letting its white-hot core roll off instead of clipping.
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.setClearColor(new THREE.Color(config.palette.void), 1);
+  // The scene is cleared into a LINEAR half-float target, but three hands the clear colour over in
+  // display encoding (measured: #0D050B came out as rgb(46,20,42)). Decoding it once more here is what
+  // makes the void land on the palette value after tone mapping.
+  renderer.setClearColor(new THREE.Color(config.palette.void).convertSRGBToLinear(), 1);
 
   const scene = new THREE.Scene();
   const rig = createCameraRig(config);
-  const progress = createProgress({ hero });
-  createGui(config); // docs/04 Â§1: the live panel mutates the same singleton exposed as __CONFIG
+  let externalOverride = null;
+  const progress = progressSource
+    ? {
+        // An embedding page owns the scroll maths; the engine only reads a number.
+        measure() {},
+        read() {
+          if (externalOverride !== null) return externalOverride;
+          const value = Number(progressSource());
+          return Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : 0;
+        },
+        setOverride(value) {
+          externalOverride =
+            typeof value === 'number' && Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : null;
+          return externalOverride;
+        }
+      }
+    : createProgress({ hero });
+  const panel = gui ? createGui(config) : null;
+  const post = createPost(renderer, scene, rig.camera, config);
+  let circuitLayer = null;
+  let endpointsLayer = null;
+  /** Last progress actually drawn; the picture is a pure function of it, so equal means skip. */
+  let drawnProgress = Number.NaN;
+  let needsDraw = true;
+  let stageWidth = 1;
+  let stageHeight = 1;
+  const projectScratch = new THREE.Vector3();
+  const focusScratch = { x: 0.5, y: 0.5 };
+  let labelText = '';
 
   let city = null;
   /** The search layer (docs/03 Â§5): candidate routes + frontier points, built after the GLB resolves. */
@@ -355,6 +405,10 @@ export async function startEngine({ canvas, stage, hero, hudProgress }) {
     const height = stage.clientHeight || window.innerHeight;
     renderer.setSize(width, height, false);
     rig.setAspect(width / height);
+    stageWidth = width;
+    stageHeight = height;
+    post.setSize(renderer.domElement.width, renderer.domElement.height);
+    needsDraw = true;
     // The frontier point's screen-space floor needs the real drawing-buffer height (docs/11 Â§4.1).
     config.search.viewportHeight = renderer.domElement.height || height;
     if (!stageVisible) {
@@ -434,6 +488,13 @@ export async function startEngine({ canvas, stage, hero, hudProgress }) {
   function aimFor(value) {
     const amount = config.guide.amount;
     if (!(amount > 0) || routeCentre.length === 0) {
+      // Fixed aim (follow route = 0). The only motion is the finale drift: the aim eases south so the
+      // last frames hold the route and the circuit together. Still one value per frame from u_progress.
+      const finale = config.finale;
+      if (finale && finale.aimZ !== config.targetZ) {
+        const t = fadeEase(value, finale.start, finale.end);
+        return aimScratch.set(config.targetX, config.targetY, config.targetZ + (finale.aimZ - config.targetZ) * t);
+      }
       return null;
     }
     const wanted = Math.min(1, Math.max(0, value + config.search.aimLead));
@@ -472,8 +533,19 @@ export async function startEngine({ canvas, stage, hero, hudProgress }) {
     // `u` itself, which reveals the route FORWARDS from the source - is the exact defect the runtime
     // gate's uniform-vs-mirror check (check D0) now fails on.
     const routeState = routeReplayState(value, config);
+    // The completion flash: one envelope drives the route's HDR lift, the bloom lift and the plum wash.
+    const flash = flashEnvelope(value, config.search);
+    routeState.flash = flash;
     if (city) {
       city.sync(config, value, routeState); // buildings fade + both shader materials' uniforms
+      // A fully faded city must not keep writing depth over the ground-level layers.
+      city.objects.Buildings.visible = city.materials.Buildings.opacity > 0.004;
+    }
+    if (circuitLayer) {
+      circuitLayer.sync(config, value, flash);
+    }
+    if (endpointsLayer) {
+      endpointsLayer.sync(config, pixelRatio, flash);
     }
     if (ground) {
       ground.sync(config, value); // docs/05 §6: the water / park / circuit ground layer
@@ -481,7 +553,35 @@ export async function startEngine({ canvas, stage, hero, hudProgress }) {
     if (landmarksLayer) {
       landmarksLayer.sync(config, value); // docs/05 §7: the landmark hero masses
     }
-    renderer.render(scene, rig.camera);
+    // The wash radiates from the destination, wherever the camera currently puts it.
+    let focus = null;
+    if (endpointsLayer) {
+      projectScratch.copy(endpointsLayer.goal).project(rig.camera);
+      focusScratch.x = Math.min(1.2, Math.max(-0.2, projectScratch.x * 0.5 + 0.5));
+      focusScratch.y = Math.min(1.2, Math.max(-0.2, projectScratch.y * 0.5 + 0.5));
+      focus = focusScratch;
+    }
+    post.sync(config, flash, focus);
+    post.render();
+    drawnProgress = value;
+    needsDraw = false;
+
+    // The circuit's label rides the track. transform + opacity only, and only when they change.
+    if (label && circuitLayer) {
+      projectScratch.copy(circuitLayer.labelAnchor).project(rig.camera);
+      const visible = projectScratch.z < 1 && Math.abs(projectScratch.x) < 1.05 && Math.abs(projectScratch.y) < 1.05;
+      const t = Math.min(Math.max((value - config.circuit.revealStart) / 0.12, 0), 1);
+      const x = Math.round((projectScratch.x * 0.5 + 0.5) * stageWidth);
+      const y = Math.round((-projectScratch.y * 0.5 + 0.5) * stageHeight);
+      const text = visible ? x + ',' + y + ',' + t.toFixed(2) : 'hidden';
+      if (text !== labelText) {
+        labelText = text;
+        label.style.opacity = visible ? String(t) : '0';
+        if (visible) {
+          label.style.transform = 'translate3d(' + x + 'px,' + y + 'px,0)';
+        }
+      }
+    }
 
     // DOM write only when the rendered text actually changes: keeps the loop layout-free.
     if (hudProgress) {
@@ -496,7 +596,14 @@ export async function startEngine({ canvas, stage, hero, hudProgress }) {
   // ------------------------------------------------------------------------- the single loop
   function tick() {
     frameHandle = requestAnimationFrame(tick);
-    renderAt(progress.read());
+    const value = progress.read();
+    // Every frame is a pure function of u_progress, so an unchanged value is an unchanged picture:
+    // skip the draw (and the bloom chain) entirely while the reader is not scrolling. With the tuning
+    // panel mounted any slider may have moved, so the panel build always draws.
+    if (!panel && !needsDraw && value === drawnProgress) {
+      return;
+    }
+    renderAt(value);
   }
 
   function startLoop() {
@@ -514,12 +621,18 @@ export async function startEngine({ canvas, stage, hero, hudProgress }) {
 
   // ------------------------------------------------------------------------- boot
   resize(); // size before the first render so frame 1 is already correct
-  window.addEventListener('resize', () => {
+  const onResize = () => {
     resize();
     if (frameHandle === null) {
-      renderAt(progress.read()); // docs/06 Â§2: exactly one manual pass while paused
+      renderAt(progress.read()); // exactly one manual pass while paused
     }
-  });
+  };
+  window.addEventListener('resize', onResize);
+  // The stage can change size without the window doing so (a layout shift, a side menu opening).
+  const stageObserver = typeof ResizeObserver === 'function' ? new ResizeObserver(onResize) : null;
+  if (stageObserver) {
+    stageObserver.observe(stage);
+  }
 
   try {
     city = await createCity(scene, config);
@@ -554,8 +667,13 @@ export async function startEngine({ canvas, stage, hero, hudProgress }) {
   geo.landmarks = landmarksLayer.fingerprint;
   geo.warnings.push(...landmarksLayer.fingerprint.warnings);
 
+  // The destination venue and the two endpoint glows. Built with the other layers, before frame 1.
+  circuitLayer = createCircuit(scene, config);
+  geo.circuit = circuitLayer.fingerprint;
+  endpointsLayer = createEndpoints(scene, config, astarTrace);
+
   // docs/06 Â§2 gating. The initial state is visible, so the first render happens here.
-  observeVisibility(stage, {
+  const visibility = observeVisibility(stage, {
     onVisible: () => {
       stageVisible = true;
       startLoop();
@@ -586,7 +704,29 @@ export async function startEngine({ canvas, stage, hero, hudProgress }) {
     stopLoop,
     resize,
     aimFor,
-    geo
+    geo,
+    post,
+    circuit: circuitLayer,
+    endpoints: endpointsLayer,
+    /** Force a value (0..1) or hand control back with null. Renders synchronously. */
+    setProgress(value) {
+      progress.setOverride(value);
+      renderAt(progress.read());
+    },
+    /** Tear everything down: the loop, the observers, the GPU resources and the panel. */
+    destroy() {
+      stopLoop();
+      visibility.disconnect();
+      if (stageObserver) stageObserver.disconnect();
+      window.removeEventListener('resize', onResize);
+      if (panel) panel.destroy();
+      scene.traverse((object) => {
+        if (object.geometry) object.geometry.dispose();
+        if (object.material) object.material.dispose();
+      });
+      post.dispose();
+      renderer.dispose();
+    }
   };
 
   window.__ENGINE = engine;

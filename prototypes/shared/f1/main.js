@@ -1,11 +1,19 @@
 import { createExperience } from './core/experience.js'
 
-// The shipped page. One look, no switcher.
-//
-// The whole boot sequence lives in core/experience.js so that presets.html can
-// run the identical scene -- same frame loop, same panel, same airflow field --
-// and differ only in which preset it starts on and whether it draws a switcher.
-createExperience({
+// The standalone page: full-window canvas, the tuning panel, window scroll.
+// Embedding in a portfolio page goes through mount.js instead.
+const app = createExperience({
   canvas: document.querySelector('#webgl'),
-  storageKey: 'f1-currents-config-v1',
+  storageKey: 'f1-currents-upgraded-v1',
 })
+
+// Verification hooks (tools/sheet.mjs): force a progress value, and know when the
+// car has arrived so a capture is not taken of an empty line field.
+window.__F1 = app
+window.__TEST_SET_PROGRESS = (value) => app.setProgress(value)
+const ready = setInterval(() => {
+  if (app.getCar()) {
+    window.__F1_READY = true
+    clearInterval(ready)
+  }
+}, 100)

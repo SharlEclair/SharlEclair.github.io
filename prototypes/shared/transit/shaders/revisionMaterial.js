@@ -134,7 +134,7 @@ export function createRevisionMaterial(config) {
    */
   function sync(next, frame, framesPerEvent, phase) {
     uniforms.u_frame.value = frame;
-    const dim = phase.final ? next.search.settleFactor : 1;
+    const dim = 1 - (phase.clear ?? 0);
     if (applied.dim !== dim) {
       uniforms.u_dim.value = dim;
       applied.dim = dim;

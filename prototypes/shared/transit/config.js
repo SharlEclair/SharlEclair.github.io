@@ -17,16 +17,22 @@ import GUI from 'lil-gui';
 
 /** docs/05 §1 (five) + §6 (water and land). Inventing a colour outside this object is a breach. */
 export const PALETTE = Object.freeze({
-  void: '#151419', // Background / Void - Deep Ink
-  violet: '#7055D9', // Signature Glow - Violet
-  street: '#4A2E15', // Street network (inactive) - Dark Brown / Dim Amber
-  pulseCore: '#FFFDE6', // A* pulse head - Yellow-White
-  pulseAmber: '#FF9500', // A* pulse trail / pulse body - Bright Amber
+  void: '#120510', // Background - near-black desert night with a plum cast (reference frame_0001)
+  violet: '#7055D9', // Signature Violet - reserved for the Albert Park circuit
+  street: '#B8431C', // Unvisited street network - dark crimson / burnt umber, drawn at ~5-10 %
+  pulseCore: '#FFF8D6', // Winning path core - white-hot
+  pulseAmber: '#FF9900', // Winning path glow - golden amber
+  // --- the burning-paper-edge search (reference frames 0010-0040) ---
+  frontierHot: '#FFF6CC', // newly relaxed edge - incandescent white-yellow
+  frontierGold: '#FFB800', // the leading perimeter - vivid gold
+  ember: '#7A2600', // visited interior - dim burnt-orange filigree
+  flashWash: '#2E0E24', // completion flash - deep plum / magenta atmospheric wash
+  plum: '#5A2850', // building / landmark lift under the ember light
   // docs/05 §6 - the ground. Both are NIGHT values, not daylight ones: at night a river is dark slate,
   // not blue, and a park is near-black green. They separate from the void (#151419) by tone and a slight
   // hue shift, which is what makes water readable without breaking the "computational atelier" palette.
-  water: '#1A2233', // Water - dark slate
-  land: '#151C18' // Park / ground cover - near-black green
+  water: '#160B1C', // Water - dark plum slate
+  land: '#120A0B' // Park / ground cover - near-black umber
 });
 
 /**
@@ -61,7 +67,10 @@ const CAMERA_POINT_SPEC = [
   { label: 'Start', xyz: [0, 55, -2950] }, // low, just past the RMIT end, looking down the route
   { label: 'Mid-Ascent', xyz: [520, 420, -1500] }, // rising over the CBD core
   { label: 'High-Angle', xyz: [980, 1250, 250] }, // east of the corridor, route below
-  { label: 'Birdseye', xyz: [-250, 2950, 2050] } // above Albert Park, whole AOI in frame
+  // Framing tweak (prototype): the original endpoint [-250, 2950, 2050] sat directly over the park, so
+  // with a fixed aim the circuit fell under the bottom edge. The flight now carries on south and a
+  // little higher so the final frame holds the whole route AND the circuit loop.
+  { label: 'Birdseye', xyz: [-250, 3300, 4100] }
 ];
 
 export const config = {
@@ -89,7 +98,7 @@ export const config = {
      * nothing in the render path ever raises it again, so the city cannot return.
      */
     fadeStart: 0.15,
-    fadeEnd: 0.8,
+    fadeEnd: 0.72,
 
     // --- 'night' look (docs/05 §5). Every colour below is a docs/05 §1 palette entry. ---
     /** Windowless side of a facade. Exactly the void, so a dark mass matches the sky it stands in. */
@@ -100,21 +109,21 @@ export const config = {
      * layer. It is needed at all because the void is also the clear colour: a body painted exactly
      * `#151419` would be invisible against the background it stands in front of.
      */
-    liftColor: PALETTE.violet,
-    massLift: 0.035,
+    liftColor: PALETTE.plum,
+    massLift: 0.05,
     /** A lit window. The palette's own Yellow-White, as §1 assigns to the pulse head. */
     windowColor: PALETTE.pulseCore,
     /** The share of lit windows that go warm instead of cool (the palette's Amber). */
     warmColor: PALETTE.pulseAmber,
     warmMix: 0.4,
     /** Emissive gain on a lit pane. */
-    windowLit: 1.45,
+    windowLit: 1.05,
     /**
      * Fraction of windows that are lit at all. The rest read as dark glass - this is the parameter
      * that makes a facade read as "mostly empty offices at night" rather than a fairground, and it is
      * the single biggest lever on how close the city sits to the reference night basemap.
      */
-    windowRatio: 0.23,
+    windowRatio: 0.2,
     /**
      * Storey height and window pitch in METRES, so a window is one physical size on every building
      * regardless of its footprint. These were tuned UP from 3.2 / 2.6 after looking at a render: at
@@ -208,14 +217,14 @@ export const config = {
      * The circuit. Deliberately the palette's own Amber: the circuit is the DESTINATION, and amber is
      * the colour the project already gives to the answer, so the venue and the route agree.
      */
-    circuitColor: PALETTE.pulseAmber,
+    circuitColor: PALETTE.violet,
     landAlpha: 0.85,
     waterAlpha: 0.95,
     /**
      * The circuit reads as a highlighted ring over the streets it is made of, so it is nearly opaque —
      * it has to sit ON the road strips (which are baked at y = 0.25 / 0.50) rather than beside them.
      */
-    circuitAlpha: 0.95,
+    circuitAlpha: 0.0, // the baked circuit layer is degenerate; scene/circuit.js draws the real one
     /**
      * Layer ids. These MIRROR the bake (`scripts/bake_ground.py` LAYER_*) and are an ETL contract, not a
      * tunable: they are the per-vertex values already written into `src/data/ground.js`, so changing one
@@ -247,10 +256,10 @@ export const config = {
      * Lifted toward the signature violet by MUCH more than the city's 0.035: that difference is what
      * makes a landmark read as a landmark instead of as another anonymous prism.
      */
-    liftColor: PALETTE.violet,
-    lift: 0.09,
+    liftColor: PALETTE.plum,
+    lift: 0.14,
     /** The top of a tall landmark brightens toward this, so a spire tip is the brightest thing here. */
-    crownColor: PALETTE.violet,
+    crownColor: PALETTE.pulseAmber,
     crownMix: 0.3,
     /** World height in metres over which the vertical gradient completes. */
     crownHeight: 60,
@@ -289,7 +298,7 @@ export const config = {
        * Violet sweeps up the structure as the scroll advances, which is what the real spire's
        * programmable light show does - and it is the project's own colour doing it.
        */
-      waveColor: PALETTE.violet,
+      waveColor: PALETTE.frontierGold,
       /** Fraction of the height over which skirt colour becomes mast colour. */
       gradient: 0.35,
       /** Emission gain. The spire is lit from inside by its own lamps, so it reads at 4 km. */
@@ -321,16 +330,19 @@ export const config = {
 
   roads: {
     color: PALETTE.street, // docs/05 §1 core strip: Dim Amber, effectively opaque
-    glowColor: PALETTE.pulseAmber, // docs/05 §3 layer 2: the wider 16 m strip underneath
+    glowColor: PALETTE.ember, // the wider 16 m strip underneath
     /**
      * Base alpha of the glow strip. Low on purpose: 17.02% of the Roads glow region is covered
      * >= 2x by legitimately distinct streets (HANDOFF.md §7), and additive blending cannot
      * attenuate an overlap. This number *is* the blow-out control - the decision the user
      * authorized by the user (HANDOFF.md §10; docs/08 §Plan changes).
      */
-    glowAlpha: 0.1,
-    /** Alpha of the 6 m core strip. Near-opaque so it masks the glow ribbon underneath it. */
-    coreOpacity: 0.85
+    glowAlpha: 0.045,
+    /**
+     * Alpha of the 6 m core strip. The shader premultiplies and then blends additively, so the visible
+     * weight is alpha squared: 0.3 puts the idle network at ~9 % - the reference's ultra-faint grid.
+     */
+    coreOpacity: 0.3
   },
 
   apath: {
@@ -338,7 +350,7 @@ export const config = {
     amberColor: PALETTE.pulseAmber, // docs/05 §1 trail: Bright Amber
     glowColor: PALETTE.pulseAmber, // outer 26 m strip's bloom colour
     pulseWidth: 0.02, // half-width of the bright head, in arc-length (vUv.x) units, docs/03 §3
-    trailOpacity: 0.26, // alpha of the explored amber trail on the 8 m core strip
+    trailOpacity: 1.9, // HDR gain of the white-hot core strip (bloom threshold is ~1.0)
     /**
      * The 26 m bloom strip's two shares, and they are what separate "explored" from "unexplored" on the
      * route. `glowBaseAlpha` is the faint background glow the UNEXPLORED route still carries - it exists so
@@ -346,8 +358,10 @@ export const config = {
      * route read as pre-drawn before the search had reached it. `trailGlowAlpha` is what the EXPLORED route
      * carries: it is now the dominant term, so the bloom follows the pulse instead of anticipating it.
      */
-    glowBaseAlpha: 0.03,
-    trailGlowAlpha: 0.1
+    glowBaseAlpha: 0.0,
+    trailGlowAlpha: 0.4,
+    /** Extra HDR gain the route carries at the peak of the completion flash. */
+    flashGain: 0.9
   },
 
 /**
@@ -375,9 +389,16 @@ search: {
    * runway at all for the predecessor-chain walk, which would be squeezed into the last frame. The
    * search converges at 0.86 and the reconstruction runs 0.86 -> 1.0.
    */
-  replayEnd: 0.86,
+  replayEnd: 0.8,
+  /**
+   * u at which the replay STARTS (prototype tweak). With the camera's aim fixed (guide.amount = 0) the
+   * first third of the flight looks over the city, away from where the search begins, so a replay that
+   * started at u = 0 burned most of its fire off screen. Before this point the scene is the idle
+   * network, the two endpoint glows and the circuit. 0 restores the original timing.
+   */
+  replayStart: 0.34,
   /** `u` at which the predecessor chain starts being revealed backwards from the goal. */
-  freezeEnd: 0.86,
+  freezeEnd: 0.8,
   /**
    * Floor on the reconstruction front, as a route arc-length fraction (docs/11 §9).
    *
@@ -389,7 +410,14 @@ search: {
    * The disclosed cost: the answer is drawn as its visible second half rather than the whole polyline.
    * Set it to 0 to get the complete chain walk back at the price of an unlit finale.
    */
-  minRouteReveal: 0.62,
+  minRouteReveal: 0,
+  /**
+   * The optimal-route wipe: how much of u the winner takes to run from the goal back to the start.
+   * Short on purpose - the path is revealed as part of the flash, not as a second act.
+   */
+  wipeSpan: 0.05,
+  /** How much of u the explored network takes to clear once the goal settles (near-instant). */
+  clearSpan: 0.012,
   /**
    * How far AHEAD of `u_progress` the camera aims while the search runs, in `u` units.
    *
@@ -402,13 +430,19 @@ search: {
   /** Height of the search layer. Clear of the roads core (y=0.50) and the route core (y=1.00). */
   y: 0.7,
   /** Half-width of an examined-road ribbon, in metres. */
-  edgeWidth: 6,
+  edgeWidth: 4.5,
+  /** Screen-space floor on an examined road's half-width, in drawing-buffer pixels. */
+  edgeMinPixels: 1.6,
+  /** HDR gains of the three temperature bands of an examined road. */
+  hotGain: 3.4,
+  goldGain: 2.6,
+  emberGain: 2.2,
   /**
    * The accumulated explored network. `trailAlpha` is an examined road's alpha right behind the
    * frontier being examined and `settledFade` is how much of it remains once the search has moved on,
    * so the explored region reads as a persistent trace that grows rather than a flash.
    */
-  trailAlpha: 1.2,
+  trailAlpha: 1.0,
   settledFade: 0.45,
   /**
    * Frontier band, expressed in EVENTS and converted to frames at load. A node is BRIGHTEST right after
@@ -425,19 +459,21 @@ search: {
    */
   frontierFloor: 0.22,
   /** How long an examined road stays at full brightness, also in events. */
-  examineHoldEvents: 14,
+  examineHoldEvents: 110,
   /**
    * Path revisions (docs/11 §4.2b). A* re-parenting an already-discovered node onto a cheaper
    * connection is one of the algorithm's most characteristic behaviours and the one thing a static
    * route drawing cannot show, so each of the trace's revisions gets its own bright beam: flat for
-   * evisionHoldEvents, then eased out over evisionFadeEvents, after which the ordinary explored
+   * 
+evisionHoldEvents, then eased out over 
+evisionFadeEvents, after which the ordinary explored
    * road keeps the corridor lit.
    */
   revisionHoldEvents: 10,
   revisionFadeEvents: 26,
   revisionAlpha: 0.9,
   /** White-hot amber: a revision is the search's own "this got better" signal (docs/05 §4). */
-  revisionColour: PALETTE.pulseCore,
+  revisionColour: PALETTE.frontierHot,
   /**
    * Frontier point profile, in METRES (world-sized, so it attenuates with distance on its own).
    * `dotCoreRadius` is the hot centre, `dotBeamRadius` the soft violet halo. `coreMix` blends the
@@ -445,17 +481,17 @@ search: {
    * violet-dominated (docs/05 §4). The acceptance criterion is SCREEN-space and is measured by
    * `artifacts/search/frontier-footprint.mjs`.
    */
-  dotCoreRadius: 3.4,
-  dotBeamRadius: 11,
-  coreMix: 0.6,
-  dotAlpha: 3.2,
+  dotCoreRadius: 2.6,
+  dotBeamRadius: 8,
+  coreMix: 0.9,
+  dotAlpha: 1.3,
   /**
    * Screen-space floor on a frontier point's radius, in pixels of the drawing buffer. The metre
    * radius above is the right size while the drone is low, but the last third of the flight climbs to
    * a 3 km birdseye where an 11 m disc is under a pixel and the frontier would vanish. This floor is
    * what keeps the subject legible at every altitude; the metre radius wins whenever it is larger.
    */
-  minPixelRadius: 7,
+  minPixelRadius: 3,
   /**
    * Drawing-buffer height in pixels, written by the render path on every resize (src/engine.js).
    * It is the other half of the metres-per-pixel conversion above; it is NOT a user tunable and is
@@ -463,7 +499,7 @@ search: {
    */
   viewportHeight: 800,
   /** Alpha of a settled node's persistent trace, as a fraction of a frontier point's. */
-  settledAlpha: 0.26,
+  settledAlpha: 0.05,
   /**
    * How much a better `f` brightens a frontier point: the frame's live best `f` is the brightest, and
    * a node `priorityRange` metres worse sits at 1. This is the one place `f` drives the picture, which
@@ -474,15 +510,16 @@ search: {
   /** Once the reconstruction starts, the explored network steps back to this share of its alpha. */
   settleFactor: 0.7,
   /** Venue colour: violet reads as the search layer against the amber/white solution (docs/05 §3). */
-  colour: PALETTE.violet,
-  coreColour: PALETTE.pulseCore,
+  colour: PALETTE.frontierGold,
+  coreColour: PALETTE.frontierHot,
+  emberColour: PALETTE.ember,
   /**
    * The discharge on the route (docs/03 §5). It rides the reconstructed part of the route and travels
    * backwards along it, so the strike and the reconstruction are the same gesture.
    */
-  flashStart: 0.88,
-  flashSpan: 0.2,
-  flashPeak: 1.8,
+  flashStart: 0.8,
+  flashSpan: 0.13,
+  flashPeak: 1.0,
   flickers: 3,
   residual: 0.3
 },
@@ -507,7 +544,7 @@ search: {
    */
   guide: {
     /** 0 = pure targetX/Y/Z, 1 = aim at the route point at `u_progress + lead`. */
-    amount: 0.95,
+    amount: 0,
     /**
      * Aim this far ahead of the pulse, in u units, so the head sits low in the frame - and, as
      * measured while fixing the trajectory shake, so the view axis stops grazing the world up axis.
@@ -528,7 +565,59 @@ search: {
   /** docs/04 §3 - lookAt target (the zero-centre anchor, as verified in Step 2). */
   targetX: 0,
   targetY: 0,
-  targetZ: 0
+  targetZ: 0,
+
+  /**
+   * Finale framing (prototype tweak, guide.amount stays 0): the fixed aim eases south across the last
+   * part of the flight so the final frame holds the whole route AND the circuit. Set aimZ to targetZ
+   * to switch it off.
+   */
+  finale: { aimZ: 1750, start: 0.56, end: 0.96 },
+
+  /**
+   * The Albert Park circuit (scene/circuit.js): the real track centreline, rebuilt from the cached OSM
+   * data, drawn as a glowing ribbon plus a vertical light curtain so it reads topographically from a
+   * low angle and as a neon loop from the birdseye.
+   */
+  circuit: {
+    colour: PALETTE.violet,
+    hotColour: '#B7A2FF',
+    halfWidth: 9,
+    /** Height of the light curtain, in metres. */
+    wallHeight: 26,
+    /** HDR gain at rest, and at full reveal. */
+    gainNear: 0.3,
+    gainFar: 0.95,
+    revealStart: 0.42,
+    revealEnd: 0.8,
+    /** The lapping light: laps completed across the whole scroll, and its HDR gain. */
+    laps: 5,
+    chaseGain: 2.0,
+    chaseWidth: 0.045,
+    minPixels: 1.1
+  },
+
+  /** Start and destination markers: soft radial amber-gold point glows (reference frame_0001). */
+  endpoints: {
+    colour: PALETTE.frontierGold,
+    coreColour: PALETTE.frontierHot,
+    pixelRadius: 26,
+    gain: 2.4
+  },
+
+  /** HDR post-processing (post.js): bloom + the completion flash's plum wash + grade. */
+  post: {
+    bloomStrength: 0.7,
+    bloomRadius: 0.62,
+    bloomThreshold: 0.92,
+    /** Extra bloom strength at the peak of the flash. */
+    flashBloom: 0.55,
+    /** Peak of the plum wash. The reference's is roughly double this; the brief asks for a calmer flash. */
+    flashWash: 1.15,
+    washColour: PALETTE.flashWash,
+    exposure: 1.0,
+    vignette: 0.42
+  }
 };
 
 /**
@@ -663,9 +752,9 @@ export function createGui(target = config) {
   apath.addColor(target.apath, 'amberColor').name('trail colour');
   apath.addColor(target.apath, 'glowColor').name('bloom colour');
   apath.add(target.apath, 'pulseWidth', 0.002, 0.2, 0.001).name('pulse half-width');
-  apath.add(target.apath, 'trailOpacity', 0, 1, 0.01).name('trail alpha (core)');
+  apath.add(target.apath, 'trailOpacity', 0, 6, 0.01).name('trail alpha (core)');
   apath.add(target.apath, 'glowBaseAlpha', 0, 0.5, 0.005).name('bloom base alpha');
-  apath.add(target.apath, 'trailGlowAlpha', 0, 0.3, 0.005).name('trail alpha (glow)');
+  apath.add(target.apath, 'trailGlowAlpha', 0, 2, 0.005).name('trail alpha (glow)');
 
   const search = gui.addFolder('A* search replay (docs/11)');
   search.add(target.search, 'replayEnd', 0, 1, 0.005).name('replay end (u, goal settled)');
@@ -730,6 +819,30 @@ export function createGui(target = config) {
   lookAt.add(target, 'targetZ', -3000, 3000, 1).name('targetZ');
   lookAt.add(target.guide, 'amount', 0, 1, 0.01).name('follow route');
   lookAt.add(target.guide, 'lead', -0.2, 0.2, 0.005).name('follow lead (u)');
+
+  const ember = gui.addFolder('burning edge + flash');
+  ember.add(target.search, 'hotGain', 0, 8, 0.05).name('frontier white-hot gain');
+  ember.add(target.search, 'goldGain', 0, 6, 0.05).name('frontier gold gain');
+  ember.add(target.search, 'emberGain', 0, 3, 0.05).name('visited ember gain');
+  ember.add(target.search, 'edgeMinPixels', 0, 3, 0.05).name('edge pixel floor');
+  ember.add(target.search, 'wipeSpan', 0.005, 0.2, 0.005).name('route wipe span (u)');
+  ember.add(target.search, 'clearSpan', 0.001, 0.1, 0.001).name('grid clear span (u)');
+  ember.add(target.apath, 'flashGain', 0, 4, 0.05).name('route flash gain');
+  ember.add(target.post, 'bloomStrength', 0, 3, 0.01).name('bloom strength');
+  ember.add(target.post, 'bloomRadius', 0, 1.2, 0.01).name('bloom radius');
+  ember.add(target.post, 'bloomThreshold', 0, 2, 0.01).name('bloom threshold');
+  ember.add(target.post, 'flashBloom', 0, 2, 0.01).name('flash bloom lift');
+  ember.add(target.post, 'flashWash', 0, 4, 0.01).name('flash plum wash');
+  ember.add(target.post, 'vignette', 0, 1, 0.01).name('vignette');
+  ember.add(target.post, 'exposure', 0.2, 2.5, 0.01).name('exposure');
+
+  const circuit = gui.addFolder('Albert Park circuit');
+  circuit.addColor(target.circuit, 'colour').name('colour');
+  circuit.add(target.circuit, 'gainNear', 0, 4, 0.05).name('gain (early)');
+  circuit.add(target.circuit, 'gainFar', 0, 6, 0.05).name('gain (finale)');
+  circuit.add(target.circuit, 'wallHeight', 0, 120, 1).name('curtain height (m)');
+  circuit.add(target.circuit, 'laps', 0, 20, 0.5).name('chase laps');
+  circuit.add(target.circuit, 'chaseGain', 0, 8, 0.1).name('chase gain');
 
   return gui;
 }

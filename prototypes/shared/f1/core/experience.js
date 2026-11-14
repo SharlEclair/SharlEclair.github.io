@@ -1,7 +1,10 @@
 import * as THREE from 'three'
 
 import { time } from './time.js'
-import { initScroll, updateScroll, refreshScrollSpace, scroll } from './scroll.js'
+import { initScroll, updateScroll, refreshScrollSpace, scroll, setProgressSource, setProgressOverride } from './scroll.js'
+import { createPost } from './post.js'
+import { onViewportChange } from './viewport.js'
+import { applyLookToConfig, LOOK } from '../look.js'
 import { createRenderer } from './renderer.js'
 import { scene, updateScene } from '../scene/scene.js'
 import { camera, initCamera, updateCamera, rebuildCurves } from '../camera/rig.js'
@@ -48,8 +51,23 @@ export function createExperience({
   // Optional: take over persistence entirely. See the note in ui/panel.js.
   onPersist = null,
   onResetVault = null,
+  // --- embedding (all optional; the standalone pages pass none of these) ---
+  // Element the canvas should fill. Omit for the original full-window behaviour.
+  container = null,
+  // `() => number` in 0..1. When set, the host page owns the scroll mapping.
+  progress = null,
+  // Mount the lil-gui tuning panel. Off when embedded.
+  gui = true,
+  maxPixelRatio = 1.5,
+  // Freeze the flow field's clock (prefers-reduced-motion): scroll still scrubs.
+  staticTime = false,
 } = {}) {
-  const renderer = createRenderer(canvas)
+  // The upgraded look is written onto the live config BEFORE anything reads it.
+  applyLookToConfig()
+  if (progress) setProgressSource(progress)
+
+  const renderer = createRenderer(canvas, { sizeTo: container, maxPixelRatio })
+  renderer.toneMappingExposure = LOOK.exposure
 
   const disposeScroll = initScroll()
   const disposeCamera = initCamera()
@@ -132,7 +150,9 @@ export function createExperience({
   // otherwise read it while it is still in the temporal dead zone.
   let currentPresetId = initialPresetId || (presets?.[0]?.id ?? null)
 
-  const panel = createPanel({
+  // No panel when embedded: it would also restore tuning saved in localStorage
+  // over the look, which is right for the tuning page and wrong for a portfolio.
+  const panel = !gui ? { refresh() {}, destroy() {} } : createPanel({
     rebuildAirflow,
     refreshCar,
     applyFinish,
@@ -150,23 +170,54 @@ export function createExperience({
     onResetVault,
   })
 
-  const clock = new THREE.Clock()
-  let running = true
+  const post = createPost(renderer, scene, camera)
+  const syncPostSize = () => post.setSize(renderer.domElement.width, renderer.domElement.height)
+  syncPostSize()
+  const stopViewportSync = onViewportChange(syncPostSize)
 
-  function frame() {
-    if (!running) return
-    requestAnimationFrame(frame)
-
-    const delta = Math.min(clock.getDelta(), 0.05)
-    time.delta = delta
-    time.elapsed += delta
-
+  function draw() {
     updateScroll()
     updateCamera()
     updateAirflow(airflow, camera)
     updateScene(scroll.progress)
-    renderer.render(scene, camera)
+    post.render(time.elapsed, !staticTime)
   }
+
+  const clock = new THREE.Clock()
+  let running = true
+  // Off-screen pause. The loop is a continuous animation (the flow field moves in
+  // time), so unlike a scroll-only scene it cannot skip unchanged frames; what it
+  // can do is stop entirely whenever its canvas is not on screen.
+  let onScreen = true
+  let rafId = 0
+
+  function frame() {
+    if (!running || !onScreen) {
+      rafId = 0
+      return
+    }
+    rafId = requestAnimationFrame(frame)
+
+    const delta = Math.min(clock.getDelta(), 0.05)
+    time.delta = delta
+    if (!staticTime) time.elapsed += delta
+
+    draw()
+  }
+
+  const watched = container || renderer.domElement
+  const visibility = typeof IntersectionObserver === 'function'
+    ? new IntersectionObserver((entries) => {
+        const next = entries[entries.length - 1].isIntersecting
+        if (next === onScreen) return
+        onScreen = next
+        if (onScreen && running && !rafId) {
+          clock.getDelta() // discard the paused interval
+          frame()
+        }
+      }, { rootMargin: '10% 0px' })
+    : null
+  if (visibility) visibility.observe(watched)
 
   // Re-derive everything that caches a value off `config`, given the diff a
   // preset apply measured. Order matters: the scroll relayout can move the page,
@@ -184,7 +235,7 @@ export function createExperience({
 
     panel.refresh()
     updateCamera()
-    renderer.render(scene, camera)
+    post.render(time.elapsed, !staticTime)
   }
 
   // Switch the live scene to a preset.
@@ -215,6 +266,11 @@ export function createExperience({
 
   function destroy() {
     running = false
+    if (visibility) visibility.disconnect()
+    stopViewportSync()
+    setProgressSource(null)
+    setProgressOverride(null)
+    post.dispose()
     disposeScroll()
     disposeCamera()
     panel.destroy()
@@ -263,11 +319,13 @@ export function createExperience({
     start,
     // Composites one frame immediately, without waiting for the next rAF.
     renderNow() {
-      updateScroll()
-      updateCamera()
-      updateAirflow(airflow, camera)
-      updateScene(scroll.progress)
-      renderer.render(scene, camera)
+      draw()
+    },
+    post,
+    // Force the scroll progress (0..1) and draw; null hands control back.
+    setProgress(value) {
+      setProgressOverride(value)
+      draw()
     },
     getAirflow: () => airflow,
     getPresetId: () => currentPresetId,

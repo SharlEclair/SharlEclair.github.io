@@ -1,47 +1,50 @@
 /**
- * Search-edge material (docs/11): the roads the A* search actually examined, as thin ribbons over the
- * city, in a single draw call.
+ * Search-edge material: the roads the A* search actually examined, drawn as a BURNING PAPER EDGE.
  *
- * Each ribbon carries the road's own first-examination frame, and the state is a function of
- * `u_frame - aExam`:
+ * Each ribbon carries the road's own first-examination frame, and its temperature is a function of
+ * `u_frame - aExam` alone, so the picture stays a pure function of the replay position:
  *
- *   not examined yet   collapsed outside the clip volume. The subdued network the search happens
- *                      INSIDE is the city's own `Roads` mesh, which is already on screen - this layer
- *                      never redraws it, and lighting a road before the trace examined it would claim
- *                      knowledge the algorithm did not have
- *   being examined now brightest, for `examineHoldEvents` events - "A* is checking these roads now"
- *   explored           a dimmer persistent trail easing to `settledFade`, so the examined region
- *                      accumulates behind the frontier
+ *   not examined yet   collapsed outside the clip volume - the idle crimson network underneath is the
+ *                      city's own Roads mesh, and lighting a road early would claim knowledge A* lacked
+ *   just relaxed       incandescent white-yellow (#FFF6CC) at several times display white, so the HDR
+ *                      bloom pass catches it: this is the advancing perimeter
+ *   cooling            vivid gold (#FFB800), still above the bloom threshold for a few events
+ *   visited            a dim, fine burnt-orange filigree (#7A2600) that stays behind as the record of
+ *                      where the search has been, well under the bloom threshold
  *
- * The winning route's own roads are NOT in this layer: the mesh builder skips every edge flagged
- * `onPath`, because the winner is the amber `APath` and a violet search ribbon over it would paint the
- * answer as if it were still being searched.
+ * The three bands are exponentials with different rates rather than a single mix, so the white-hot
+ * band is thin, the gold band is a little wider, and the hot glow stays concentrated on the leading
+ * edge exactly as the reference frames show. Additive blending into a half-float target; values above
+ * 1.0 are deliberate.
  *
- * HOW THE RIBBON IS BUILT, AND WHY INSIDE THE SHADER
- * The geometry is two triangles between the road's endpoints, with `aCornerVec.y` selecting which end a
- * vertex sits on and `aCornerVec.x` which side of the road. The shader turns the world-space direction
- * into a camera-space offset perpendicular to the projected road, so the ribbon is a true ground
- * ribbon seen from above rather than a screen-space thick line, and it keeps its width in metres -
- * which means it attenuates with distance exactly the way the roads under it do.
+ * The winning route's own roads are NOT in this layer (the mesh builder skips edges flagged onPath).
+ *
+ * The ribbon is built in the vertex shader: two triangles between the segment's endpoints, widened
+ * perpendicular to the projected road. Its half-width is in metres with a screen-space floor, so the
+ * filigree stays a crisp ~2 px line from the 3 km birdseye instead of dissolving below a pixel.
  */
 import * as THREE from 'three';
 
 /**
- * Build the search-edge material.
- *
  * @param {typeof import('../config.js').config} config the live singleton
  * @returns {{ material: THREE.ShaderMaterial, uniforms: Record<string, THREE.IUniform>,
- *            sync: (next: typeof config, frame: number, phase: object) => void }}
+ *            sync: (next: typeof config, frame: number, phase: object, framesPerEvent?: number) => void }}
  */
 export function createSearchEdgeMaterial(config) {
   const uniforms = {
     u_frame: { value: 0 },
     u_hold: { value: 1 },
     u_edgeWidth: { value: config.search.edgeWidth },
+    u_minPixels: { value: config.search.edgeMinPixels },
+    u_viewportHeight: { value: 800 },
     u_trailAlpha: { value: config.search.trailAlpha },
-    u_settledFade: { value: config.search.settledFade },
+    u_hotGain: { value: config.search.hotGain },
+    u_goldGain: { value: config.search.goldGain },
+    u_emberGain: { value: config.search.emberGain },
     u_dim: { value: 1 },
-    u_colour: { value: new THREE.Color(config.search.colour) }
+    u_hotColour: { value: new THREE.Color(config.search.coreColour) },
+    u_goldColour: { value: new THREE.Color(config.search.colour) },
+    u_emberColour: { value: new THREE.Color(config.search.emberColour) }
   };
 
   const material = new THREE.ShaderMaterial({
@@ -50,13 +53,9 @@ export function createSearchEdgeMaterial(config) {
     transparent: true,
     blending: THREE.AdditiveBlending,
     depthWrite: false,
-    // Same measured reason as the node points: the city is invisible from mid-flight on but still
-    // writes depth, so the search layer is drawn over the map rather than inside it.
     depthTest: false,
     side: THREE.DoubleSide,
     vertexShader: /* glsl */ `
-      // position is the road's start or end, and aDirection is the road's full vector. Both are the
-      // standard/plain attributes, so three.js computes the geometry's bounds from position.
       attribute vec3 aDirection;
       attribute float aSide;
       attribute vec2 aCornerVec;
@@ -64,10 +63,13 @@ export function createSearchEdgeMaterial(config) {
 
       uniform float u_frame;
       uniform float u_edgeWidth;
+      uniform float u_minPixels;
+      uniform float u_viewportHeight;
 
       varying float vSide;
       varying float vAlong;
       varying float vExam;
+      varying float vGrain;
 
       void main() {
         // Not examined yet: A* has not looked at this road at this frame.
@@ -76,105 +78,109 @@ export function createSearchEdgeMaterial(config) {
           vSide = 0.0;
           vAlong = 0.0;
           vExam = 0.0;
+          vGrain = 0.0;
           return;
         }
 
-        // The road's tangent, projected into camera space; the ribbon's width is perpendicular to it.
         vec3 cameraCentre = (modelViewMatrix * vec4(position, 1.0)).xyz;
         vec3 cameraAlong = (modelViewMatrix * vec4(position + aDirection, 1.0)).xyz - cameraCentre;
         float lengthAlong = length(cameraAlong);
-        // A degenerate road (two nodes at the same coordinate) has no direction to be perpendicular
-        // to; the fallback keeps the arithmetic finite instead of turning the quad into NaN.
         vec2 axis = lengthAlong > 1e-4 ? cameraAlong.xy / lengthAlong : vec2(1.0, 0.0);
         vec2 perpendicular = vec2(-axis.y, axis.x);
 
-        // aCornerVec.y is 0 at the road's start and 1 at its end: that is what makes ONE quad span the
-        // road rather than a billboard sitting on it.
         vec3 centre = cameraCentre + cameraAlong * aCornerVec.y;
-        vec2 offset = perpendicular * aSide * u_edgeWidth;
-        gl_Position = projectionMatrix * vec4(centre.xy + offset, centre.z, 1.0);
+        // Metres with a pixel floor (same construction as the frontier points).
+        float metresPerPixel = 2.0 * length(centre) / (projectionMatrix[1][1] * u_viewportHeight);
+        float halfWidth = max(u_edgeWidth, u_minPixels * metresPerPixel);
+        gl_Position = projectionMatrix * vec4(centre.xy + perpendicular * aSide * halfWidth, centre.z, 1.0);
 
         vSide = aSide;
         vAlong = aCornerVec.y;
         vExam = aExam;
+        // A stable per-road value: charred paper is uneven, so the ember filigree is too.
+        vGrain = fract(sin(aExam * 12.9898 + dot(aDirection.xz, vec2(0.37, 0.71))) * 43758.5453);
       }
     `,
     fragmentShader: /* glsl */ `
       uniform float u_frame;
       uniform float u_hold;
       uniform float u_trailAlpha;
-      uniform float u_settledFade;
+      uniform float u_hotGain;
+      uniform float u_goldGain;
+      uniform float u_emberGain;
       uniform float u_dim;
-      uniform vec3 u_colour;
+      uniform vec3 u_hotColour;
+      uniform vec3 u_goldColour;
+      uniform vec3 u_emberColour;
 
       varying float vSide;
       varying float vAlong;
       varying float vExam;
+      varying float vGrain;
 
       void main() {
-        // How long ago A* examined this road, in frames. The state is a function of that alone, which is
-        // what makes the picture a pure function of the replay position (docs/07 s1).
-        float delta = u_frame - vExam;
-        float t = clamp(delta / max(u_hold, 1e-4), 0.0, 1.0);
-        float alpha = u_trailAlpha * (1.0 + (u_settledFade - 1.0) * t);
+        // Age of this road in units of the hold window: 0 at the frontier, growing behind it.
+        float t = max(u_frame - vExam, 0.0) / max(u_hold, 1e-4);
 
-        // Soften both long edges so a road reads as a glow rather than a hard stripe - the same
-        // cross-fade the route's own ribbon uses.
-        float crossFade = 1.0 - abs(vSide);
-        // Soften the ends too, so a road whose neighbour has not been examined yet does not stop on a
-        // hard square.
-        float endFade = 0.55 + 0.45 * (1.0 - abs(2.0 * vAlong - 1.0));
+        // Three temperature bands. The white-hot one dies fastest, so only the newest edges carry it.
+        float hot = exp(-t * 7.0);
+        float gold = exp(-t * 1.9);
+        float emberLevel = mix(0.55, 1.0, vGrain);
 
-        gl_FragColor = vec4(u_colour, alpha * crossFade * endFade * u_dim);
+        vec3 colour = u_emberColour * u_emberGain * emberLevel
+                    + u_goldColour * u_goldGain * gold
+                    + u_hotColour * u_hotGain * hot;
+
+        // A thin bright core with a soft shoulder: a line of fire, not a painted stripe.
+        float across = 1.0 - abs(vSide);
+        float profile = mix(across, across * across, 0.5);
+        // The cooled filigree is finer than the burning edge.
+        profile *= mix(0.8, 1.0, gold);
+
+        gl_FragColor = vec4(colour * u_trailAlpha * profile * u_dim, 1.0);
         #include <colorspace_fragment>
       }
     `
   });
 
-  const applied = {
-    hold: Number.NaN,
-    edgeWidth: Number.NaN,
-    trailAlpha: Number.NaN,
-    settledFade: Number.NaN,
-    dim: Number.NaN,
-    colour: ''
-  };
+  // Colour is premultiplied in the shader (alpha fixed at 1), so plain ONE/ONE blending is the exact
+  // additive sum and nothing depends on how a float target treats alpha above 1.
+  material.blending = THREE.CustomBlending;
+  material.blendEquation = THREE.AddEquation;
+  material.blendSrc = THREE.OneFactor;
+  material.blendDst = THREE.OneFactor;
+
+  const applied = {};
 
   /**
-   * Push config + frame + phase into the uniforms.
-   *
    * @param {typeof config} next
    * @param {number} frame
-   * @param {{ final: boolean }} phase
+   * @param {{ clear?: number }} phase
    * @param {number} framesPerEvent
    */
   function sync(next, frame, phase, framesPerEvent = 1) {
+    const s = next.search;
     uniforms.u_frame.value = frame;
-    const dim = phase.final ? next.search.settleFactor : 1;
-    if (applied.dim !== dim) {
-      uniforms.u_dim.value = dim;
-      applied.dim = dim;
+    uniforms.u_dim.value = 1 - (phase.clear ?? 0);
+    uniforms.u_hold.value = Math.max(s.examineHoldEvents * framesPerEvent, 1);
+    uniforms.u_edgeWidth.value = s.edgeWidth;
+    uniforms.u_minPixels.value = s.edgeMinPixels;
+    uniforms.u_viewportHeight.value = s.viewportHeight;
+    uniforms.u_trailAlpha.value = s.trailAlpha;
+    uniforms.u_hotGain.value = s.hotGain;
+    uniforms.u_goldGain.value = s.goldGain;
+    uniforms.u_emberGain.value = s.emberGain;
+    if (applied.hot !== s.coreColour) {
+      uniforms.u_hotColour.value.set(s.coreColour);
+      applied.hot = s.coreColour;
     }
-    const hold = Math.max(next.search.examineHoldEvents * framesPerEvent, 1);
-    if (applied.hold !== hold) {
-      uniforms.u_hold.value = hold;
-      applied.hold = hold;
+    if (applied.gold !== s.colour) {
+      uniforms.u_goldColour.value.set(s.colour);
+      applied.gold = s.colour;
     }
-    if (applied.edgeWidth !== next.search.edgeWidth) {
-      uniforms.u_edgeWidth.value = next.search.edgeWidth;
-      applied.edgeWidth = next.search.edgeWidth;
-    }
-    if (applied.trailAlpha !== next.search.trailAlpha) {
-      uniforms.u_trailAlpha.value = next.search.trailAlpha;
-      applied.trailAlpha = next.search.trailAlpha;
-    }
-    if (applied.settledFade !== next.search.settledFade) {
-      uniforms.u_settledFade.value = next.search.settledFade;
-      applied.settledFade = next.search.settledFade;
-    }
-    if (applied.colour !== next.search.colour) {
-      uniforms.u_colour.value.set(next.search.colour);
-      applied.colour = next.search.colour;
+    if (applied.ember !== s.emberColour) {
+      uniforms.u_emberColour.value.set(s.emberColour);
+      applied.ember = s.emberColour;
     }
   }
 

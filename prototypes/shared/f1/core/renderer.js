@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { setViewport } from './viewport.js'
 
 // The renderer is created on demand rather than at module scope.
 //
@@ -10,7 +11,7 @@ import * as THREE from 'three'
 // second getContext() call returns null and the page dies with no useful error.
 //
 // Deferring to a call makes each entry point own its own canvas explicitly.
-export function createRenderer(canvas) {
+export function createRenderer(canvas, { sizeTo = null, maxPixelRatio = 1.5 } = {}) {
   const el = canvas || document.querySelector('#webgl')
   if (!el) throw new Error('[F1 x Currents] no canvas available to render into')
 
@@ -21,9 +22,16 @@ export function createRenderer(canvas) {
     powerPreference: 'high-performance',
   })
 
+  // Sized to `sizeTo` when embedded in a page section, to the window otherwise.
+  // The pixel ratio is capped: the bloom chain's cost scales with pixels, and
+  // past ~1.5 the thin additive lines gain nothing visible.
   const resize = () => {
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-    renderer.setSize(window.innerWidth, window.innerHeight)
+    const width = sizeTo ? sizeTo.clientWidth : window.innerWidth
+    const height = sizeTo ? sizeTo.clientHeight : window.innerHeight
+    const ratio = Math.min(window.devicePixelRatio || 1, maxPixelRatio)
+    renderer.setPixelRatio(ratio)
+    renderer.setSize(Math.max(1, width), Math.max(1, height), !sizeTo)
+    setViewport(width, height, ratio)
   }
 
   resize()
@@ -46,8 +54,11 @@ export function createRenderer(canvas) {
   renderer.toneMappingExposure = 1.0
 
   window.addEventListener('resize', resize)
+  const observer = sizeTo && typeof ResizeObserver === 'function' ? new ResizeObserver(resize) : null
+  if (observer) observer.observe(sizeTo)
 
   renderer.disposeAll = () => {
+    if (observer) observer.disconnect()
     window.removeEventListener('resize', resize)
     renderer.dispose()
   }

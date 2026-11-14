@@ -218,11 +218,14 @@ export function flashBandResponse(frac, peak) {
 export function routeReplayState(u, config) {
   const progress = Math.min(Math.max(Number.isFinite(u) ? u : 0, 0), 1);
   const reconstructStart = Math.min(Math.max(config.search.freezeEnd, 1e-6), 1);
-  const span = Math.max(1 - reconstructStart, 1e-6);
+  // The optimal-route WIPE: the winner runs from the goal back to the start across `wipeSpan` of
+  // scroll, so it lands inside the completion flash instead of taking the rest of the runway.
+  const span = Math.max(Math.min(config.search.wipeSpan ?? 1 - reconstructStart, 1 - reconstructStart), 1e-6);
   const rebuild = Math.min(Math.max((progress - reconstructStart) / span, 0), 1);
   // The pulse is a smoothstep of the reconstruction, not a step: a head that snapped into existence
   // would read as a jump cut rather than as an answer arriving.
-  const pulse = rebuild * rebuild * (3 - 2 * rebuild);
+  const pulseT = Math.min(rebuild * 5, 1);
+  const pulse = pulseT * pulseT * (3 - 2 * pulseT);
   // THE FRONT STOPS WHERE THE CAMERA CAN STILL SEE IT.
   //
   // The chain walk runs the front from the goal (1) back to the start (0), which is the correct
@@ -297,6 +300,26 @@ export function routeGlowResponse(frac, u, config) {
 }
 
 /**
+ * The completion flash, 0..1: a near-instant attack on the frame the goal settles and a smooth decay
+ * back to dark across `flashSpan`. ONE definition - the route's HDR lift, the bloom pass's extra
+ * strength and the plum atmospheric wash all read it, so they rise and fall as one event.
+ *
+ * @param {number} u `u_progress`, 0..1
+ * @param {typeof import('../config.js').config.search} search
+ * @returns {number} 0 outside the window, peaking at ~1 just after `flashStart`
+ */
+export function flashEnvelope(u, search) {
+  const span = Math.max(search.flashSpan, 1e-4);
+  const s = (u - search.flashStart) / span;
+  if (!(s > 0) || s >= 1) {
+    return 0;
+  }
+  const attack = smoothstep(0, 0.07, s);
+  const decay = Math.pow(1 - s, 2.6);
+  return attack * decay * (search.flashPeak ?? 1);
+}
+
+/**
  * The cubic smoothstep the GLSL built-in implements, for the CPU mirrors above.
  *
  * Written with the two edges explicitly rather than as a clamped `0/0`: a zero-width interval must
@@ -346,7 +369,10 @@ export function createPulseMaterial(config) {
     u_flashSpan: { value: config.search.flashSpan },
     u_flashPeak: { value: config.search.flashPeak },
     u_flashFlickers: { value: config.search.flickers },
-    u_flashResidual: { value: config.search.residual }
+    u_flashResidual: { value: config.search.residual },
+    /** The completion flash envelope (flashEnvelope), written per frame. */
+    u_flash: { value: 0 },
+    u_flashGain: { value: config.apath.flashGain }
   };
 
   const material = new THREE.ShaderMaterial({
@@ -378,6 +404,8 @@ export function createPulseMaterial(config) {
       uniform float u_flashPeak;
       uniform float u_flashFlickers;
       uniform float u_flashResidual;
+      uniform float u_flash;
+      uniform float u_flashGain;
       uniform vec3 u_coreColor;
       uniform vec3 u_amberColor;
       uniform vec3 u_glowColor;
@@ -412,109 +440,43 @@ export function createPulseMaterial(config) {
         // and decreasing to the start (0.0), so everything past it is alpha 0 - absent, not dim.
         // Writing this as routeVis = 1 - smoothstep(...) matters: the mask must be 1 on the revealed
         // side, and the inverted form blanks the whole route.
-        float routeVis = (1.0 - smoothstep(u_routeReveal - 0.004, u_routeReveal, vUv.x)) * u_routePulse;
+        // The wipe runs from the GOAL (vUv.x = 1) back to the start: everything the front has passed -
+        // the side nearer the goal - is lit and stays lit. (The reference shader lit the other side,
+        // which un-drew the route as the front advanced.)
+        float routeVis = smoothstep(u_routeReveal - 0.004, u_routeReveal, vUv.x) * u_routePulse;
 
-        // --- the pulse head: smoothstep against the baked arc-length coordinate -----------
-        // Tolerance is clamped to a minimum so the ramp can never be degenerate: a 0/0 smoothstep
-        // ramp is a NaN, and one NaN fragment discards the entire draw call (docs/03 §3).
-        //
-        // smoothstep(0.0, w, d) is 0 where d = 0 and 1 once d >= w, so the head must be its
-        // COMPLEMENT. Writing it the other way round puts black at the head and light everywhere
-        // else - a bug that still renders "something" and is invisible to a compile check, so the
-        // numeric probe in __STEP3_PROBE exists specifically to catch it.
-        //
-        // The head is anchored to the RECONSTRUCTION FRONT and not to u_progress: that is the whole
-        // point of the replay, and while the search runs u_routePulse is 0 so the head does not
-        // exist at all. u_progress keeps driving the camera and the discharge's strobe.
+        // --- the wipe front ----------------------------------------------------------------
+        // A short white-hot head rides the reconstruction front while the winner is being drawn
+        // (goal -> start). It exists only during the wipe: once the front reaches the start it has
+        // nowhere left to be, and the route settles into its steady state.
         float w = max(u_pulseWidth, 1e-4);
-        float head = (1.0 - smoothstep(0.0, w, abs(vUv.x - u_routeReveal))) * u_routePulse;
+        float front = (1.0 - smoothstep(0.0, w, abs(vUv.x - u_routeReveal)))
+                    * u_routePulse * smoothstep(0.0, 0.02, u_routeReveal);
 
-        // --- the revealed trail behind the reconstruction front ---------------------------
-        // A smoothstep rather than a linear ramp: same ~22 m edge, no seam where it reaches full
-        // strength. This mask is also what the completion discharge is confined to.
-        float trail = routeVis;
+        // --- composition: a razor-sharp white-hot core wrapped in a wide golden-amber glow -----------
+        // The two strips are two additive layers with two jobs. The 8 m core carries u_coreColor at
+        // several times display white, so it stays a hard thin line and feeds the bloom pass; the 26 m
+        // strip carries u_glowColor below the threshold as the body of the halo. The completion flash
+        // lifts both for the length of its envelope and then lets them fall back.
+        float lift = 1.0 + u_flash * u_flashGain;
+        float coreGain = routeVis * u_trailOpacity * lift + front * 2.5;
+        float glowGain = routeVis * (u_glowBaseAlpha + u_trailGlowAlpha) * lift + front * 0.8;
 
-        // --- the completion discharge (docs/03 §5) ----------------------------------------
-        // A brief, sharply LOCALIZED strike that moves along the route the search has already found -
-        // not a lift of the whole trail and not a slow gradient. Three factors, each doing one job:
-        //
-        //   strike  the strobe envelope. Raising the strobe band to 2.6 sharpens it in time, so each
-        //           blink is short and the route is comparatively dark between blinks.
-        //   band    a narrow spatial window around a head that sweeps from the route's leading edge
-        //           BACKWARDS (see FLASH_TRAVEL) as the window opens. The front is a sharp edge and the
-        //           wake behind it is short: the exact-zero smoothstep product below peaks just behind
-        //           the front and is gone within about two falloff widths, so only a short length of
-        //           route is lit at any instant - a strike travelling along it, not a lit-up route.
-        //   trail   confining everything to what has actually been explored, so the discharge can never
-        //           light route ahead of the pulse (docs/03 §5's mask).
-        float flashS = clamp((u_progress - u_flashStart) / max(u_flashSpan, 1e-4), 0.0, 1.0);
-        float flashAttack = smoothstep(0.0, 0.10, flashS);
-        float flashDecay = pow(max(1.0 - flashS, 0.0), 1.35);
-        float strobeBand = abs(cos(3.14159265 * u_flashFlickers * flashS));
-        float strobe = mix(0.30, 1.0, strobeBand);
-        strobe *= mix(0.30, 1.0, pow(strobeBand, 2.6));
-        float envelope = u_flashResidual + (1.0 - u_flashResidual) * flashDecay;
-        float strike = u_flashPeak * flashAttack * envelope * strobe;
-
-        // The band's leading edge rides the RECONSTRUCTION FRONT, not the raw progress value.
-        //
-        // This is the second half of why the discharge was invisible. The camera aims at route point
-        // (progress + aimLead) and the route is 5.5 km long, so only a fraction of its arc length is
-        // ever on screen; a band placed at the raw progress value (0.9 here) sat on route the camera was
-        // looking past. The front at least STARTS at the goal - which is what the camera is framing -
-        // and walks back along the answer, which is the same gesture the reconstruction makes and the
-        // same reason the head above is anchored to it.
-        float waveLead = u_routeReveal * (1.0 - flashS * FLASH_TRAVEL);
-        float rel = (vUv.x - waveLead) / max(FLASH_FALLOFF, 1e-4);
-        float ahead = smoothstep(0.0, 0.25, rel);
-        float behind = smoothstep(0.0, 1.0, -rel);
-        float band = (1.0 - ahead) * (1.0 - behind);
-        float surge = strike * trail * band;
-
-        // --- composition ----------------------------------------------------------------
-        // Strip roles: the core carries the crisp head, the trail and the discharge; the glow carries
-        // the bloom around the head, the bloom the EXPLORED route carries, and a barely-there halo. The
-        // layer gain keeps the two additive layers from summing to twice the palette.
-        //
-        // The glow is deliberately weighted toward the revealed trail: a constant bloom over the whole
-        // route made it read as pre-drawn before the search reached it. u_glowBaseAlpha is now applied
-        // only to route the reconstruction has reached, so before the answer exists the route's alpha
-        // is exactly zero rather than a whisper. The head's own bloom is gated by routeVis for the same
-        // reason: without it the term is symmetric and would light ~22 m of route that has not been
-        // revealed.
-        float exploredSide = routeVis;
-        // THE DISCHARGE IS A FLIP, NOT AN ADDITION, and that distinction was a defect.
-        //
-        // Adding surge to an already-lit trail does nothing visible: by the time the strike fires the
-        // whole revealed route is at core alpha ~0.9 with additive blending, so the band was absorbed and
-        // measured as EXACTLY zero pixel difference across the entire window (0 changed pixels at every
-        // sampled u, flashPeak 1.8 vs 0). A lightning strike that cannot be seen is not a strike.
-        //
-        // It now darkens the revealed route across the band first and then puts the strike on top of
-        // that darkness, so the band is BRIGHTER than its surroundings by construction rather than by
-        // hoping the sum saturates differently. The dim factor is clamped so the route never goes fully
-        // black - the strike reads as a moving bright window on a dimmed route, which is a discharge.
-        float dim = 1.0 - clamp(surge, 0.0, 0.75);
-        float coreAlpha = (head * head + trail * u_trailOpacity) * dim + surge * 1.6;
-        float glowAlpha = (u_glowBaseAlpha * routeVis
-                        + u_trailGlowAlpha * trail) * dim
-                        + head * head * 0.6 * exploredSide
-                        + surge * 2.4;
-        float alpha = mix(coreAlpha, glowAlpha, fill) * layerGain;
-
-        // Unlit, additive, no bloom pass: the colour itself is the glow (docs/05 §3). Mixing keeps
-        // the two strips in the palette instead of tinting the bloom with a white head. The flash
-        // drives the colour to the palette's own Yellow-White, so the discharge stays in-palette and
-        // additive saturation supplies the white-hot core.
-        vec3 colour = mix(u_amberColor, u_coreColor, head * head);
-        colour *= mix(u_amberColor, u_glowColor, fill);
-        colour = mix(colour, u_coreColor, clamp(surge * 0.55, 0.0, 1.0));
+        vec3 colour = mix(u_coreColor * coreGain, u_glowColor * glowGain, fill) * layerGain;
+        float alpha = 1.0;
 
         gl_FragColor = vec4(colour, alpha);
         #include <colorspace_fragment>
       }
     `
   });
+
+  material.blending = THREE.CustomBlending;
+  material.blendEquation = THREE.AddEquation;
+  material.blendSrc = THREE.OneFactor;
+  material.blendDst = THREE.OneFactor;
+  // The city fades to nothing by the finale; the answer must never be occluded by what is left of it.
+  material.depthTest = false;
 
   // Last-applied config strings/numbers. Compared before every mutation so the per-frame path
   // performs no allocation and no THREE.Color parsing (determinism checklist, docs/08 Step 3).
@@ -542,6 +504,7 @@ export function createPulseMaterial(config) {
    */
   function sync(next, progress) {
     uniforms.u_progress.value = progress;
+    uniforms.u_flashGain.value = next.apath.flashGain;
 
     if (applied.coreColor !== next.apath.coreColor) {
       uniforms.u_coreColor.value.set(next.apath.coreColor);
@@ -603,9 +566,10 @@ export function createPulseMaterial(config) {
    * @param {number} reveal 1 at the goal decreasing to 0 at the start
    * @param {number} pulse 0 while the search runs, 1 once the reconstruction is complete
    */
-  function setRouteState(reveal, pulse) {
+  function setRouteState(reveal, pulse, flash = 0) {
     uniforms.u_routeReveal.value = reveal;
     uniforms.u_routePulse.value = pulse;
+    uniforms.u_flash.value = flash;
   }
 
   /**

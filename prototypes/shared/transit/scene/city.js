@@ -26,7 +26,7 @@ import { createRoadsMaterial } from './roads-material.js';
 /** docs/02 §4 - exactly these three objects, by these exact names. */
 export const CITY_OBJECT_NAMES = ['Buildings', 'Roads', 'APath'];
 
-export const CITY_ASSET_URL = '/scene.glb';
+export const CITY_ASSET_URL = `${import.meta.env?.BASE_URL ?? '/'}scene.glb`;
 
 /**
  * docs/03 §2 fade: hold `opacityNear` until `fadeStart`, ease to `opacityFar` by `fadeEnd`.
@@ -180,7 +180,7 @@ export async function createCity(scene, config) {
     roadsShader.sync(next);
     apathShader.sync(next, progress);
     if (routeState) {
-      apathShader.setRouteState(routeState.reveal, routeState.pulse);
+      apathShader.setRouteState(routeState.reveal, routeState.pulse, routeState.flash ?? 0);
     }
   }
 

@@ -4,10 +4,11 @@ import { scroll, setScrollToProgress } from '../core/scroll.js'
 import { smoothstep } from '../utils/math.js'
 import { buildCurves, applyEasing, applyCarLock } from './trajectory.js'
 import { carRef } from '../car/ref.js'
+import { viewport, onViewportChange } from '../core/viewport.js'
 
 export const camera = new THREE.PerspectiveCamera(
   config.camera.start.fov,
-  window.innerWidth / window.innerHeight,
+  viewport.width / viewport.height,
   0.05,
   400
 )
@@ -29,11 +30,11 @@ export function initCamera() {
   curves = buildCurves()
   updateCamera()
   const onResize = () => {
-    camera.aspect = window.innerWidth / window.innerHeight
+    camera.aspect = viewport.width / viewport.height
     camera.updateProjectionMatrix()
   }
-  window.addEventListener('resize', onResize)
-  return () => window.removeEventListener('resize', onResize)
+  onResize()
+  return onViewportChange(onResize)
 }
 
 export function rebuildCurves() {

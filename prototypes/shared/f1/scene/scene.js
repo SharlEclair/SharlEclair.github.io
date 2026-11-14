@@ -9,14 +9,16 @@ scene.background = new THREE.Color(palette.backgroundTop)
 // purely by its surroundings and read as chrome rather than a silhouette.
 //
 // Very soft ambient so the car reads as a dark silhouette but never pure black.
-const hemi = new THREE.HemisphereLight(0xcba6c3, 0x1d1720, 0.9)
+const hemi = new THREE.HemisphereLight(0x8a6a9a, 0x0c080e, 0.4)
 scene.add(hemi)
 
-const key = new THREE.DirectionalLight(0xffffff, 1.4)
-key.position.set(6, 12, 4)
+// Warm window-light from above and to one side: the single key of a chiaroscuro set-up.
+const key = new THREE.DirectionalLight(0xffdcaa, 2.1)
+key.position.set(5, 12, 3)
 scene.add(key)
 
-const fill = new THREE.DirectionalLight(0x886593, 0.55)
+// A violet rim from behind, so the dark body separates from the dark room.
+const fill = new THREE.DirectionalLight(0x8e68d8, 1.1)
 fill.position.set(-8, 4, -6)
 scene.add(fill)
 
@@ -27,7 +29,7 @@ scene.add(fill)
 // draw a surface where nothing is actually being held -- and the mismatch is
 // invisible until you compare the two closely. Read from the config so the two
 // cannot drift.
-const gridHelper = new THREE.GridHelper(60, 60, 0x2a1f2e, 0x231a27)
+const gridHelper = new THREE.GridHelper(60, 60, 0x4a3a2a, 0x231a27)
 gridHelper.position.y = config.airflow.groundY
 gridHelper.material.opacity = 0.35
 gridHelper.material.transparent = true
@@ -42,5 +44,10 @@ export function updateScene(scrollProgress) {
     0,
     Math.min(1, (scrollProgress - 0.3) / 0.3)
   )
-  gridHelper.material.opacity = 0.05 + reveal * 0.30
+  gridHelper.material.opacity = 0.03 + reveal * 0.2
+  // palette.backgroundTop is rewritten by look.js before the first frame.
+  if (!scene.userData.backgroundSynced) {
+    scene.background.set(palette.backgroundTop)
+    scene.userData.backgroundSynced = true
+  }
 }

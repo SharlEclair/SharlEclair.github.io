@@ -53,7 +53,8 @@ export function createSearchNodeMaterial(config) {
     u_dim: { value: 1 },
     u_debug: { value: 0 },
     u_colour: { value: new THREE.Color(config.search.colour) },
-    u_coreColour: { value: new THREE.Color(config.search.coreColour) }
+    u_coreColour: { value: new THREE.Color(config.search.coreColour) },
+    u_emberColour: { value: new THREE.Color(config.search.emberColour) }
   };
 
   const material = new THREE.ShaderMaterial({
@@ -159,6 +160,7 @@ export function createSearchNodeMaterial(config) {
       uniform float u_debug;
       uniform vec3 u_colour;
       uniform vec3 u_coreColour;
+      uniform vec3 u_emberColour;
 
       varying vec2 vCorner;
       varying float vAlpha;
@@ -189,6 +191,8 @@ export function createSearchNodeMaterial(config) {
         // docs/05 §4: the core may run toward the palette's Yellow-White so the leading edge has a hot
         // centre, but the point stays violet-dominated - hence u_coreMix, which stays well below 1.
         vec3 colour = mix(u_colour, u_coreColour, core * u_coreMix);
+        // A settled node has burnt out: it cools to the ember colour of the visited filigree.
+        colour = mix(colour, u_emberColour, vSettled);
 
         // Debug: strictly-violet points, no white core, no beam gain - a probe representation that lets
         // the numeric state be read without the look getting in the way.
@@ -216,7 +220,8 @@ export function createSearchNodeMaterial(config) {
     bestF: Number.NaN,
     debug: Number.NaN,
     colour: '',
-    coreColour: ''
+    coreColour: '',
+    emberColour: ''
   };
 
   /**
@@ -232,7 +237,11 @@ export function createSearchNodeMaterial(config) {
    */
   function sync(next, frame, phase, framesPerEvent, bestF) {
     uniforms.u_frame.value = frame;
-    uniforms.u_dim.value = phase.final ? next.search.settleFactor : 1;
+    uniforms.u_dim.value = 1 - (phase.clear ?? 0);
+    if (applied.emberColour !== next.search.emberColour) {
+      uniforms.u_emberColour.value.set(next.search.emberColour);
+      applied.emberColour = next.search.emberColour;
+    }
     uniforms.u_bestF.value = Number.isFinite(bestF) ? bestF : 0;
 
     const band = Math.max(next.search.frontierBandEvents * framesPerEvent, 1);

@@ -4,6 +4,7 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 import { config, palette } from '../config.js'
 import { FINISHES } from './finishes.js'
 import { publishCarCenter } from './ref.js'
+import { createStudioEnvironment } from '../look.js'
 
 // NOTE: DRACOLoader is deliberately NOT imported.
 //
@@ -24,7 +25,7 @@ export function loadCar(scene, onReady) {
   const loader = new GLTFLoader()
 
   loader.load(
-    config.car.modelPath,
+    `${(import.meta.env?.BASE_URL ?? '/').replace(/\/$/, '')}${config.car.modelPath}`,
     (gltf) => {
       const car = gltf.scene
 
@@ -317,11 +318,8 @@ function findFirstMaterial(car) {
 // scene into something a rough surface can sample at the right blur level --
 // without it, roughness would have no visible effect on reflections.
 export function createEnvironment(renderer) {
-  const pmrem = new THREE.PMREMGenerator(renderer)
-  pmrem.compileEquirectangularShader()
-  const envScene = new RoomEnvironment()
-  const target = pmrem.fromScene(envScene, 0.04)
-  pmrem.dispose()
-  envScene.dispose?.()
-  return target.texture
+  // The upgraded look replaces the neutral RoomEnvironment with an authored studio
+  // (look.js): a dark room with a handful of placed lights, so the lacquer shows
+  // deliberate highlights instead of a generic bright interior.
+  return createStudioEnvironment(renderer)
 }

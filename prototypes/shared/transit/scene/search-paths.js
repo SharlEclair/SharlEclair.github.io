@@ -73,12 +73,18 @@ export function phases(u, search) {
   const clamped = Number.isFinite(u) ? Math.min(1, Math.max(0, u)) : 0;
   const end = Math.min(Math.max(search.replayEnd, 1e-6), 1);
   const freezeStart = Math.min(Math.max(search.freezeEnd, end), 1);
-  const searchFrac = Math.min(clamped / end, 1);
+  const begin = Math.min(Math.max(search.replayStart ?? 0, 0), end - 1e-6);
+  const searchFrac = Math.min(Math.max((clamped - begin) / (end - begin), 0), 1);
   const frozen = clamped >= end;
   const final = clamped >= freezeStart;
   const span = Math.max(1 - freezeStart, 1e-6);
   const freeze = Math.min(Math.max((clamped - freezeStart) / span, 0), 1);
-  return { searchFrac, reveal: 1 - freeze, freeze, frozen, final };
+  // The explored network CLEARS the moment the goal settles: `clear` runs 0 -> 1 across a sliver of
+  // scroll (`clearSpan`) so a scrub through the completion frame is a fast wipe, not a pop.
+  const clearSpan = Math.max(search.clearSpan ?? 0.012, 1e-6);
+  const clearT = Math.min(Math.max((clamped - freezeStart) / clearSpan, 0), 1);
+  const clear = clearT * clearT * (3 - 2 * clearT);
+  return { searchFrac, reveal: 1 - freeze, freeze, frozen, final, clear };
 }
 
 /**
