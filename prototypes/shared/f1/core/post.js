@@ -71,11 +71,11 @@ const GradeShader = {
   `,
 }
 
-export function createPost(renderer, scene, camera) {
+export function createPost(renderer, scene, camera, { samples = 0 } = {}) {
   const size = renderer.getDrawingBufferSize(new THREE.Vector2())
   const target = new THREE.WebGLRenderTarget(size.x, size.y, {
     type: THREE.HalfFloatType,
-    samples: 4,
+    samples,
   })
   const composer = new EffectComposer(renderer, target)
   composer.setPixelRatio(1)

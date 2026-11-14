@@ -58,7 +58,8 @@ export function createExperience({
   progress = null,
   // Mount the lil-gui tuning panel. Off when embedded.
   gui = true,
-  maxPixelRatio = 1.5,
+  maxPixelRatio = 1.25,
+  msaa = 0,
   // Freeze the flow field's clock (prefers-reduced-motion): scroll still scrubs.
   staticTime = false,
 } = {}) {
@@ -170,7 +171,7 @@ export function createExperience({
     onResetVault,
   })
 
-  const post = createPost(renderer, scene, camera)
+  const post = createPost(renderer, scene, camera, { samples: msaa })
   const syncPostSize = () => post.setSize(renderer.domElement.width, renderer.domElement.height)
   syncPostSize()
   const stopViewportSync = onViewportChange(syncPostSize)

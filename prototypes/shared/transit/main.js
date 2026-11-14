@@ -24,7 +24,16 @@ if (!canvas || !stage || !hero) {
 window.__CONFIG = config;
 window.__APP_READY = false;
 
-startEngine({ canvas, stage, hero, hudProgress }).catch((error) => {
+// Tuning switches for measurement: ?pr=0.75 caps the pixel ratio, ?msaa=0 drops multisampling.
+const query = new URLSearchParams(location.search);
+startEngine({
+  canvas,
+  stage,
+  hero,
+  hudProgress,
+  maxPixelRatio: query.has('pr') ? Number(query.get('pr')) : 1.25,
+  msaa: query.has('msaa') ? Number(query.get('msaa')) : 0
+}).catch((error) => {
   // Keep the message for the harnesses, and the stack for a human: a bare message with no frame is
   // the difference between a five-minute fix and a five-minute hunt.
   window.__APP_ERROR = String(error && error.message ? error.message : error);

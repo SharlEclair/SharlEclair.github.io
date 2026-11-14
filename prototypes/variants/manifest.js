@@ -1,0 +1,51 @@
+/** The prototype switcher's list of variants. One entry per folder under variants/. */
+export const variants = [
+  {
+    id: '01-atelier-noir',
+    name: 'Atelier Noir',
+    line: 'Your mockups, finished: basalt black, serif and mono, phosphor-green Creation hands, torn paper, a handheld console for contact.',
+    nav: 'Collapsible left index (Shopify Winter ’26 style)',
+    archive: '“View all projects” button in the Projects section',
+    swatch: ['#0C0C0E', '#39FF88', '#E8E3D6'],
+  },
+  {
+    id: '02-gazette',
+    name: 'The Gazette',
+    line: 'Daylight newsprint collage: torn paper, halftone, column rules, the animations as dark plates punched through the page.',
+    nav: 'Masthead navbar that condenses on scroll',
+    archive: 'Top-level “Projects” link in the navbar',
+    swatch: ['#E9E4D8', '#161514', '#C8321E'],
+  },
+  {
+    id: '03-currents',
+    name: 'Currents',
+    line: 'Psychedelic streamline field that parts around a chrome sphere, spectrum stripes, loud display type.',
+    nav: 'Floating bottom quick-jump dock',
+    archive: '“View all projects” button in the Projects section',
+    swatch: ['#1B1026', '#8B5CF6', '#FF3B4E'],
+  },
+  {
+    id: '04-obsidian-ember',
+    name: 'Obsidian & Ember',
+    line: 'Architectural split screen: obsidian panels, ember-gold hairlines, a telemetry HUD beside classical editorial type.',
+    nav: 'Right-edge quick-jump rail with section ticks',
+    archive: 'Top-level “Archive” link in the header',
+    swatch: ['#0E0B0C', '#FFB800', '#7A2600'],
+  },
+  {
+    id: '05-daylight-gallery',
+    name: 'Daylight Gallery',
+    line: 'Museum minimalism: white walls, each project hung as a framed plate with a wall label, generous quiet.',
+    nav: 'Slim top bar plus a floor-plan index overlay',
+    archive: '“View the full collection” button in the Projects section',
+    swatch: ['#F4F2EC', '#1A1A1A', '#7055D9'],
+  },
+  {
+    id: '06-cartridge',
+    name: 'Cartridge',
+    line: 'The site as a translucent handheld: dot-matrix type, 1-bit dither, pixel night sky, a hidden dino run.',
+    nav: 'Persistent START menu with number-key shortcuts',
+    archive: 'Top-level “All projects” entry in the menu bar',
+    swatch: ['#101213', '#9BBC0F', '#E5483B'],
+  },
+]

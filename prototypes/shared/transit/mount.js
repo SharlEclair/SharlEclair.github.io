@@ -43,7 +43,7 @@ function ensureLabelStyles() {
  * @param {() => number} [options.progress] external 0..1 source; overrides `runway`
  * @param {boolean} [options.gui=false] mount the lil-gui tuning panel
  * @param {boolean|string} [options.label=true] show the circuit label; pass a string to change its text
- * @param {number} [options.maxPixelRatio=1.5]
+ * @param {number} [options.maxPixelRatio=1.25]
  * @param {Partial<typeof config>} [options.overrides] shallow per-group config overrides, applied before boot
  */
 export async function mountTransit(stage, options = {}) {
@@ -52,7 +52,7 @@ export async function mountTransit(stage, options = {}) {
     progress = null,
     gui = false,
     label = true,
-    maxPixelRatio = 1.5,
+    maxPixelRatio = 1.25,
     overrides = null
   } = options;
 
@@ -86,6 +86,15 @@ export async function mountTransit(stage, options = {}) {
     stage.appendChild(labelElement);
   }
 
+  // Built-in mapping: 0 when the runway's top reaches the top of the viewport, 1 when its bottom
+  // reaches the bottom. Read per frame (only while the stage is on screen), so content above the
+  // section can change height without the mapping going stale.
+  const fromRunway = () => {
+    const rect = runway.getBoundingClientRect();
+    const range = rect.height - window.innerHeight;
+    return range > 0 ? Math.min(1, Math.max(0, -rect.top / range)) : 0;
+  };
+
   window.__CONFIG = config;
   const engine = await startEngine({
     canvas,
@@ -93,7 +102,7 @@ export async function mountTransit(stage, options = {}) {
     hero: runway,
     hudProgress: null,
     gui,
-    progressSource: progress,
+    progressSource: progress ?? fromRunway,
     maxPixelRatio,
     label: labelElement
   });

@@ -11,3 +11,4 @@ dist/
 *.log
 prototypes/.shots/
 .claude/settings.local.json
+prototypes/variants/*/.shots/

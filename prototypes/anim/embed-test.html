@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Embed test</title>
+<style>
+  body{margin:0;background:#111;color:#ddd;font:16px/1.5 system-ui}
+  .pad{height:120vh;display:grid;place-items:center}
+  .runway{height:400vh;position:relative}
+  .stage{position:sticky;top:0;height:100vh;overflow:hidden}
+  .half{display:grid;grid-template-columns:1fr 1.6fr}
+  .half .stage{grid-column:2}
+  .copy{position:sticky;top:0;height:100vh;display:grid;place-items:center}
+</style>
+</head>
+<body>
+<div class="pad">Intro (no WebGL loaded yet)</div>
+<section class="runway half" id="f1"><div class="copy">F1 copy pinned</div><div class="stage" id="f1-stage"></div></section>
+<div class="pad">Between</div>
+<section class="runway" id="transit"><div class="stage" id="transit-stage"></div></section>
+<div class="pad">Outro</div>
+<script type="module">
+  import { lazyF1, lazyTransit } from '/shared/lazy.js'
+  window.__handles = {}
+  lazyF1(document.querySelector('#f1-stage'), { runway: document.querySelector('#f1') }).then((h) => (window.__handles.f1 = h))
+  lazyTransit(document.querySelector('#transit-stage'), { runway: document.querySelector('#transit') }).then((h) => (window.__handles.transit = h))
+</script>
+</body>
+</html>

@@ -22,7 +22,7 @@ import { createExperience } from './core/experience.js'
  * @param {HTMLElement} [options.runway] tall element whose scroll range maps to 0..1 (defaults to the stage's parent)
  * @param {() => number} [options.progress] external 0..1 source; overrides `runway`
  * @param {boolean} [options.gui=false] mount the lil-gui tuning panel
- * @param {number} [options.maxPixelRatio=1.5]
+ * @param {number} [options.maxPixelRatio=1.25]
  * @param {boolean} [options.reducedMotion] freeze the flow field's clock; defaults to the OS setting
  */
 export function mountF1(stage, options = {}) {
@@ -30,7 +30,7 @@ export function mountF1(stage, options = {}) {
     runway = stage.parentElement,
     progress = null,
     gui = false,
-    maxPixelRatio = 1.5,
+    maxPixelRatio = 1.25,
     reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false,
   } = options
 

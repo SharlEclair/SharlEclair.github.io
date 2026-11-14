@@ -102,13 +102,15 @@ const GradeShader = {
  * @param {THREE.Camera} camera
  * @param {typeof import('./config.js').config} config
  */
-export function createPost(renderer, scene, camera, config) {
+export function createPost(renderer, scene, camera, config, { samples = 0 } = {}) {
   const size = renderer.getDrawingBufferSize(new THREE.Vector2());
-  // 4x MSAA on the HDR target: the scene is thin additive lines, which alias badly without it, and it
-  // is far cheaper here than a post AA pass that would also soften the bloom's input.
+  // MSAA is OFF by default. Measured on an Intel UHD (1425x900): 4x multisampling of this half-float
+  // target cost ~34 ms a frame on its own, against ~11 ms for the whole pipeline without it. The bloom
+  // softens the thin additive lines enough that the difference is hard to see; pass { samples: 4 } on a
+  // discrete GPU if you want it back.
   const target = new THREE.WebGLRenderTarget(size.x, size.y, {
     type: THREE.HalfFloatType,
-    samples: renderer.capabilities.isWebGL2 ? 4 : 0
+    samples
   });
   const composer = new EffectComposer(renderer, target);
   composer.setPixelRatio(1); // sizes are passed in drawing-buffer pixels

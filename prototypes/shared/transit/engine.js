@@ -311,7 +311,9 @@ export async function startEngine({
   /** Optional `() => number` (0..1). When given it replaces the built-in scroll mapping entirely. */
   progressSource = null,
   /** Device-pixel-ratio cap. Bloom cost scales with pixels, so this is the main performance lever. */
-  maxPixelRatio = 1.5,
+  maxPixelRatio = 1.25,
+  /** MSAA samples on the HDR scene target. 0 is markedly cheaper on integrated GPUs. */
+  msaa = 0,
   /** Optional DOM element positioned over the Albert Park circuit each frame (a text label). */
   label = null
 }) {
@@ -348,7 +350,7 @@ export async function startEngine({
       }
     : createProgress({ hero });
   const panel = gui ? createGui(config) : null;
-  const post = createPost(renderer, scene, rig.camera, config);
+  const post = createPost(renderer, scene, rig.camera, config, { samples: msaa });
   let circuitLayer = null;
   let endpointsLayer = null;
   /** Last progress actually drawn; the picture is a pure function of it, so equal means skip. */
