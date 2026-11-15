@@ -1,6 +1,6 @@
 # 03 Currents
 
-- Concept: a psychedelic streamline field (one 2D canvas, about 1,650 lines) that parts around a chrome sphere, spectrum stripes as dividers, and loud condensed display type (Bricolage Grotesque) with mono labels (DM Mono).
+- Concept: a psychedelic streamline field (one 2D canvas of fine parallel lines) that parts around a chrome sphere, spectrum stripes as dividers, and loud condensed display type (Bricolage Grotesque) with mono labels (DM Mono).
 - Nav: a floating bottom dock with a sliding marker, number keys 1 to 5, an email button and the theme toggle. It slips away while a pinned runway copy card would sit under it. On phones the labels shorten and "Intro" is dropped (the brand link and key 1 still go to the top).
 - Archive trigger: a "View all projects" pill button at the end of the Projects section, linking to `projects.html` (rows with spectrum edges, featured four plus the `archive` list).
 - Field: `field.js` keeps the sphere/line state per section (`data-field` on each section, the deepest section at mid-viewport wins) and stops drawing when no transparent section is on screen. DPR 1, self-governing line density, still frames under reduced motion.

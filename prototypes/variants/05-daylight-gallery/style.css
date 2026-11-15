@@ -184,6 +184,7 @@ ol.plan-works { list-style: none; margin: 0; padding: 0 1.1rem 1rem; display: gr
 .cat-foot a { display: inline-flex; align-items: center; min-height: 2.75rem; }
 @media (max-width: 720px) { .check { grid-template-columns: 2.6rem minmax(0, 1fr); grid-template-areas: "no title" "no meta" "no text" "no links"; } .check-meta { padding-top: 0; } .catalogue { padding-top: 6rem; } }
 @media (prefers-reduced-motion: reduce) {
+  .runway { height: auto !important; }
   .hang { position: relative; height: auto; }
   .tide, .sq-try, .sq-x, .sq-fix, .sq-dot { animation: none; }
 }

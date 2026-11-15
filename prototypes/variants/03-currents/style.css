@@ -176,6 +176,7 @@ section { padding: clamp(5rem, 10vw, 9rem) var(--gut); }
   .hero { padding-top: 4.6rem; }
 }
 @media (prefers-reduced-motion: reduce) {
+  .runway { height: auto !important; }
   .pin { position: relative; height: auto; display: grid; }
   .fill { position: relative; height: 60vh; }
   .pin .card { position: static; transform: none; width: auto; }
