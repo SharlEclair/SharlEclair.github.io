@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ashwin Pillai, data engineer</title>
+<meta name="description" content="Ashwin Pillai. I build systems for making sense of complicated things.">
+<link rel="icon" href="/favicon.svg">
+<script>(function(){var d=document.documentElement;d.classList.add('js');try{var t=localStorage.getItem('portfolio-theme');if(t!=='light'&&t!=='dark')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';d.dataset.theme=t}catch(e){d.dataset.theme='dark'}})()</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,300..800&family=DM+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="/shared/ui/base.css">
+<link rel="stylesheet" href="/variants/03-currents/style.css">
+</head>
+<body data-page="home">
+<canvas id="field" aria-hidden="true"></canvas>
+<a class="skip-link" href="#main">Skip to content</a>
+<a class="brand" href="#top">Ashwin Pillai</a>
+<main id="main">
+<section id="top" class="hero" data-field=".64,.42,1.5,1,1,1" aria-labelledby="hero-h" tabindex="-1">
+<h1 id="hero-h" class="name"><span>Ashwin</span><span>Pillai</span></h1>
+<p class="tag">I build systems for making sense of complicated things.</p>
+<p class="meta">Data engineer / Melbourne, Australia</p>
+<div class="stripes" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+</section>
+<section id="approach" class="approach" data-field=".86,.3,.85,.55,.6,.6" aria-labelledby="approach-h" tabindex="-1">
+<h2 id="approach-h" class="h2">How I work</h2>
+<div class="approach__grid">
+<p class="big">I get annoyed by things that are slow for no reason. A coursebook build that took 389.9 seconds. A pipeline that trusted data nobody checked. A system that behaves like a black box.</p>
+<p class="sm"><b>02</b>A broken system is just a problem that gives you clues instead of answers. I find the friction, then write the version without it: that build now runs in 34.2 seconds, and a content-check audit I ran cut false alarms by 68%.</p>
+<p class="sm"><b>03</b>Computer Science with Honours in AI/ML, now finishing a Master of Data Science at RMIT. Off the clock, I’m watching F1 tech breakdowns or Paper Rex pushing into enemy spawn on defence.</p>
+</div>
+</section>
+<section id="projects" class="projects" data-field=".5,.5,1,.45,.3,0" aria-labelledby="projects-h" tabindex="-1">
+<div class="projects__head"><h2 id="projects-h" class="h2">Projects</h2><div class="stripes" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div></div>
+<article class="proj proj--anim" aria-labelledby="f1-pitwall-t">
+<div class="runway" style="--runway:380vh">
+<div class="pin">
+<div class="fill" data-stage="f1"></div>
+<div class="card" data-copy>
+<p class="k"><b>01</b> Data platform / 2026</p>
+<h3 id="f1-pitwall-t">F1 Pitwall Platform</h3>
+<p>Formula 1 produces huge amounts of live timing data, and some of it is wrong. I built a system that collects it automatically every week, runs 23 checks on it, and proves that all 84,140 laps from 88 race sessions arrive safely in a cloud database, with none lost or altered.</p>
+</div>
+</div>
+</div>
+<div class="facts">
+<dl><div><dt>Laps accounted for</dt><dd>84,140</dd></div><div><dt>Race sessions</dt><dd>88</dd></div><div><dt>Data-quality checks</dt><dd>23</dd></div></dl>
+<ul class="chips" role="list" aria-label="Built with"><li>AWS Lambda</li><li>S3</li><li>EventBridge</li><li>Polars</li><li>Snowflake</li><li>dbt</li><li>DuckDB</li><li>Power BI</li><li>GitHub Actions</li></ul>
+<a class="more" href="https://github.com/SharlEclair/f1-pitwall-platform" rel="noopener">Source on GitHub <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13.5 6.5L19 12l-5.5 5.5"/></svg></a>
+</div>
+</article>
+<article class="proj proj--anim" aria-labelledby="transit-desert-t">
+<div class="runway" style="--runway:420vh">
+<div class="pin">
+<div class="fill" data-stage="transit"></div>
+<div class="card" data-copy>
+<p class="k"><b>02</b> Geospatial analysis / 2026</p>
+<h3 id="transit-desert-t">Transit Desert</h3>
+<p>Some parts of a city are hard to get out of without a car. I mapped a city into more than 10,000 small squares and measured how long it takes to reach places from each one. Modelling 177 planned metro stations shows travel time falling in about one square in five (20.2%).</p>
+<p class="cap">Illustration: an A* search replayed over Melbourne, RMIT to the Albert Park circuit.</p>
+</div>
+</div>
+</div>
+<div class="facts">
+<dl><div><dt>Grid squares</dt><dd>10,000+</dd></div><div><dt>Planned stations modelled</dt><dd>177</dd></div><div><dt>Squares with faster travel</dt><dd>20.2%</dd></div></dl>
+<ul class="chips" role="list" aria-label="Built with"><li>H3</li><li>GTFS</li><li>OpenStreetMap</li><li>Conveyal R5</li><li>DuckDB</li><li>Python</li></ul>
+</div>
+</article>
+<article class="proj proj--still" data-field=".12,.78,.8,.45,.5,.6" aria-labelledby="sql-agent-t">
+<div class="still">
+<figure class="viz" role="img" aria-label="A loop: ask in plain English, write the query, safety check, run. When a run fails the agent diagnoses and fixes the query, then runs it again. 9 of 10 correct on the first attempt, 10 of 10 after self-healing.">
+<svg viewBox="0 0 540 280" aria-hidden="true" focusable="false">
+<path class="lane" d="M50 190H490"/>
+<path class="flow" d="M50 190H490"/>
+<path class="loopback" d="M490 190C490 60 380 60 330 60S210 60 210 150"/>
+<path class="loopback fix" d="M330 60C250 60 250 190 250 190"/>
+<g class="n"><circle cx="50" cy="190" r="9"/><circle cx="170" cy="190" r="9"/><circle cx="290" cy="190" r="9"/><circle class="bad" cx="490" cy="190" r="9"/><circle class="ok" cx="330" cy="60" r="9"/></g>
+<g class="t"><text x="50" y="224" text-anchor="middle">Ask</text><text x="170" y="224" text-anchor="middle">Write query</text><text x="290" y="224" text-anchor="middle">Safety check</text><text x="490" y="224" text-anchor="middle">Run: error</text><text x="330" y="36" text-anchor="middle">Diagnose and fix</text></g>
+</svg>
+<div class="pips" aria-hidden="true"><span>First attempt</span><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i class="miss"></i></div>
+<div class="pips ok" aria-hidden="true"><span>Self-healed</span><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+</figure>
+<div class="card">
+<p class="k"><b>03</b> Agentic AI / 2026</p>
+<h3 id="sql-agent-t">Self-Healing SQL Agent</h3>
+<p>Most people can’t ask a database a question without knowing a query language. This tool lets you ask in plain English: an AI writes the database query, safety checks review it before it runs, and if it fails, the tool diagnoses the error and fixes it itself. It went from 9 correct answers to a perfect 10 out of 10 on a test set, and 45 automated tests keep it reliable.</p>
+</div>
+</div>
+<div class="facts">
+<dl><div><dt>Correct, first attempt</dt><dd>9 / 10</dd></div><div><dt>Correct, after self-healing</dt><dd>10 / 10</dd></div><div><dt>Automated tests</dt><dd>45</dd></div></dl>
+<ul class="chips" role="list" aria-label="Built with"><li>Python</li><li>DuckDB</li><li>sqlglot</li><li>LLM</li></ul>
+<a class="more" href="https://github.com/SharlEclair/home-credit-agent" rel="noopener">Source on GitHub <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13.5 6.5L19 12l-5.5 5.5"/></svg></a>
+</div>
+</article>
+<article class="proj proj--still proj--flip" data-field=".9,.7,.8,.45,.5,.6" aria-labelledby="harvest-surprise-t">
+<div class="still">
+<figure class="viz viz--h" role="img" aria-label="Contour views of three reservoirs, a satellite water-level line tracking a gauge line, and bars for the rice area planted.">
+<svg viewBox="0 0 540 300" aria-hidden="true" focusable="false">
+<g class="rings"><ellipse class="r0" cx="90" cy="70" rx="78" ry="50" transform="rotate(-12 90 70)"/><ellipse class="r1" cx="90" cy="70" rx="60" ry="39" transform="rotate(2 90 70)"/><ellipse class="r2" cx="90" cy="70" rx="43" ry="28" transform="rotate(16 90 70)"/><ellipse class="r3" cx="90" cy="70" rx="28" ry="18" transform="rotate(30 90 70)"/><ellipse class="r0" cx="270" cy="70" rx="63" ry="40" transform="rotate(-12 270 70)"/><ellipse class="r1" cx="270" cy="70" rx="49" ry="31" transform="rotate(2 270 70)"/><ellipse class="r2" cx="270" cy="70" rx="35" ry="22" transform="rotate(16 270 70)"/><ellipse class="r3" cx="270" cy="70" rx="23" ry="14" transform="rotate(30 270 70)"/><ellipse class="r0" cx="450" cy="70" rx="73" ry="46" transform="rotate(-12 450 70)"/><ellipse class="r1" cx="450" cy="70" rx="57" ry="36" transform="rotate(2 450 70)"/><ellipse class="r2" cx="450" cy="70" rx="41" ry="26" transform="rotate(16 450 70)"/><ellipse class="r3" cx="450" cy="70" rx="26" ry="17" transform="rotate(30 450 70)"/></g>
+<g transform="translate(14 150)" class="lines"><path class="g" d="M0 50L0 40L24 34L48 28L72 23L96 20L120 19L144 20L168 23L192 27L216 32L240 37L264 42L288 46L312 49L336 50L360 48L384 45L408 40L432 34L456 28L480 21L504 16"/><path class="s" d="M0 52L0 38L24 33L48 28L72 22L96 21L120 21L144 21L168 25L192 31L216 34L240 40L264 46L288 48L312 51L336 52L360 48L384 45L408 41L432 32L456 27L480 22L504 14"/></g>
+<g transform="translate(14 232)" class="bars"><rect style="--i:0" x="0" y="44" width="14" height="14"/><rect style="--i:1" x="24" y="39" width="14" height="19"/><rect style="--i:2" x="48" y="35" width="14" height="23"/><rect style="--i:3" x="72" y="33" width="14" height="25"/><rect style="--i:4" x="96" y="31" width="14" height="27"/><rect style="--i:0" x="120" y="31" width="14" height="27"/><rect style="--i:1" x="144" y="31" width="14" height="27"/><rect style="--i:2" x="168" y="33" width="14" height="25"/><rect style="--i:3" x="192" y="35" width="14" height="23"/><rect style="--i:4" x="216" y="37" width="14" height="21"/><rect style="--i:0" x="240" y="38" width="14" height="20"/><rect style="--i:1" x="264" y="38" width="14" height="20"/><rect style="--i:2" x="288" y="36" width="14" height="22"/><rect style="--i:3" x="312" y="33" width="14" height="25"/><rect style="--i:4" x="336" y="29" width="14" height="29"/><rect style="--i:0" x="360" y="25" width="14" height="33"/><rect style="--i:1" x="384" y="20" width="14" height="38"/><rect style="--i:2" x="408" y="16" width="14" height="42"/><rect style="--i:3" x="432" y="13" width="14" height="45"/><rect style="--i:4" x="456" y="11" width="14" height="47"/><rect style="--i:0" x="480" y="11" width="14" height="47"/><rect style="--i:1" x="504" y="12" width="14" height="46"/></g>
+</svg>
+<p class="leg" aria-hidden="true"><span class="s">satellite</span><span class="g">gauge</span><span class="b">rice planted</span></p>
+</figure>
+<div class="card">
+<p class="k"><b>04</b> Research / 2026</p>
+<h3 id="harvest-surprise-t">Harvest Surprise</h3>
+<p>Can free satellite photos tell us how the economy is doing? I tested it. Satellite images of three California reservoirs tracked their real water levels closely, and those water levels helped predict how much rice farmers plant, even on years the model hadn’t seen.</p>
+</div>
+</div>
+<div class="facts">
+<dl><div><dt>Reservoirs measured</dt><dd>3</dd></div></dl>
+<ul class="chips" role="list" aria-label="Built with"><li>Sentinel-2</li><li>Planetary Computer</li><li>Python</li><li>FastAPI</li><li>DuckDB</li></ul>
+<a class="more" href="https://github.com/SharlEclair/harvest-surprise" rel="noopener">Source on GitHub <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13.5 6.5L19 12l-5.5 5.5"/></svg></a>
+</div>
+</article>
+<p class="all"><a class="btn" href="/variants/03-currents/projects.html">View all projects <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13.5 6.5L19 12l-5.5 5.5"/></svg></a></p>
+</section>
+<section id="experience" class="experience" data-field=".1,.22,.95,.45,.5,.8" aria-labelledby="exp-h" tabindex="-1">
+<h2 id="exp-h" class="h2">Experience</h2>
+<article class="band" style="--c:var(--s1)">
+<p class="band__d">Jul 2026 to present<span>Melbourne</span></p>
+<div><h3>Data Engineer</h3><p class="band__o">Spectrum Tuition, RMIT industry capstone</p>
+<ul><li>Made a coursebook build 11 times faster, from 389.9 seconds to 34.2, by running the AI steps in parallel and testing that the output matched the original.</li><li>Audited the platform’s automatic quality checks on real tutor books and shipped 21 fixes. False alarms fell by 68%, and on a book the checks had never seen they fell from 345 to 3.</li><li>Helped put the platform’s production website online, setting up the domain, hosting and database.</li></ul></div>
+</article>
+<article class="band" style="--c:var(--s2)">
+<p class="band__d">Dec 2023 to Apr 2024<span>Mumbai</span></p>
+<div><h3>Data Analytics Engineer</h3><p class="band__o">Embin Technologies</p>
+<ul><li>Cut manual reporting time by 40% by designing dashboards that operational managers could drill into, and walking them through how to use them.</li><li>Reduced device-level data errors by 25% by finding that sensor readings were drifting out of calibration.</li><li>Built automated pipelines that cleaned IoT sensor data and showed occupancy and peak-demand patterns across 40+ facilities.</li></ul></div>
+</article>
+<article class="band" style="--c:var(--s3)">
+<p class="band__d">Mar 2025 to Dec 2026<span>Melbourne</span></p>
+<div><h3>Master of Data Science</h3><p class="band__o">RMIT University</p>
+<ul><li>Future Leaders Scholarship recipient (20% tuition reduction).</li><li>Applied coursework in data visualisation, databases, analytics and data wrangling, with the capstone above as the industry project.</li></ul></div>
+</article>
+</section>
+<section id="contact" class="contact" data-field=".5,.38,1.6,1,1,1" aria-labelledby="contact-h" tabindex="-1">
+<h2 id="contact-h" class="h2">Contact</h2>
+<p class="mailbig"><a href="mailto:ashwinrajesh@yahoo.com">ashwinrajesh@yahoo.com</a></p>
+<ul class="links" role="list">
+<li><a href="#linkedin-url-to-be-added">LinkedIn <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13.5 6.5L19 12l-5.5 5.5"/></svg></a></li>
+<li><a href="https://github.com/SharlEclair" rel="noopener">GitHub, SharlEclair <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13.5 6.5L19 12l-5.5 5.5"/></svg></a></li>
+</ul>
+<div class="stripes" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+</section>
+</main>
+<nav class="dock" aria-label="Quick jump">
+<div class="dock-links"><span class="dock-marker" aria-hidden="true"></span>
+<a href="#top"><kbd aria-hidden="true">1</kbd><span class="full">Intro</span><span class="short">Intro</span></a>
+<a href="#approach"><kbd aria-hidden="true">2</kbd><span class="full">How I work</span><span class="short">How</span></a>
+<a href="#projects"><kbd aria-hidden="true">3</kbd><span class="full">Projects</span><span class="short">Projects</span></a>
+<a href="#experience"><kbd aria-hidden="true">4</kbd><span class="full">Experience</span><span class="short">Work</span></a>
+<a href="#contact"><kbd aria-hidden="true">5</kbd><span class="full">Contact</span><span class="short">Contact</span></a>
+</div>
+<a class="dock-btn" href="mailto:ashwinrajesh@yahoo.com" aria-label="Email ashwinrajesh@yahoo.com"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 6.5h17v11h-17zM3.5 7l8.5 6.5L20.5 7"/></svg></a>
+<button class="dock-btn" type="button" data-theme-toggle><svg class="i-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg><svg class="i-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.5 14.5A8 8 0 0 1 9.5 4.5a8 8 0 1 0 10 10z"/></svg></button>
+</nav>
+<script type="module" src="/variants/03-currents/main.js"></script>
+<script type="module" src="/shared/ui/switcher.js"></script>
+</body>
+</html>
