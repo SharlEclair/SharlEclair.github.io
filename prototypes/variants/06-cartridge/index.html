@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ashwin Pillai, data engineer</title>
+<meta name="description" content="Ashwin Pillai. I build systems for making sense of complicated things.">
+<link rel="icon" href="/favicon.svg">
+<script>(function(){var d=document.documentElement;d.classList.add('js');try{var t=localStorage.getItem('portfolio-theme');if(t!=='light'&&t!=='dark')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';d.dataset.theme=t}catch(e){d.dataset.theme='dark'}})()</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&family=Atkinson+Hyperlegible+Next:wght@400..700&display=swap">
+<link rel="stylesheet" href="/shared/ui/base.css">
+<link rel="stylesheet" href="/variants/06-cartridge/style.css">
+</head>
+<body data-page="home">
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="bar">
+<button class="bar-start" type="button" aria-expanded="false" aria-controls="menu">Start</button>
+<p class="bar-now" data-now></p>
+<div class="bar-right">
+<a class="bar-lib" href="/variants/06-cartridge/projects.html">All projects</a>
+<a class="ibtn" href="mailto:ashwinrajesh@yahoo.com" aria-label="Email ashwinrajesh@yahoo.com"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 6.5h17v11h-17zM3.5 7l8.5 6.5L20.5 7"/></svg></a>
+<button class="ibtn" type="button" data-theme-toggle aria-label="Switch theme"><svg class="i-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg><svg class="i-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.5 14.5A8 8 0 0 1 9.5 4.5a8 8 0 1 0 10 10z"/></svg></button>
+</div>
+<div class="menu" id="menu" data-open="false">
+<nav aria-label="Sections"><ol role="list">
+<li><a href="#top"><kbd>1</kbd>Intro</a></li>
+<li><a href="#approach"><kbd>2</kbd>How I work</a></li>
+<li><a href="#projects"><kbd>3</kbd>Projects</a></li>
+<li><a href="#experience"><kbd>4</kbd>Experience</a></li>
+<li><a href="#contact"><kbd>5</kbd>Contact</a></li>
+<li><a class="menu-lib" href="/variants/06-cartridge/projects.html"><kbd aria-hidden="true">+</kbd>All projects</a></li>
+<li><a href="mailto:ashwinrajesh@yahoo.com"><kbd aria-hidden="true">@</kbd>ashwinrajesh@yahoo.com</a></li>
+</ol></nav>
+</div>
+</header>
+<main id="main">
+<section id="top" class="hero" tabindex="-1" aria-labelledby="hero-h">
+<div class="shell hero-shell">
+<div class="bezel"><span class="led" aria-hidden="true"></span>
+<div class="screen screen--grid hero-lcd" data-sky>
+<canvas class="lcd" data-sky-canvas aria-hidden="true"></canvas>
+<div class="hero-copy">
+<h1 id="hero-h" class="px">Ashwin Pillai</h1>
+<p class="tagline">I build systems for making sense of complicated things.</p>
+<p class="hero-meta px">Data engineer / Melbourne, Australia</p>
+<p class="hint px">Press <b>Start</b> or keys <kbd>1</kbd>-<kbd>5</kbd></p>
+</div>
+</div>
+</div>
+<div class="deck" aria-hidden="true"><span class="dpad"></span><span class="grille"></span><span class="ab"><i>B</i><i>A</i></span></div>
+</div>
+</section>
+<section id="approach" class="approach" tabindex="-1" aria-labelledby="approach-h">
+<div class="wrap">
+<h2 id="approach-h">How I work</h2>
+<div class="prose">
+<p>I get annoyed by things that are slow for no reason. A coursebook build that took 389.9 seconds. A pipeline that trusted data nobody checked. A system that behaves like a black box.</p>
+<p>A broken system is just a problem that gives you clues instead of answers. I find the friction, then write the version without it: that build now runs in 34.2 seconds, and a content-check audit I ran cut false alarms by 68%.</p>
+<p>Computer Science with Honours in AI/ML, now finishing a Master of Data Science at RMIT. Off the clock, I’m watching F1 tech breakdowns or Paper Rex pushing into enemy spawn on defence.</p>
+</div>
+</div>
+</section>
+<section id="projects" class="projects" tabindex="-1" aria-labelledby="projects-h">
+<div class="wrap"><h2 id="projects-h">Projects</h2></div>
+<article class="proj" aria-labelledby="f1-pitwall-t">
+<div class="runway" style="--runway:380vh">
+<div class="pin">
+<div class="copy cart">
+<p class="cart-kind"><span>01</span> Data platform · 2026</p>
+<h3 id="f1-pitwall-t">F1 Pitwall Platform</h3>
+<p>Formula 1 produces huge amounts of live timing data, and some of it is wrong. I built a system that collects it automatically every week, runs 23 checks on it, and proves that all 84,140 laps from 88 race sessions arrive safely in a cloud database, with none lost or altered.</p>
+</div>
+<div class="shell handheld"><div class="bezel"><span class="led" aria-hidden="true"></span><div class="screen"><div class="plate" data-stage="f1"></div></div></div><div class="deck" aria-hidden="true"><span class="dpad"></span><span class="grille"></span><span class="ab"><i>B</i><i>A</i></span></div></div>
+</div>
+</div>
+<div class="facts screen">
+<dl><div><dt>Laps accounted for</dt><dd>84,140</dd></div><div><dt>Race sessions</dt><dd>88</dd></div><div><dt>Data-quality checks</dt><dd>23</dd></div></dl>
+<ul class="chips" role="list" aria-label="Built with"><li>AWS Lambda</li><li>S3</li><li>EventBridge</li><li>Polars</li><li>Snowflake</li><li>dbt</li><li>DuckDB</li><li>Power BI</li><li>GitHub Actions</li></ul>
+<a class="more" href="https://github.com/SharlEclair/f1-pitwall-platform" rel="noopener">Source on GitHub <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M10.5 5.5 15 10l-4.5 4.5"/></svg></a>
+</div>
+</article>
+<article class="proj proj--r" aria-labelledby="transit-desert-t">
+<div class="runway" style="--runway:420vh">
+<div class="pin">
+<div class="copy cart">
+<p class="cart-kind"><span>02</span> Geospatial analysis · 2026</p>
+<h3 id="transit-desert-t">Transit Desert</h3>
+<p>Some parts of a city are hard to get out of without a car. I mapped a city into more than 10,000 small squares and measured how long it takes to reach places from each one. Modelling 177 planned metro stations shows travel time falling in about one square in five (20.2%).</p>
+<p class="cap">Illustration: an A* search replayed over Melbourne, RMIT to the Albert Park circuit.</p>
+</div>
+<div class="shell handheld"><div class="bezel"><span class="led" aria-hidden="true"></span><div class="screen"><div class="plate" data-stage="transit"></div></div></div><div class="deck" aria-hidden="true"><span class="dpad"></span><span class="grille"></span><span class="ab"><i>B</i><i>A</i></span></div></div>
+</div>
+</div>
+<div class="facts screen">
+<dl><div><dt>Grid squares</dt><dd>10,000+</dd></div><div><dt>Planned stations modelled</dt><dd>177</dd></div><div><dt>Squares with faster travel</dt><dd>20.2%</dd></div></dl>
+<ul class="chips" role="list" aria-label="Built with"><li>H3</li><li>GTFS</li><li>OpenStreetMap</li><li>Conveyal R5</li><li>DuckDB</li><li>Python</li></ul>
+</div>
+</article>
+<article class="proj proj--still" aria-labelledby="sql-agent-t">
+<div class="still">
+<div class="shell handheld handheld--mini"><div class="bezel"><span class="led" aria-hidden="true"></span><div class="screen screen--grid"><canvas class="lcd" data-scene="sql" role="img" aria-label="A small LCD loop: the SQL agent asks, writes a query, safety checks it, runs it, hits an error, squashes the bug, re-runs, and the benchmark fills from 9 to 10 out of 10."></canvas></div></div><div class="deck" aria-hidden="true"><span class="dpad"></span><span class="grille"></span><span class="ab"><i>B</i><i>A</i></span></div></div>
+<div class="copy cart">
+<p class="cart-kind"><span>03</span> Agentic AI · 2026</p>
+<h3 id="sql-agent-t">Self-Healing SQL Agent</h3>
+<p>Most people can’t ask a database a question without knowing a query language. This tool lets you ask in plain English: an AI writes the database query, safety checks review it before it runs, and if it fails, the tool diagnoses the error and fixes it itself. It went from 9 correct answers to a perfect 10 out of 10 on a test set, and 45 automated tests keep it reliable.</p>
+</div>
+</div>
+<div class="facts screen">
+<dl><div><dt>Correct, first attempt</dt><dd>9 / 10</dd></div><div><dt>Correct, after self-healing</dt><dd>10 / 10</dd></div><div><dt>Automated tests</dt><dd>45</dd></div></dl>
+<ul class="chips" role="list" aria-label="Built with"><li>Python</li><li>DuckDB</li><li>sqlglot</li><li>LLM</li></ul>
+<a class="more" href="https://github.com/SharlEclair/home-credit-agent" rel="noopener">Source on GitHub <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M10.5 5.5 15 10l-4.5 4.5"/></svg></a>
+</div>
+</article>
+<article class="proj proj--still proj--r" aria-labelledby="harvest-surprise-t">
+<div class="still">
+<div class="shell handheld handheld--mini"><div class="bezel"><span class="led" aria-hidden="true"></span><div class="screen screen--grid"><canvas class="lcd" data-scene="reservoir" role="img" aria-label="A small LCD scene: a satellite passes over a reservoir while a gauge trace follows the water level."></canvas></div></div><div class="deck" aria-hidden="true"><span class="dpad"></span><span class="grille"></span><span class="ab"><i>B</i><i>A</i></span></div></div>
+<div class="copy cart">
+<p class="cart-kind"><span>04</span> Research · 2026</p>
+<h3 id="harvest-surprise-t">Harvest Surprise</h3>
+<p>Can free satellite photos tell us how the economy is doing? I tested it. Satellite images of three California reservoirs tracked their real water levels closely, and those water levels helped predict how much rice farmers plant, even on years the model hadn’t seen.</p>
+</div>
+</div>
+<div class="facts screen">
+<dl><div><dt>Reservoirs measured</dt><dd>3</dd></div></dl>
+<ul class="chips" role="list" aria-label="Built with"><li>Sentinel-2</li><li>Planetary Computer</li><li>Python</li><li>FastAPI</li><li>DuckDB</li></ul>
+<a class="more" href="https://github.com/SharlEclair/harvest-surprise" rel="noopener">Source on GitHub <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M10.5 5.5 15 10l-4.5 4.5"/></svg></a>
+</div>
+</article>
+<p class="wrap all"><a class="btn" href="/variants/06-cartridge/projects.html">All projects <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M10.5 5.5 15 10l-4.5 4.5"/></svg></a></p>
+</section>
+<section id="experience" class="experience" tabindex="-1" aria-labelledby="exp-h">
+<div class="wrap">
+<h2 id="exp-h">Experience</h2>
+<div class="slots">
+<article class="slot">
+<p class="slot-when"><b>SLOT 1</b>Jul 2026 to present<span>Melbourne</span></p>
+<div><h3>Data Engineer</h3><p class="slot-org">Spectrum Tuition, RMIT industry capstone</p>
+<ul><li>Made a coursebook build 11 times faster, from 389.9 seconds to 34.2, by running the AI steps in parallel and testing that the output matched the original.</li><li>Audited the platform’s automatic quality checks on real tutor books and shipped 21 fixes. False alarms fell by 68%, and on a book the checks had never seen they fell from 345 to 3.</li><li>Helped put the platform’s production website online, setting up the domain, hosting and database.</li></ul></div>
+</article>
+<article class="slot">
+<p class="slot-when"><b>SLOT 2</b>Dec 2023 to Apr 2024<span>Mumbai</span></p>
+<div><h3>Data Analytics Engineer</h3><p class="slot-org">Embin Technologies</p>
+<ul><li>Cut manual reporting time by 40% by designing dashboards that operational managers could drill into, and walking them through how to use them.</li><li>Reduced device-level data errors by 25% by finding that sensor readings were drifting out of calibration.</li><li>Built automated pipelines that cleaned IoT sensor data and showed occupancy and peak-demand patterns across 40+ facilities.</li></ul></div>
+</article>
+<article class="slot">
+<p class="slot-when"><b>SLOT 3</b>Mar 2025 to Dec 2026<span>Melbourne</span></p>
+<div><h3>Master of Data Science</h3><p class="slot-org">RMIT University</p>
+<ul><li>Future Leaders Scholarship recipient (20% tuition reduction).</li><li>Applied coursework in data visualisation, databases, analytics and data wrangling, with the capstone above as the industry project.</li></ul></div>
+</article>
+</div>
+</div>
+</section>
+<section id="contact" class="contact" tabindex="-1" aria-labelledby="contact-h">
+<div class="wrap contact-grid">
+<div>
+<h2 id="contact-h">Contact</h2>
+<p class="mailbig"><a href="mailto:ashwinrajesh@yahoo.com">ashwinrajesh@yahoo.com</a></p>
+<p class="note">Find START on the console for a secret level.</p>
+</div>
+<div class="shell console">
+<div class="bezel"><span class="led" aria-hidden="true"></span>
+<div class="screen screen--grid con-screen">
+<ul class="con-list" role="list" data-list>
+<li><a href="mailto:ashwinrajesh@yahoo.com">ashwinrajesh@yahoo.com</a></li>
+<li><a href="#linkedin-url-to-be-added">LinkedIn</a></li>
+<li><a href="https://github.com/SharlEclair" rel="noopener">GitHub, SharlEclair</a></li>
+</ul>
+<canvas class="lcd" data-game hidden role="img" aria-label="A small running-dinosaur game. Press A, space or tap to jump, Escape or B to quit."></canvas>
+</div>
+</div>
+<div class="deck con-ctl">
+<span class="dpad" aria-hidden="true"></span>
+<button class="con-start" type="button" data-start aria-label="Start the hidden game">Start</button>
+<span class="ab"><button type="button" data-b aria-label="B: quit the game">B</button><button type="button" data-a aria-label="A: jump">A</button></span>
+</div>
+</div>
+</div>
+</section>
+</main>
+<footer class="foot"><p>Ashwin Pillai, Melbourne, Australia. Set in Pixelify Sans and Atkinson Hyperlegible Next.</p><a href="#top">Back to top</a></footer>
+<script type="module" src="/variants/06-cartridge/main.js"></script>
+<script type="module" src="/shared/ui/switcher.js"></script>
+</body>
+</html>
