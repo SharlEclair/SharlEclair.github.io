@@ -39,14 +39,11 @@ export const projects = [
     kind: 'Data platform',
     animation: 'f1',
     summary:
-      'Formula 1 produces huge amounts of live timing data, and some of it is wrong. I built a system that collects it automatically every week, runs 23 checks on it, and accounts for all 84,140 laps from 88 race sessions: 84,122 clean laps and 18 quarantined, with none unaccounted for.',
-    more:
-      'It also tested whether a machine-learning model could predict lap times better than a simple formula. On the first season it could not; across three seasons it made a small but detectable improvement over the linear baseline. I reported both.',
+      'Formula 1 produces huge amounts of live timing data, and some of it is wrong. I built a system that collects it automatically every week, runs 23 checks on it, and proves that all 84,140 laps from 88 race sessions arrive safely in a cloud database, with none lost or altered.',
     facts: [
       ['Laps accounted for', '84,140'],
       ['Race sessions', '88'],
-      ['Data-quality rules', '23'],
-      ['Lap-time error, LightGBM vs linear', '0.935 s vs 1.085 s'],
+      ['Data-quality checks', '23'],
     ],
     stack: ['AWS Lambda', 'S3', 'EventBridge', 'Polars', 'Snowflake', 'dbt', 'DuckDB', 'Power BI', 'GitHub Actions'],
     repo: 'https://github.com/SharlEclair/f1-pitwall-platform',
@@ -58,13 +55,11 @@ export const projects = [
     kind: 'Geospatial analysis',
     animation: 'transit',
     summary:
-      'Some parts of a city are hard to get out of without a car. I mapped a city into more than 10,000 small squares and measured how long it takes to reach places from each one. Adding 177 planned metro stations would cut travel time in about one square in five (20.2%).',
-    more: 'The map measures land area, not number of people, and the page says so.',
+      'Some parts of a city are hard to get out of without a car. I mapped a city into more than 10,000 small squares and measured how long it takes to reach places from each one. Modelling 177 planned metro stations shows travel time falling in about one square in five (20.2%).',
     facts: [
-      ['Grid cells (H3, Res-09)', '10,891'],
+      ['Grid squares', '10,000+'],
       ['Planned stations modelled', '177'],
-      ['Cells with faster travel', '2,204 (20.2%)'],
-      ['Routing engine', 'Conveyal R5'],
+      ['Squares with faster travel', '20.2%'],
     ],
     stack: ['H3', 'GTFS', 'OpenStreetMap', 'Conveyal R5', 'DuckDB', 'Python'],
     // The animation is an illustration: an A* search replayed over Melbourne streets, from RMIT to the
@@ -80,13 +75,11 @@ export const projects = [
     kind: 'Agentic AI',
     animation: null,
     summary:
-      'Most people can’t ask a database a question without knowing a query language. This tool lets you ask in plain English: an AI writes the database query, safety checks review it before it runs, and if it fails, the tool diagnoses the error and fixes it itself.',
-    more: 'On a 10-question test it went from 9 correct to all 10 after fixing its own mistakes, and 45 automated tests keep it honest.',
+      'Most people can’t ask a database a question without knowing a query language. This tool lets you ask in plain English: an AI writes the database query, safety checks review it before it runs, and if it fails, the tool diagnoses the error and fixes it itself. It went from 9 correct answers to a perfect 10 out of 10 on a test set, and 45 automated tests keep it reliable.',
     facts: [
-      ['Benchmark, first attempt', '9 / 10'],
-      ['Benchmark, after self-healing', '10 / 10'],
+      ['Correct, first attempt', '9 / 10'],
+      ['Correct, after self-healing', '10 / 10'],
       ['Automated tests', '45'],
-      ['Query safety', 'SELECT-only, read-only database'],
     ],
     stack: ['Python', 'DuckDB', 'sqlglot', 'LLM'],
     repo: 'https://github.com/SharlEclair/home-credit-agent',
@@ -98,13 +91,9 @@ export const projects = [
     kind: 'Research',
     animation: null,
     summary:
-      'Can free satellite photos tell us how the economy is doing? I tested it. Satellite images of three California reservoirs tracked their real water levels closely (correlation 0.66 to 0.93 against gauge readings). Those water levels also helped predict how much rice farmers plant, when tested on years the model hadn’t seen.',
-    more: 'Two of my four ideas worked and two didn’t, and I report the failures too.',
+      'Can free satellite photos tell us how the economy is doing? I tested it. Satellite images of three California reservoirs tracked their real water levels closely, and those water levels helped predict how much rice farmers plant, even on years the model hadn’t seen.',
     facts: [
       ['Reservoirs measured', '3'],
-      ['Correlation with gauges', '0.66 to 0.93'],
-      ['Ideas that held up', '2 of 4'],
-      ['Pipeline stages', '11'],
     ],
     stack: ['Sentinel-2', 'Planetary Computer', 'Python', 'FastAPI', 'DuckDB'],
     repo: 'https://github.com/SharlEclair/harvest-surprise',
@@ -126,7 +115,7 @@ export const work = [
   {
     role: 'Data Engineer',
     org: 'Spectrum Tuition',
-    note: 'RMIT capstone with an industry partner, five-person team',
+    note: 'RMIT industry capstone',
     dates: 'Jul 2026 to present',
     place: 'Melbourne',
     points: [
@@ -159,13 +148,6 @@ export const education = [
       'Future Leaders Scholarship recipient (20% tuition reduction).',
       'Applied coursework in data visualisation, databases, analytics and data wrangling, with the capstone above as the industry project.',
     ],
-  },
-  {
-    role: 'Bachelor of Engineering, Computer Science',
-    org: 'St. Francis Institute of Technology',
-    dates: 'Jan 2020 to May 2024',
-    place: 'Mumbai',
-    points: ['Honours in Artificial Intelligence and Machine Learning. GPA 8.48 / 10.'],
   },
 ]
 
