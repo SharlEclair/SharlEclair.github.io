@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ashwin Pillai, data engineer</title>
+<meta name="description" content="Ashwin Pillai. I build systems for making sense of complicated things.">
+<link rel="icon" href="/favicon.svg">
+<script>(function(){var d=document.documentElement;d.classList.add('js');try{var t=localStorage.getItem('portfolio-theme');if(t!=='light'&&t!=='dark')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';d.dataset.theme=t;if(localStorage.getItem('an-index')==='rail')d.dataset.index='rail'}catch(e){d.dataset.theme='dark'}})()</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Recursive:wght,MONO@300..800,0..1&display=swap">
+<link rel="stylesheet" href="/shared/ui/base.css">
+<link rel="stylesheet" href="/variants/01-atelier-noir/style.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<button class="index-fab" type="button" aria-controls="index" aria-expanded="false" data-index-open>
+<span class="index-fab__num" data-current-num aria-hidden="true">I</span><span>Index</span>
+</button>
+<button class="tool tool--float" type="button" data-theme-toggle><svg class="tool__sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg><svg class="tool__moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.5 14.5A8 8 0 0 1 9.5 4.5a8 8 0 1 0 10 10z"/></svg></button>
+<aside class="index" id="index" aria-label="Site index">
+<a class="index__name" href="#top" aria-label="Ashwin Pillai, back to top"><span class="index__full">Ashwin Pillai</span><span class="index__mono" aria-hidden="true">AP</span></a>
+<nav aria-label="Sections">
+<ol class="index__list" role="list">
+<li><a href="#top" data-num="I"><span class="index__label">Intro</span><span class="index__num" aria-hidden="true">I</span></a></li>
+<li><a href="#approach" data-num="II"><span class="index__label">How I work</span><span class="index__num" aria-hidden="true">II</span></a></li>
+<li><a href="#projects" data-num="III"><span class="index__label">Projects</span><span class="index__num" aria-hidden="true">III</span></a></li>
+<li><a href="#experience" data-num="IV"><span class="index__label">Experience</span><span class="index__num" aria-hidden="true">IV</span></a></li>
+<li><a href="#contact" data-num="V"><span class="index__label">Contact</span><span class="index__num" aria-hidden="true">V</span></a></li>
+</ol>
+</nav>
+<div class="index__foot">
+<a class="index__mail" href="mailto:ashwinrajesh@yahoo.com"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 6.5h17v11h-17zM3.5 7l8.5 6.5L20.5 7"/></svg><span class="index__label">ashwinrajesh@yahoo.com</span></a>
+<div class="index__tools">
+<button class="tool tool--theme" type="button" data-theme-toggle><svg class="tool__sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg><svg class="tool__moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.5 14.5A8 8 0 0 1 9.5 4.5a8 8 0 1 0 10 10z"/></svg></button>
+<button class="tool tool--collapse" type="button" data-index-collapse aria-pressed="false" aria-label="Collapse index to a rail">
+<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4.5v15M19 12H9M13 7.5L8.5 12l4.5 4.5"/></svg>
+</button>
+</div>
+</div>
+</aside>
+<main id="main">
+<section id="top" class="hero" aria-labelledby="hero-h">
+<div class="hero__pin">
+<p class="hero__meta"><span>Data engineer</span><span>Melbourne, Australia</span><span>Portfolio 2026</span></p>
+<div class="screen" role="img" aria-label="Two hands drawn in green phosphor bars reach toward each other; the gap between the fingertips closes as you scroll.">
+<svg class="hands" viewBox="0 0 1200 560" preserveAspectRatio="xMidYMid meet" aria-hidden="true" focusable="false">
+<defs>
+<pattern id="bars" width="8" height="8" patternUnits="userSpaceOnUse"><rect width="8" height="5.2" fill="#fff"/></pattern>
+<mask id="barmask" maskUnits="userSpaceOnUse" x="0" y="0" width="1200" height="560"><rect width="1200" height="560" fill="url(#bars)"/></mask>
+<g id="hand" fill="currentColor" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+<path d="M-60 470L170 350" stroke-width="86"/>
+<path d="M120 330C140 250 250 232 332 256L350 330C322 388 222 404 150 378Z" stroke="none"/>
+<path d="M318 276L452 266" stroke-width="36"/><path d="M452 266L585 284" stroke-width="25"/>
+<path d="M334 306L432 322L482 352" stroke-width="29"/>
+<path d="M328 332L406 354L446 388" stroke-width="27"/>
+<path d="M312 354L374 380L402 412" stroke-width="23"/>
+<path d="M176 362L256 398L334 394" stroke-width="31"/>
+</g>
+</defs>
+<g mask="url(#barmask)" class="hands__bars">
+<use class="hands__l" href="#hand"/>
+<use class="hands__r" href="#hand"/>
+</g>
+<circle class="hands__spark" cx="600" cy="272" r="26"/>
+</svg>
+</div>
+<h1 id="hero-h" class="hero__name">Ashwin Pillai</h1>
+<p class="hero__tag">I build systems for making sense of complicated things.</p>
+</div>
+</section>
+<section id="approach" class="paper approach tear-a" aria-labelledby="approach-h">
+<div class="paper__in">
+<h2 id="approach-h" class="display">How I work</h2>
+<div class="approach__body">
+<p class="lead">I get annoyed by things that are slow for no reason. A coursebook build that took 389.9 seconds. A pipeline that trusted data nobody checked. A system that behaves like a black box.</p>
+<p class="">A broken system is just a problem that gives you clues instead of answers. I find the friction, then write the version without it: that build now runs in 34.2 seconds, and a content-check audit I ran cut false alarms by 68%.</p>
+<p class="">Computer Science with Honours in AI/ML, now finishing a Master of Data Science at RMIT. Off the clock, I’m watching F1 tech breakdowns or Paper Rex pushing into enemy spawn on defence.</p>
+</div>
+</div>
+</section>
+<section id="projects" class="projects" aria-labelledby="projects-h">
+<div class="projects__head">
+<h2 id="projects-h" class="display">Projects</h2>
+<p class="mono">Four of the things I have built. Two of them move.</p>
+</div>
+<article class="proj proj--anim" id="f1-pitwall" data-anim="f1" aria-labelledby="f1-pitwall-t">
+<div class="runway" style="--runway:360vh">
+<div class="pin">
+<div class="copy">
+<p class="kicker"><span>01</span> Data platform / 2026</p>
+<h3 class="proj__title" id="f1-pitwall-t">F1 Pitwall Platform</h3>
+<p class="proj__sum">Formula 1 produces huge amounts of live timing data, and some of it is wrong. I built a system that collects it automatically every week, runs 23 checks on it, and proves that all 84,140 laps from 88 race sessions arrive safely in a cloud database, with none lost or altered.</p>
+</div>
+<div class="plate" data-stage="f1" aria-label="F1 Pitwall Platform animation"></div>
+</div>
+</div>
+<div class="facts">
+<dl class="facts__list"><div><dt>Laps accounted for</dt><dd>84,140</dd></div><div><dt>Race sessions</dt><dd>88</dd></div><div><dt>Data-quality checks</dt><dd>23</dd></div></dl>
+<ul class="chips" role="list" aria-label="Built with"><li>AWS Lambda</li><li>S3</li><li>EventBridge</li><li>Polars</li><li>Snowflake</li><li>dbt</li><li>DuckDB</li><li>Power BI</li><li>GitHub Actions</li></ul>
+<a class="repo" href="https://github.com/SharlEclair/f1-pitwall-platform" rel="noopener">Source on GitHub <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13.5 6.5L19 12l-5.5 5.5"/></svg></a>
+</div>
+</article>
+<article class="proj proj--anim" id="transit-desert" data-anim="transit" aria-labelledby="transit-desert-t">
+<div class="runway" style="--runway:400vh">
+<div class="pin">
+<div class="copy">
+<p class="kicker"><span>02</span> Geospatial analysis / 2026</p>
+<h3 class="proj__title" id="transit-desert-t">Transit Desert</h3>
+<p class="proj__sum">Some parts of a city are hard to get out of without a car. I mapped a city into more than 10,000 small squares and measured how long it takes to reach places from each one. Modelling 177 planned metro stations shows travel time falling in about one square in five (20.2%).</p>
+<p class="cap">Illustration: an A* search replayed over Melbourne, RMIT to the Albert Park circuit.</p>
+</div>
+<div class="plate" data-stage="transit" aria-label="Transit Desert animation"></div>
+</div>
+</div>
+<div class="facts">
+<dl class="facts__list"><div><dt>Grid squares</dt><dd>10,000+</dd></div><div><dt>Planned stations modelled</dt><dd>177</dd></div><div><dt>Squares with faster travel</dt><dd>20.2%</dd></div></dl>
+<ul class="chips" role="list" aria-label="Built with"><li>H3</li><li>GTFS</li><li>OpenStreetMap</li><li>Conveyal R5</li><li>DuckDB</li><li>Python</li></ul>
+</div>
+</article>
+<article class="proj proj--still" id="sql-agent" aria-labelledby="sql-agent-t">
+<div class="still">
+<div class="pin">
+<div class="copy">
+<p class="kicker"><span>03</span> Agentic AI / 2026</p>
+<h3 class="proj__title" id="sql-agent-t">Self-Healing SQL Agent</h3>
+<p class="proj__sum">Most people can’t ask a database a question without knowing a query language. This tool lets you ask in plain English: an AI writes the database query, safety checks review it before it runs, and if it fails, the tool diagnoses the error and fixes it itself. It went from 9 correct answers to a perfect 10 out of 10 on a test set, and 45 automated tests keep it reliable.</p>
+</div>
+<div class="plate plate--sql" role="img" aria-label="A loop: ask in plain English, write the query, safety check, run. On an error the agent diagnoses and fixes, then runs again. First attempt 9 of 10 correct, after self-healing 10 of 10.">
+<div class="crt">
+<p class="t t1">&gt; ask in plain English</p>
+<ol class="loop" aria-hidden="true">
+<li>write query</li><li>safety check</li><li>run</li><li class="loop__bad">error</li><li>diagnose</li><li>fix</li>
+</ol>
+<p class="t t2">SELECT only. Read-only database.</p>
+<div class="score" aria-hidden="true"><span class="score__label">first attempt</span><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i class="miss"></i></div>
+<div class="score score--after" aria-hidden="true"><span class="score__label">self-healed</span><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+</div>
+</div>
+</div>
+</div>
+<div class="facts">
+<dl class="facts__list"><div><dt>Correct, first attempt</dt><dd>9 / 10</dd></div><div><dt>Correct, after self-healing</dt><dd>10 / 10</dd></div><div><dt>Automated tests</dt><dd>45</dd></div></dl>
+<ul class="chips" role="list" aria-label="Built with"><li>Python</li><li>DuckDB</li><li>sqlglot</li><li>LLM</li></ul>
+<a class="repo" href="https://github.com/SharlEclair/home-credit-agent" rel="noopener">Source on GitHub <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13.5 6.5L19 12l-5.5 5.5"/></svg></a>
+</div>
+</article>
+<article class="proj proj--still" id="harvest-surprise" aria-labelledby="harvest-surprise-t">
+<div class="still">
+<div class="pin">
+<div class="copy">
+<p class="kicker"><span>04</span> Research / 2026</p>
+<h3 class="proj__title" id="harvest-surprise-t">Harvest Surprise</h3>
+<p class="proj__sum">Can free satellite photos tell us how the economy is doing? I tested it. Satellite images of three California reservoirs tracked their real water levels closely, and those water levels helped predict how much rice farmers plant, even on years the model hadn’t seen.</p>
+</div>
+<div class="plate plate--harvest" role="img" aria-label="Three reservoirs seen from space, a satellite-estimated water level line tracking a gauge reading line, and bars for the area of rice planted.">
+<div class="crt">
+<svg viewBox="0 0 400 300" aria-hidden="true" focusable="false">
+<g class="tiles"><g transform="translate(8 10)"><rect class="tile" width="120" height="100"/><rect class="px" x="0" y="0" opacity=".3"/><rect class="px" x="24" y="0" opacity=".8"/><rect class="px" x="48" y="0" opacity=".6"/><rect class="px" x="72" y="0" opacity=".3"/><rect class="px" x="96" y="0" opacity=".13"/><rect class="px" x="0" y="50" opacity=".7"/><rect class="px" x="24" y="50" opacity=".9"/><rect class="px" x="48" y="50" opacity=".8"/><rect class="px" x="72" y="50" opacity=".8"/><rect class="px" x="96" y="50" opacity=".6"/><path class="lake" d="M90.3 50.0L92.9 64.7L68.9 66.8L49.6 69.7L29.2 63.8L17.0 50.0L32.7 37.8L51.5 33.9L69.4 32.3L93.2 35.1Z"/><path class="scan" d="M0 20H120"/></g><g transform="translate(140 10)"><rect class="tile" width="120" height="100"/><rect class="px" x="0" y="0" opacity=".10"/><rect class="px" x="24" y="0" opacity=".9"/><rect class="px" x="48" y="0" opacity=".8"/><rect class="px" x="72" y="0" opacity=".5"/><rect class="px" x="96" y="0" opacity=".6"/><rect class="px" x="0" y="50" opacity=".12"/><rect class="px" x="24" y="50" opacity=".3"/><rect class="px" x="48" y="50" opacity=".5"/><rect class="px" x="72" y="50" opacity=".9"/><rect class="px" x="96" y="50" opacity=".11"/><path class="lake" d="M82.0 50.0L83.1 60.3L71.5 71.8L50.4 68.1L41.0 58.5L27.5 50.0L28.8 36.0L51.5 34.0L71.6 28.0L77.9 42.0Z"/><path class="scan" d="M0 32H120"/></g><g transform="translate(272 10)"><rect class="tile" width="120" height="100"/><rect class="px" x="0" y="0" opacity=".11"/><rect class="px" x="24" y="0" opacity=".12"/><rect class="px" x="48" y="0" opacity=".14"/><rect class="px" x="72" y="0" opacity=".6"/><rect class="px" x="96" y="0" opacity=".5"/><rect class="px" x="0" y="50" opacity=".12"/><rect class="px" x="24" y="50" opacity=".14"/><rect class="px" x="48" y="50" opacity=".11"/><rect class="px" x="72" y="50" opacity=".14"/><rect class="px" x="96" y="50" opacity=".12"/><path class="lake" d="M98.0 50.0L87.5 62.3L73.0 74.7L51.1 66.8L19.7 68.0L12.9 50.0L30.7 36.9L45.1 21.8L68.7 33.5L95.1 34.3Z"/><path class="scan" d="M0 44H120"/></g></g>
+<g transform="translate(8 135)"><text class="lbl" y="-6">water level</text><path class="ln ln--gauge" pathLength="1" d="M0 56L11 50L22 44L33 40L44 38L55 37L66 39L77 42L88 47L99 52L110 58L121 63L132 67L143 70L154 71L165 71L176 68L187 64L198 58L209 52"/><path class="ln ln--sat" pathLength="1" d="M0 57L11 52L22 47L33 41L44 40L55 40L66 40L77 44L88 50L99 53L110 60L121 66L132 68L143 72L154 74L165 72L176 70L187 67L198 59L209 54"/></g>
+<g transform="translate(8 215)"><text class="lbl" y="-6">rice planted</text><rect class="bar" style="--d:0" x="0" y="56" width="10" height="14"/><rect class="bar" style="--d:1" x="16" y="50" width="10" height="20"/><rect class="bar" style="--d:2" x="31" y="45" width="10" height="25"/><rect class="bar" style="--d:3" x="47" y="41" width="10" height="29"/><rect class="bar" style="--d:4" x="62" y="39" width="10" height="31"/><rect class="bar" style="--d:5" x="78" y="39" width="10" height="31"/><rect class="bar" style="--d:6" x="94" y="41" width="10" height="29"/><rect class="bar" style="--d:7" x="109" y="44" width="10" height="26"/><rect class="bar" style="--d:8" x="125" y="46" width="10" height="24"/><rect class="bar" style="--d:9" x="140" y="48" width="10" height="22"/><rect class="bar" style="--d:10" x="156" y="48" width="10" height="22"/><rect class="bar" style="--d:11" x="172" y="46" width="10" height="24"/><rect class="bar" style="--d:12" x="187" y="42" width="10" height="28"/><rect class="bar" style="--d:13" x="203" y="36" width="10" height="34"/><rect class="bar" style="--d:14" x="218" y="30" width="10" height="40"/><rect class="bar" style="--d:15" x="234" y="24" width="10" height="46"/></g>
+</svg>
+<p class="legend" aria-hidden="true"><span class="k k--sat"></span>satellite <span class="k k--gauge"></span>gauge</p>
+</div>
+</div>
+</div>
+</div>
+<div class="facts">
+<dl class="facts__list"><div><dt>Reservoirs measured</dt><dd>3</dd></div></dl>
+<ul class="chips" role="list" aria-label="Built with"><li>Sentinel-2</li><li>Planetary Computer</li><li>Python</li><li>FastAPI</li><li>DuckDB</li></ul>
+<a class="repo" href="https://github.com/SharlEclair/harvest-surprise" rel="noopener">Source on GitHub <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13.5 6.5L19 12l-5.5 5.5"/></svg></a>
+</div>
+</article>
+<p class="projects__all"><a class="button" href="/variants/01-atelier-noir/projects.html">View all projects <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13.5 6.5L19 12l-5.5 5.5"/></svg></a></p>
+</section>
+<section id="experience" class="paper experience tear-b" aria-labelledby="exp-h">
+<div class="paper__in">
+<h2 id="exp-h" class="display">Experience</h2>
+<h3 class="sub">Work</h3>
+<ol class="jobs" role="list">
+<li class="job">
+<p class="job__dates">Jul 2026 to present<span>Melbourne</span></p>
+<div class="job__body">
+<h4 class="job__role">Data Engineer</h4>
+<p class="job__org">Spectrum Tuition, RMIT industry capstone</p>
+<ul class="job__points"><li>Made a coursebook build 11 times faster, from 389.9 seconds to 34.2, by running the AI steps in parallel and testing that the output matched the original.</li><li>Audited the platform’s automatic quality checks on real tutor books and shipped 21 fixes. False alarms fell by 68%, and on a book the checks had never seen they fell from 345 to 3.</li><li>Helped put the platform’s production website online, setting up the domain, hosting and database.</li></ul>
+</div>
+</li>
+<li class="job">
+<p class="job__dates">Dec 2023 to Apr 2024<span>Mumbai</span></p>
+<div class="job__body">
+<h4 class="job__role">Data Analytics Engineer</h4>
+<p class="job__org">Embin Technologies</p>
+<ul class="job__points"><li>Cut manual reporting time by 40% by designing dashboards that operational managers could drill into, and walking them through how to use them.</li><li>Reduced device-level data errors by 25% by finding that sensor readings were drifting out of calibration.</li><li>Built automated pipelines that cleaned IoT sensor data and showed occupancy and peak-demand patterns across 40+ facilities.</li></ul>
+</div>
+</li>
+</ol>
+<h3 class="sub">Education</h3>
+<ol class="jobs" role="list">
+<li class="job">
+<p class="job__dates">Mar 2025 to Dec 2026<span>Melbourne</span></p>
+<div class="job__body">
+<h4 class="job__role">Master of Data Science</h4>
+<p class="job__org">RMIT University</p>
+<ul class="job__points"><li>Future Leaders Scholarship recipient (20% tuition reduction).</li><li>Applied coursework in data visualisation, databases, analytics and data wrangling, with the capstone above as the industry project.</li></ul>
+</div>
+</li>
+</ol>
+</div>
+</section>
+<section id="contact" class="contact" aria-labelledby="contact-h">
+<div class="contact__copy">
+<h2 id="contact-h" class="display">Contact</h2>
+<p class="contact__mail"><a href="mailto:ashwinrajesh@yahoo.com">ashwinrajesh@yahoo.com</a></p>
+<p class="mono note">The console works too: the D-pad moves between lines, A opens one, B copies the address, START goes back to the top.</p>
+</div>
+<div class="console" data-console>
+<div class="console__bezel">
+<p class="console__legend" aria-hidden="true">Dot matrix, no sound</p>
+<div class="lcd">
+<ul class="lcd__list" role="list" data-lcd-list>
+<li><a class="is-sel" href="mailto:ashwinrajesh@yahoo.com">ashwinrajesh@yahoo.com</a></li>
+<li><a href="#linkedin-url-to-be-added">LinkedIn</a></li>
+<li><a href="https://github.com/SharlEclair" rel="noopener">GitHub</a></li>
+</ul>
+<p class="lcd__hud" data-hud aria-live="polite"></p>
+</div>
+</div>
+<div class="console__deck">
+<div class="dpad">
+<button type="button" class="dpad__up" data-pad="up" aria-label="Up: previous contact line"></button>
+<button type="button" class="dpad__down" data-pad="down" aria-label="Down: next contact line"></button>
+</div>
+<div class="ab">
+<button type="button" data-pad="b" aria-label="B: copy the email address">B</button>
+<button type="button" data-pad="a" aria-label="A: open the selected line">A</button>
+</div>
+<button type="button" class="start" data-pad="start" aria-label="Start: back to the top">Start</button>
+<span class="grille" aria-hidden="true"></span>
+</div>
+</div>
+</section>
+<footer class="foot">
+<p>Ashwin Pillai, Melbourne, Australia</p>
+<a href="#top">Back to top</a>
+</footer>
+</main>
+<script type="module" src="/variants/01-atelier-noir/main.js"></script>
+<script type="module" src="/shared/ui/switcher.js"></script>
+</body>
+</html>
