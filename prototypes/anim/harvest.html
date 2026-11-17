@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>Harvest Surprise</title>
+  </head>
+  <body>
+    <script type="module">
+      // ?look=lcd -> 160x144 Game Boy look shown 4x in a box
+      // ?theme=light|dark (default dark), ?nocap=1 hides the beat caption (posters). window.__SET_THEME(t) switches live.
+      // Runway 200vh = exactly ONE viewport of scroll for progress 0..1, same as the real page.
+      import { runStandalone } from '/shared/gl/standalone.js'
+      const q = new URLSearchParams(location.search)
+      const importer = () => import('/shared/scenes/harvest/scene.js')
+      const theme = q.get('theme') === 'light' ? 'light' : 'dark'
+      document.documentElement.dataset.theme = theme
+      if (q.get('nocap')) {
+        const hide = document.createElement('style')
+        hide.textContent = '.beat{display:none!important}'
+        document.head.appendChild(hide)
+      }
+
+      if (q.get('look') !== 'lcd') {
+        await runStandalone(importer, { scene: { look: 'full', theme }, runway: 200, background: theme === 'light' ? '#e8e6db' : '#08080a' })
+        window.__SET_THEME = (t) => { document.documentElement.dataset.theme = t; window.__SCENE?.setTheme(t) }
+      } else {
+        const style = document.createElement('style')
+        style.textContent = `html,body{margin:0;background:#14161a;color:#eee;font:14px/1.4 ui-monospace,Menlo,Consolas,monospace}
+        .runway{position:relative;height:600vh}.stage{position:sticky;top:0;height:100vh;overflow:hidden}`
+        document.head.appendChild(style)
+        const runway = document.createElement('div')
+        runway.className = 'runway'
+        const stage = document.createElement('div')
+        stage.className = 'stage'
+        runway.appendChild(stage)
+        document.body.appendChild(runway)
+        try {
+          const [{ createHarness }, { createScreenTarget }, mod] = await Promise.all([
+            import('/shared/gl/harness.js'),
+            import('/shared/dither/pass.js'),
+            importer(),
+          ])
+          const h = createHarness(stage, { runway, clearColor: 0x14161a })
+          const { THREE } = h
+          const inner = await mod.createScene({ THREE, renderer: h.renderer, size: { w: 160, h: 144, dpr: 1 }, look: 'lcd' })
+          const screen = createScreenTarget(THREE, 160, 144)
+          const sceneUI = new THREE.Scene()
+          const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 10)
+          const plane = new THREE.Mesh(
+            new THREE.PlaneGeometry(640, 576),
+            new THREE.MeshBasicMaterial({ map: screen.texture, toneMapped: false }),
+          )
+          sceneUI.add(plane)
+          h.add({
+            scene: sceneUI,
+            camera: cam,
+            animated: inner.animated,
+            update: (ctx) => inner.update(ctx),
+            resize: (w, hh) => {
+              cam.left = -w / 2; cam.right = w / 2; cam.top = hh / 2; cam.bottom = -hh / 2
+              cam.updateProjectionMatrix()
+              inner.resize(160, 144, 1)
+            },
+            render: (renderer, ctx) => {
+              inner.render(renderer, ctx, screen)
+              renderer.setRenderTarget(null)
+              renderer.render(sceneUI, cam)
+            },
+            dispose: () => { inner.dispose(); screen.dispose(); plane.geometry.dispose(); plane.material.dispose() },
+          })
+          h.start()
+          window.__HARNESS = h
+          window.__SCENE = inner
+          window.__BEATS = inner.beats
+          window.__TEST_SET_PROGRESS = (v) => h.setProgress(v)
+          window.__TEST_SET_POINTER = (x, y) => h.setPointer(x, y)
+          window.__APP_READY = true
+        } catch (error) {
+          console.error(error)
+          window.__APP_ERROR = String(error)
+        }
+      }
+    </script>
+  </body>
+</html>

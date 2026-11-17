@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -9,19 +9,9 @@
   </head>
   <body>
     <main id="hero">
-      <div id="stage">
-        <canvas id="scene"></canvas>
-        <div id="hud">
-          <p id="hud-title">TRANSIT DESERT</p>
-          <p id="hud-subtitle">RMIT &rarr; Albert Park</p>
-          <p id="hud-progress">u_progress 0.000</p>
-        </div>
-      </div>
+      <div id="stage"></div>
     </main>
-    <section id="outro">
-      <h1>Transit Desert</h1>
-      <p>Standalone view of the scroll-driven A* replay. Scroll to scrub.</p>
-    </section>
+    <section id="outro" aria-hidden="true"></section>
     <script type="module" src="/shared/transit/main.js"></script>
   </body>
 </html>

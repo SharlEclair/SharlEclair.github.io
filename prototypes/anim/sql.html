@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>Self-Healing SQL Agent</title>
+  </head>
+  <body>
+    <script type="module">
+      // One scroll (0..1) of the self-healing ribbon. ?theme=light for the paper theme; the stage pins for 100vh of scroll.
+      // Test: window.__SCENE.setTheme('light') then window.__HARNESS.invalidate()
+      import { runStandalone } from '/shared/gl/standalone.js'
+      const q = new URLSearchParams(location.search)
+      const theme = q.get('theme') === 'light' ? 'light' : 'dark'
+      document.documentElement.dataset.theme = theme
+      runStandalone(() => import('/shared/scenes/sql/scene.js'), {
+        scene: { theme },
+        runway: 200,
+        background: theme === 'light' ? '#e8e6db' : '#08080a',
+      })
+    </script>
+  </body>
+</html>

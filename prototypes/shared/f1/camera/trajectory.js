@@ -10,6 +10,7 @@ import { config } from '../config.js'
 //   cubic    stronger ease, heavier settle
 //   quintic  very strong ease, almost a hold at each end
 //   expo     very slow start, then a rush
+//   outSine  quick start, gentle landing: the move shows from the first scroll tick
 //
 // Every one of these stays within 0..1. An overshooting curve (easeOutBack and
 // friends) is NOT usable here: CatmullRomCurve3.getPoint cannot extrapolate --
@@ -18,6 +19,7 @@ import { config } from '../config.js'
 const EASINGS = {
   linear: (t) => t,
   sine: (t) => -(Math.cos(Math.PI * t) - 1) / 2,
+  outSine: (t) => Math.sin((Math.PI * t) / 2),
   cubic: (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2),
   quintic: (t) => (t < 0.5 ? 16 * t ** 5 : 1 - Math.pow(-2 * t + 2, 5) / 2),
   expo: (t) => (t === 0 ? 0 : t === 1 ? 1 : t < 0.5 ? Math.pow(2, 20 * t - 10) / 2 : (2 - Math.pow(2, -20 * t + 10)) / 2),

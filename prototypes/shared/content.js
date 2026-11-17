@@ -13,9 +13,7 @@ export const person = {
   // From the owner's own mockup (mock-ups/Contact.png).
   email: 'ashwinrajesh@yahoo.com',
   github: { label: 'GitHub', handle: 'SharlEclair', url: 'https://github.com/SharlEclair' },
-  // No LinkedIn URL exists in the source material. Render the link, keep href as-is, and the owner
-  // will fill it in.
-  linkedin: { label: 'LinkedIn', url: '#linkedin-url-to-be-added' },
+  linkedin: { label: 'LinkedIn', url: 'https://www.linkedin.com/in/ashwinrpillai' },
 }
 
 export const howIWork = {
@@ -66,7 +64,7 @@ export const projects = [
     // Albert Park circuit. The project itself studied Mumbai and used Conveyal R5, not A*. If a variant
     // captions the animation, it must say so in words like these.
     animationCaption: 'Illustration: an A* search replayed over Melbourne, RMIT to the Albert Park circuit.',
-    repo: null,
+    repo: 'https://github.com/SharlEclair/transit-desert-platform',
   },
   {
     id: 'sql-agent',
@@ -104,11 +102,10 @@ export const projects = [
  * Additional work for the future /projects archive. One line each, no claims beyond these.
  */
 export const archive = [
-  { title: 'F1 Strategy Engine', kind: 'Simulation', year: '2026', line: 'Could an undercut have won Monza 2024? 10,000 race permutations evaluated in about 0.2 seconds; the honest answer is a coin toss (53.77%).' },
-  { title: 'MILP Roster Optimizer', kind: 'Optimisation', year: '2026', line: 'An exact fantasy-roster optimiser for the Valorant Champions Tour. Mean solve time 8.76 ms on a 28-player pool.' },
-  { title: 'AssignMate', kind: 'Team hackathon', year: '2026', line: 'An assignment workspace with a rule-based AI guardrail that refuses by default. Built with a team; 765 tests.' },
+  { title: 'F1 Strategy Engine', kind: 'Simulation', year: '2026', line: 'Could an undercut have won Monza 2024? 10,000 race permutations evaluated in about 0.2 seconds; the honest answer is a coin toss (53.77%).', repo: 'https://github.com/SharlEclair/f1-strategy-engine' },
+  { title: 'MILP Roster Optimizer', kind: 'Optimisation', year: '2026', line: 'An exact fantasy-roster optimiser for the Valorant Champions Tour. Mean solve time 8.76 ms on a 28-player pool.', repo: 'https://github.com/SharlEclair/vct-prediction-engine' },
+  { title: 'AssignMate', kind: 'Team hackathon', year: '2026', line: 'An assignment workspace with a rule-based AI guardrail that refuses by default. Built with a team; 765 tests.', repo: 'https://github.com/SharlEclair/rmit-hackathon' },
   { title: 'Retail Supplier Scorecard', kind: 'Exercise', year: '2026', line: 'A weekly supplier scorecard on public sample data with Power Query, Excel and Power Automate.' },
-  { title: 'F1 × Currents', kind: 'Graphics', year: '2026', line: 'The scroll-driven WebGL piece on this page: about 1,650 streamlines in one draw call.' },
 ]
 
 export const work = [

@@ -17,7 +17,8 @@
  * frame rate.
  */
 import puppeteer from 'puppeteer-core'
-import { existsSync } from 'node:fs'
+import { existsSync, mkdirSync } from 'node:fs'
+import { dirname } from 'node:path'
 
 const args = process.argv.slice(2)
 const flags = Object.fromEntries(
@@ -31,6 +32,8 @@ if (!url || !out) {
   console.error('usage: node tools/shot.mjs <url> <out> [flags]')
   process.exit(2)
 }
+
+mkdirSync(dirname(out), { recursive: true })
 
 const candidates = [
   'C:/Program Files/Google/Chrome/Application/chrome.exe',

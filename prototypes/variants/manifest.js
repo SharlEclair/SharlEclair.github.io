@@ -1,6 +1,22 @@
 /** The prototype switcher's list of variants. One entry per folder under variants/. */
 export const variants = [
   {
+    id: '07-cartridge-dive',
+    name: 'Cartridge Dive',
+    line: 'Dithered Creation hero, then a cartridge slides in, seats into the handheld and you dive through its screen into the Harvest scene. The console returns for contact.',
+    nav: 'Translucent top bar with section anchors',
+    archive: '“View all projects” link beside the Projects heading',
+    swatch: ['#0B0B0C', '#39FF88', '#DCDACB'],
+  },
+  {
+    id: '08-handheld-hero',
+    name: 'Handheld Hero',
+    line: 'A translucent 3D handheld plays the dithered Creation scene on its screen, drifts away as you scroll, and returns at contact with a menu and a hidden runner.',
+    nav: 'Translucent top bar with section anchors',
+    archive: '“View all projects” link beside the Projects heading',
+    swatch: ['#0B0B0C', '#39FF88', '#C9CCD0'],
+  },
+  {
     id: '01-atelier-noir',
     name: 'Atelier Noir',
     line: 'Your mockups, finished: basalt black, serif and mono, phosphor-green Creation hands, torn paper, a handheld console for contact.',

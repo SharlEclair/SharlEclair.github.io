@@ -21,10 +21,16 @@ import * as THREE from 'three'
 // and the `pivot` mode without a second copy of those numbers.
 export const carRef = {
   center: new THREE.Vector3(),
+  // World-space bounding box extents, for the contact shadow and the glow.
+  size: new THREE.Vector3(1, 1, 1),
+  minY: 0,
   ready: false,
 }
 
-export function publishCarCenter(centre) {
-  carRef.center.copy(centre)
+// Accepts the object measureCar() returns ({ centre, size, min }).
+export function publishCarCenter(measured) {
+  carRef.center.copy(measured.centre)
+  carRef.size.copy(measured.size)
+  carRef.minY = measured.min.y
   carRef.ready = true
 }

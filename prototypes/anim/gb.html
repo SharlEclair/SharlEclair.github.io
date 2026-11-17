@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>Gameboy</title>
+  </head>
+  <body>
+    <!--
+      ?bg=light            cream paper background + light theme (default: dark #08080a)
+      ?alpha=1             transparent canvas over the HTML background, like shared/p2/page.js
+      ?pose=ref1|ref3|front|hero|contact   hold one pose (no scroll track, no idle sway)
+      ?cart=0              hide the cartridge (for comparing with the reference photos)
+      ?poster=hero|contact the poster frames: hero scene / contact menu on the LCD, centred, cart seated
+    -->
+    <script type="module">
+      import { runStandalone } from '/shared/gl/standalone.js'
+      import { L } from '/shared/gb/layout.js'
+      const q = new URLSearchParams(location.search)
+      const light = q.get('bg') === 'light'
+      const bg = light ? '#e8e6db' : '#08080a'
+      const alpha = q.get('alpha') === '1'
+      const poster = q.get('poster')
+      const POSES = {
+        ref3: { rx: -0.38, ry: 0, rz: 0 },
+        ref1: { rx: -0.55, ry: -0.3, rz: -0.78 },
+        front: { rx: 0, ry: 0, rz: 0 },
+        hero: { rx: -0.05, ry: -0.32, rz: 0.05 },
+        contact: { rx: -0.05, ry: -0.2, rz: 0 },
+      }
+      const poseName = poster ?? q.get('pose')
+      const hold = POSES[poseName]
+      // Centre the seated console vertically (the pose y is in world units; replicate scene.js's fit)
+      const fov = 30
+      const halfH = 12 * Math.tan((fov * Math.PI) / 360)
+      const halfW = halfH * (innerWidth / innerHeight)
+      const fit = Math.min((halfH * 2 * 0.8) / (L.extent.top - L.extent.bottom), (halfW * 2 * 0.8) / (L.extent.w + 0.1))
+      const s = Number(q.get('s') ?? (poster ? 1.0 : 1))
+      const cart = q.get('cart') === '0' ? 0 : 1
+      const yc = cart ? -((L.extent.top + L.extent.bottom) / 2) * fit * s : 0
+      const track = hold ? [{ at: 0, xf: 0, y: yc, z: 0, s, cart: 1, ...hold }] : undefined
+      const label = poster === 'hero' ? { title: 'PORTFOLIO', subtitle: 'ASHWIN PILLAI' } : { title: 'HARVEST SURPRISE', subtitle: 'RICE FROM ORBIT' }
+      await runStandalone(() => import('/shared/gb/scene.js'), {
+        scene: {
+          interactive: !hold, palette: q.get('palette') ?? 'dmg', bootOnStart: q.get('boot') !== '0' && !poster,
+          theme: light ? 'light' : 'dark', idle: !hold, cartridge: label, ...(track ? { track } : {}),
+        },
+        runway: hold ? 100 : 400,
+        harness: alpha ? { alpha: true, clearAlpha: 0 } : { clearColor: parseInt(bg.slice(1), 16) },
+        background: bg,
+      })
+      const sc = window.__SCENE
+      if (sc && cart === 0) sc.cart.visible(false)
+      if (sc && poster === 'contact') sc.lcd.wake?.()
+      if (sc && poster === 'hero') {
+        const [{ createScreenTarget }, mod] = await Promise.all([import('/shared/dither/pass.js'), import('/shared/scenes/hero/scene.js')])
+        const h = window.__HARNESS
+        const inner = await mod.createScene({ THREE: h.THREE, renderer: h.renderer, size: { w: 160, h: 144, dpr: 1 }, look: 'lcd' })
+        sc.attachScreen(inner, { target: createScreenTarget(h.THREE, 160, 144), progress: () => Number(q.get('hp') ?? 0.35) })
+        if (q.get('palette')) sc.setPalette(q.get('palette'))
+      }
+      // held poses do not animate, so keep a few frames coming (attached screen, palette swaps, LCD boot)
+      if (sc && hold) setInterval(() => window.__HARNESS.invalidate(), 120)
+      document.querySelector('.beat')?.remove()
+      window.__GB_READY = true
+    </script>
+  </body>
+</html>

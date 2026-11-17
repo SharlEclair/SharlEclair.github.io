@@ -6,15 +6,40 @@
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <title>F1 × Currents</title>
     <style>
-      html, body { margin: 0; padding: 0; width: 100%; background: #1d1720; color: #cba6c3;
-        font-family: Inter, Helvetica, Arial, sans-serif; overflow-x: hidden; }
-      #webgl { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; z-index: 0; pointer-events: none; }
-      #scroll-container { position: relative; z-index: 1; pointer-events: none; }
+      :root { --bg: #08080a; }
+      :root[data-theme="light"] { --bg: #e8e6db; }
+      html, body { margin: 0; padding: 0; width: 100%; background: var(--bg); overflow-x: hidden; }
+      /* One 100vh of scroll maps to progress 0..1: the runway is the stage plus 100vh. */
+      #runway { position: relative; height: 200vh; }
+      #stage { position: sticky; top: 0; height: 100vh; overflow: hidden; }
     </style>
   </head>
   <body>
-    <canvas id="webgl"></canvas>
-    <div id="scroll-container"></div>
-    <script type="module" src="/shared/f1/main.js"></script>
+    <div id="runway"><div id="stage"></div></div>
+    <script type="module">
+      // Standalone harness for the same mountF1 the portfolio embeds.
+      //   ?theme=light|dark   starting theme (default dark)
+      //   ?layout=center|right|top   framing (default: auto, as on the page)
+      //   ?gui=1              the lil-gui tuning panel
+      import { mountF1 } from '/shared/f1/mount.js'
+      const q = new URLSearchParams(location.search)
+      document.documentElement.dataset.theme = q.get('theme') === 'light' ? 'light' : 'dark'
+      const f1 = mountF1(document.getElementById('stage'), {
+        runway: document.getElementById('runway'),
+        gui: q.has('gui'),
+        layout: q.get('layout') || 'auto',
+        maxPixelRatio: q.has('pr') ? Number(q.get('pr')) : 1.25,
+      })
+      // Verification hooks (tools/shot.mjs).
+      window.__F1 = f1.app
+      window.__TEST_SET_PROGRESS = (value) => f1.setProgress(value)
+      window.__setTheme = (value) => { document.documentElement.dataset.theme = value }
+      const ready = setInterval(() => {
+        if (f1.app.getCar()) {
+          window.__F1_READY = true
+          clearInterval(ready)
+        }
+      }, 100)
+    </script>
   </body>
 </html>

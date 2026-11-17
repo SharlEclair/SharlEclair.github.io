@@ -26,15 +26,63 @@ const _aimRig = new THREE.PerspectiveCamera()
 
 const DEG = THREE.MathUtils.degToRad
 
+// Where the page puts its text: over the LEFT ~40% of the stage on desktop and the BOTTOM ~45% on a
+// phone. The framing is rendered into the free area instead, by shrinking the camera's virtual frame
+// to `scale` of the canvas and parking its centre at (cx, cy), as fractions of the canvas. That is
+// setViewOffset with a frame smaller than the window, so the car keeps its proportions, sits in the
+// clear area, and the field still runs edge to edge behind the text.
+//
+//   right   desktop: focus centred in the right 60% (x 0.40..1.00)
+//   top     phone / portrait: focus centred in the top 55% (y 0..0.55)
+//   center  no offset (the standalone page, or a page without overlaid text)
+const LAYOUTS = {
+  // scale0 at the top view, scale1 at the chase view (the car is wide there, so a narrow phone needs
+  // more room); the two are blended across the move.
+  right: { scale0: 0.88, scale1: 0.88, cx: 0.7, cy: 0.5 },
+  top: { scale0: 0.8, scale1: 0.46, cx: 0.5, cy: 0.275 },
+  center: null,
+}
+let layoutMode = 'auto'
+
+export function resolveLayout() {
+  if (layoutMode !== 'auto') return layoutMode
+  return viewport.width / viewport.height < 0.9 ? 'top' : 'right'
+}
+
+// Sets the view window for the current layout and progress. Callers update the projection matrix.
+function syncView() {
+  const W = viewport.width
+  const H = viewport.height
+  camera.aspect = W / H
+  const L = LAYOUTS[resolveLayout()]
+  if (!L) {
+    camera.clearViewOffset()
+    camera.userData.viewScale = 1
+    return
+  }
+  const scale = THREE.MathUtils.lerp(L.scale0, L.scale1, smoothstep(0.15, 1, scroll.progress))
+  const fullW = W * scale
+  const fullH = H * scale
+  camera.setViewOffset(fullW, fullH, fullW / 2 - L.cx * W, fullH / 2 - L.cy * H, W, H)
+  camera.userData.viewScale = scale
+}
+
+function applyLayout() {
+  syncView()
+  camera.updateProjectionMatrix()
+}
+
+// 'auto' | 'right' | 'top' | 'center'
+export function setLayoutMode(mode) {
+  layoutMode = mode in LAYOUTS || mode === 'auto' ? mode : 'auto'
+  applyLayout()
+}
+
 export function initCamera() {
   curves = buildCurves()
   updateCamera()
-  const onResize = () => {
-    camera.aspect = viewport.width / viewport.height
-    camera.updateProjectionMatrix()
-  }
-  onResize()
-  return onViewportChange(onResize)
+  applyLayout()
+  return onViewportChange(applyLayout)
 }
 
 export function rebuildCurves() {
@@ -90,6 +138,7 @@ export function updateCamera() {
   camera.quaternion.copy(_lookQuat).multiply(_aimQuat)
 
   camera.fov = THREE.MathUtils.lerp(curves.startFov, curves.endFov, p)
+  syncView()
   camera.updateProjectionMatrix()
 
   // 3. Dutch tilt, ramped in over the tail of the scroll. Applied last so it

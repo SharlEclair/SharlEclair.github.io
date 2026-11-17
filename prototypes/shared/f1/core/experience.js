@@ -6,9 +6,10 @@ import { createPost } from './post.js'
 import { onViewportChange } from './viewport.js'
 import { applyLookToConfig, LOOK } from '../look.js'
 import { createRenderer } from './renderer.js'
-import { scene, updateScene } from '../scene/scene.js'
-import { camera, initCamera, updateCamera, rebuildCurves } from '../camera/rig.js'
-import { createAirflow, updateAirflow } from '../airflow/field.js'
+import { scene, updateScene, applySceneTheme } from '../scene/scene.js'
+import { camera, initCamera, updateCamera, rebuildCurves, setLayoutMode, resolveLayout } from '../camera/rig.js'
+import { createAirflow, updateAirflow, applyAirflowTheme } from '../airflow/field.js'
+import { THEMES, normaliseTheme, readPageTheme } from '../theme.js'
 import { loadCar, applyCarTransform, applyCarMaterial, applyFinish, createEnvironment } from '../car/loader.js'
 import { createPanel } from '../ui/panel.js'
 import {
@@ -62,10 +63,18 @@ export function createExperience({
   msaa = 0,
   // Freeze the flow field's clock (prefers-reduced-motion): scroll still scrubs.
   staticTime = false,
+  // 'dark' | 'light'. Defaults to document.documentElement.dataset.theme.
+  theme = null,
+  // 'auto' | 'right' | 'top' | 'center': which part of the canvas the car and flow are framed in
+  // (camera/rig.js). 'auto' is right on landscape, top on portrait.
+  layout = 'auto',
 } = {}) {
   // The upgraded look is written onto the live config BEFORE anything reads it.
   applyLookToConfig()
   if (progress) setProgressSource(progress)
+
+  let themeName = normaliseTheme(theme ?? readPageTheme())
+  setLayoutMode(layout)
 
   const renderer = createRenderer(canvas, { sizeTo: container, maxPixelRatio })
   renderer.toneMappingExposure = LOOK.exposure
@@ -86,6 +95,7 @@ export function createExperience({
       airflow.mesh.material.dispose()
     }
     airflow = createAirflow(scene)
+    applyAirflowTheme(airflow, THEMES[themeName].airflow)
     return airflow
   }
 
@@ -115,7 +125,7 @@ export function createExperience({
   function syncEnvMap() {
     if (config.car.environment) {
       if (!envMap) {
-        envMap = createEnvironment(renderer)
+        envMap = createEnvironment(renderer, themeName)
         scene.environment = envMap
       }
     } else if (envMap) {
@@ -176,11 +186,46 @@ export function createExperience({
   syncPostSize()
   const stopViewportSync = onViewportChange(syncPostSize)
 
+  // The text zone follows the layout: left ~40% on landscape, bottom ~45% on portrait.
+  function syncWash() {
+    const mode = resolveLayout()
+    const strength = THEMES[themeName].grade.wash
+    if (mode === 'right') post.setWash('left', 0.42, strength)
+    else if (mode === 'top') post.setWash('bottom', 0.45, strength)
+    else post.setWash(null, 0.4, 0)
+  }
+  const stopWashSync = onViewportChange(syncWash)
+
+  // Write a theme (theme.js) onto everything that caches a look: the config the per-frame syncs read,
+  // the scene, the field's material, the post chain, the renderer's tone map and the car.
+  function applyTheme(name) {
+    themeName = normaliseTheme(name)
+    const def = THEMES[themeName]
+    renderer.toneMapping = def.toneMapping
+    renderer.toneMappingExposure = def.exposure
+    Object.assign(config.car, def.car, { environment: true })
+    config.airflow.opacity = def.airflow.opacity
+    config.airflow.lineThickness = def.airflow.lineThickness
+    config.airflow.additive = def.airflow.additive
+    applySceneTheme(def)
+    applyAirflowTheme(airflow, def.airflow)
+    post.setTheme(def, scene.background)
+    syncWash()
+    // The reflections come from a theme-specific studio, so drop the old one before the car is re-lit.
+    if (envMap) {
+      envMap.dispose()
+      envMap = null
+      scene.environment = null
+    }
+  }
+  applyTheme(themeName)
+  refreshCar()
+
   function draw() {
     updateScroll()
     updateCamera()
     updateAirflow(airflow, camera)
-    updateScene(scroll.progress)
+    updateScene(scroll.progress, camera)
     post.render(time.elapsed, !staticTime)
   }
 
@@ -269,6 +314,7 @@ export function createExperience({
     running = false
     if (visibility) visibility.disconnect()
     stopViewportSync()
+    stopWashSync()
     setProgressSource(null)
     setProgressOverride(null)
     post.dispose()
@@ -320,6 +366,19 @@ export function createExperience({
     start,
     // Composites one frame immediately, without waiting for the next rAF.
     renderNow() {
+      draw()
+    },
+    // Restyle live ('dark' | 'light'), no reload.
+    setTheme(name) {
+      if (normaliseTheme(name) === themeName) return
+      applyTheme(name)
+      refreshCar()
+      draw()
+    },
+    getTheme: () => themeName,
+    setLayout(mode) {
+      setLayoutMode(mode)
+      syncWash()
       draw()
     },
     post,

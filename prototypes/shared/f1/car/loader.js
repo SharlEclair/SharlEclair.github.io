@@ -115,7 +115,7 @@ export function applyCarTransform(car) {
     car.updateMatrixWorld(true)
     // Both exits publish, not just the auto-centred one: the camera's lock reads
     // this, and a stale centre would aim at where the car used to be.
-    publishCarCenter(measureCar(car).centre)
+    publishCarCenter(measureCar(car))
     return
   }
 
@@ -145,7 +145,7 @@ export function applyCarTransform(car) {
   // whichever pivot mode is live -- 'ground' lifts it half a body above
   // positionY, 'bbox' puts it exactly on positionY. Reading the box back is what
   // keeps the camera's aim correct in both without a second set of numbers.
-  publishCarCenter(measureCar(car).centre)
+  publishCarCenter(measureCar(car))
 }
 
 // ---------------------------------------------------------------------------
@@ -181,6 +181,9 @@ export function applyFinish(name) {
 // physical material. It is a superset of the standard shader, so a finish with
 // clearcoat 0 costs nothing visually.
 let sharedMaterial = null
+// Optional second material for named parts (the light theme's vermilion wings). Null in the dark look,
+// which keeps the single shared material exactly as before.
+let accentMaterial = null
 
 // mesh -> the material the GLB shipped with, captured at load.
 //
@@ -295,10 +298,29 @@ export function applyCarMaterial(car, envMap) {
   }
 
   releaseOriginalMaterials()
+
+  const accent = c.accent
+  let accentMat = null
+  if (accent) {
+    accentMat = accentMaterial || (accentMaterial = mat.clone())
+    accentMat.color.set(accent.color)
+    accentMat.roughness = Math.min(1, c.roughness * 0.8)
+    accentMat.metalness = c.metalness
+    accentMat.clearcoat = c.clearcoat
+    accentMat.clearcoatRoughness = c.clearcoatRoughness
+    accentMat.envMapIntensity = c.envMapIntensity
+    accentMat.envMap = envMap
+    accentMat.needsUpdate = true
+  }
   car.traverse((child) => {
-    if (child.isMesh && child.material !== mat) child.material = mat
+    if (!child.isMesh) return
+    // glTF node names come through three's sanitiser ("Rear Wing" -> "Rear_Wing"), so compare loosely.
+    const next = accentMat && accent.parts.some((part) => squash(part) === squash(child.name)) ? accentMat : mat
+    if (child.material !== next) child.material = next
   })
 }
+
+const squash = (name) => String(name).replace(/[\s_]+/g, '').toLowerCase()
 
 function findFirstMaterial(car) {
   let found = null
@@ -317,9 +339,9 @@ function findFirstMaterial(car) {
 // PMREM (prefiltered mipmapped radiance environment map) is what turns that
 // scene into something a rough surface can sample at the right blur level --
 // without it, roughness would have no visible effect on reflections.
-export function createEnvironment(renderer) {
+export function createEnvironment(renderer, theme = 'dark') {
   // The upgraded look replaces the neutral RoomEnvironment with an authored studio
   // (look.js): a dark room with a handful of placed lights, so the lacquer shows
   // deliberate highlights instead of a generic bright interior.
-  return createStudioEnvironment(renderer)
+  return createStudioEnvironment(renderer, theme)
 }

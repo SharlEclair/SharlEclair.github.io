@@ -12,7 +12,18 @@
  * the runway). The canvas tracks its size, and the loop stops while the stage is off screen.
  * Scroll input is smoothed inside the scene (~140 ms), so pass raw progress.
  *
- * Returns `{ app, setProgress(v | null), destroy() }`. One instance per page.
+ * Returns `{ app, setProgress(v | null), setTheme('dark' | 'light'), setLayout(mode), destroy() }`.
+ * One instance per page.
+ *
+ * Theme: `theme` defaults to document.documentElement.dataset.theme. When no `theme` option is passed
+ * the scene also follows later changes to that attribute on its own; `setTheme` restyles live either way.
+ *
+ * Timeline: progress 0..1 is one move (top view with flow, then the chase view). Map it to exactly 100vh
+ * of scroll: `runway` height = stage height + 100vh, or return the 0..1 yourself from `progress`.
+ *
+ * Layout: `layout` is 'auto' (default), 'right', 'top' or 'center'. The car and flow are framed in the
+ * right 60% of the stage on landscape (project text over the left ~40%) and the top 55% on portrait
+ * (text over the bottom ~45%); 'auto' switches at canvas aspect 0.9. Resize is handled.
  */
 import { createExperience } from './core/experience.js'
 
@@ -24,6 +35,8 @@ import { createExperience } from './core/experience.js'
  * @param {boolean} [options.gui=false] mount the lil-gui tuning panel
  * @param {number} [options.maxPixelRatio=1.25]
  * @param {boolean} [options.reducedMotion] freeze the flow field's clock; defaults to the OS setting
+ * @param {'dark'|'light'} [options.theme] defaults to document.documentElement.dataset.theme
+ * @param {'auto'|'right'|'top'|'center'} [options.layout='auto'] where the focal action sits in the stage
  */
 export function mountF1(stage, options = {}) {
   const {
@@ -32,6 +45,8 @@ export function mountF1(stage, options = {}) {
     gui = false,
     maxPixelRatio = 1.25,
     reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false,
+    theme = null,
+    layout = 'auto',
   } = options
 
   if (getComputedStyle(stage).position === 'static') {
@@ -57,13 +72,25 @@ export function mountF1(stage, options = {}) {
     gui,
     maxPixelRatio,
     staticTime: reducedMotion,
+    theme,
+    layout,
     storageKey: 'f1-currents-embedded',
   })
+
+  // No explicit theme: track the page's data-theme attribute.
+  const themeWatch = theme === null && typeof MutationObserver === 'function'
+    ? new MutationObserver(() => app.setTheme(document.documentElement.dataset.theme))
+    : null
+  themeWatch?.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
 
   return {
     app,
     setProgress: (value) => app.setProgress(value),
+    setTheme: (value) => app.setTheme(value),
+    getTheme: () => app.getTheme(),
+    setLayout: (mode) => app.setLayout(mode),
     destroy() {
+      themeWatch?.disconnect()
       app.destroy()
       canvas.remove()
     },

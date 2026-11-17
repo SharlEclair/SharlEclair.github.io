@@ -130,7 +130,7 @@ const app = createExperience({
 // open in separate tabs.
 function syncTitle() {
   const preset = PRESETS.find((p) => p.id === activeId)
-  document.title = `F1 × Currents — ${preset ? preset.label : activeId}`
+  document.title = `F1 × Currents - ${preset ? preset.label : activeId}`
 }
 syncTitle()
 

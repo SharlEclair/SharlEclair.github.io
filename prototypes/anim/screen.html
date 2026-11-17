@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>LCD screen variants</title>
+    <style>
+      html, body { margin: 0; background: #14161a; color: #ddd; font: 13px/1.4 ui-monospace, Menlo, Consolas, monospace; }
+      .runway { position: relative; height: 300vh; }
+      .stage { position: sticky; top: 0; height: 100vh; overflow: hidden; display: grid; grid-template-columns: 704px 1fr; }
+      .lcd { display: grid; place-items: center; background: #0b0c0e; }
+      .lcd canvas { width: 640px; height: 576px; image-rendering: pixelated; display: block; }
+      .full { position: relative; }
+      .bar { position: fixed; left: 12px; top: 10px; z-index: 5; display: flex; gap: 8px; flex-wrap: wrap; }
+      .bar a { color: #9fd; padding: 2px 8px; border: 1px solid #fff3; text-decoration: none; }
+      .bar a.on { background: #9fd; color: #000; }
+    </style>
+  </head>
+  <body>
+    <div class="bar" id="bar"></div>
+    <div class="runway" id="runway"><div class="stage">
+      <div class="lcd"><canvas id="lcd" width="640" height="576"></canvas></div>
+      <div class="full" id="full"></div>
+    </div></div>
+    <script type="module">
+      // ?screen=hands|ribbons|cubes|globe   keys 1-4 switch (reload)   ?palette=dmg|pocket|night|amber|ink|ember|mono
+      import { variants, variantNames, pickVariant } from '/shared/scenes/hero-screen/index.js'
+      import { createHarness } from '/shared/gl/harness.js'
+      import { createScreenTarget } from '/shared/dither/pass.js'
+
+      const name = pickVariant()
+      const palette = new URLSearchParams(location.search).get('palette') ?? 'dmg'
+      const bar = document.getElementById('bar')
+      variantNames.forEach((n, i) => {
+        const a = document.createElement('a')
+        a.href = `?screen=${n}${palette !== 'dmg' ? `&palette=${palette}` : ''}`
+        a.textContent = `${i + 1} ${n}`
+        if (n === name) a.className = 'on'
+        bar.appendChild(a)
+      })
+      addEventListener('keydown', (e) => {
+        const n = variantNames[Number(e.key) - 1]
+        if (n) location.search = `?screen=${n}${palette !== 'dmg' ? `&palette=${palette}` : ''}`
+      })
+
+      try {
+        const mod = await variants[name]()
+        const runway = document.getElementById('runway')
+        const h = createHarness(document.getElementById('full'), { runway })
+        const { THREE } = h
+        // full look: straight to the harness canvas
+        h.add(await mod.createScene({ THREE, renderer: h.renderer, size: h.size, look: 'full', palette }))
+        // lcd look: 160x144 target, copied (nearest) into the 2D canvas at 4x
+        const lcdScene = await mod.createScene({ THREE, renderer: h.renderer, size: { w: 160, h: 144, dpr: 1 }, look: 'lcd', palette })
+        const target = createScreenTarget(THREE, 160, 144)
+        const ctx2d = document.getElementById('lcd').getContext('2d')
+        const buf = new Uint8Array(160 * 144 * 4)
+        const img = new ImageData(160, 144)
+        // the sRGB-tagged target is encoded on write; decode the readback so the preview shows the exact palette bytes
+        const LUT = Uint8ClampedArray.from({ length: 256 }, (_, i) => { const c = i / 255; return Math.round((c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4) * 255) })
+        const off = document.createElement('canvas')
+        off.width = 160; off.height = 144
+        const octx = off.getContext('2d')
+        ctx2d.imageSmoothingEnabled = false
+        h.add({
+          scene: new THREE.Scene(), camera: new THREE.Camera(), animated: true,
+          update: (ctx) => lcdScene.update(ctx),
+          resize: () => lcdScene.resize(160, 144, 1),
+          render: (renderer, ctx) => {
+            lcdScene.render(renderer, ctx, target)
+            renderer.readRenderTargetPixels(target, 0, 0, 160, 144, buf)
+            for (let y = 0; y < 144; y++) for (let x = 0; x < 640; x++) img.data[y * 640 + x] = x % 4 === 3 ? 255 : LUT[buf[(143 - y) * 640 + x]]
+            octx.putImageData(img, 0, 0)
+            ctx2d.drawImage(off, 0, 0, 640, 576)
+            renderer.setRenderTarget(null)
+          },
+          dispose: () => { lcdScene.dispose(); target.dispose() },
+        })
+        h.start()
+        window.__POSTER = (k = 3) => { const c = document.createElement('canvas'); c.width = 160 * k; c.height = 144 * k; const g = c.getContext('2d'); g.imageSmoothingEnabled = false; g.drawImage(off, 0, 0, c.width, c.height); return c.toDataURL('image/jpeg', 0.93) }
+        window.__HARNESS = h
+        window.__SCENE = lcdScene
+        window.__TEST_SET_PROGRESS = (v) => h.setProgress(v)
+        window.__TEST_SET_POINTER = (x, y) => h.setPointer(x, y)
+        window.__APP_READY = true
+      } catch (error) {
+        console.error(error)
+        window.__APP_ERROR = String(error)
+      }
+    </script>
+  </body>
+</html>

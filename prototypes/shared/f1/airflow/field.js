@@ -88,6 +88,7 @@ const vertexShader = /* glsl */ `
   varying float v_wake;
   varying float v_band;
   varying float v_violet;
+  varying float v_depth;
 
   // Guard degenerate ramps. smoothstep with edge0 == edge1 divides by zero and
   // yields NaN, and a single NaN vertex makes the GPU discard the ENTIRE draw
@@ -285,6 +286,7 @@ const vertexShader = /* glsl */ `
     v_wake = wakeZone * vortexAmount;
     v_band = a_band;
     v_violet = a_violet;
+    v_depth = dist;
 
     gl_Position = projectionMatrix * vec4(viewPos, 1.0);
   }
@@ -298,11 +300,17 @@ const fragmentShader = /* glsl */ `
   uniform vec3 u_colorBand;        // the bold focal streak
   uniform float u_opacity;
   uniform float u_bandStrength;
+  // Distance fade toward the background (the light theme: far lines thin out instead of piling up
+  // into a dark smudge at the vanishing point). The dark theme parks near/far far away: no fade.
+  uniform float u_fadeNear;
+  uniform float u_fadeFar;
+  uniform float u_fadeMin;
 
   varying float v_influence;
   varying float v_wake;
   varying float v_band;
   varying float v_violet;
+  varying float v_depth;
 
   void main() {
     // Tonal variety: most lines pale lavender, a minority leaning violet.
@@ -316,7 +324,8 @@ const fragmentShader = /* glsl */ `
     col = mix(col, u_colorSeparation, smoothstep(0.25, 0.9, v_influence) * 0.45);
     col = mix(col, u_colorVortex, v_wake * 0.75);
 
-    gl_FragColor = vec4(col, u_opacity);
+    float fade = 1.0 - (1.0 - u_fadeMin) * smoothstep(u_fadeNear, u_fadeFar, v_depth);
+    gl_FragColor = vec4(col, u_opacity * fade);
   }
 `
 
@@ -460,6 +469,9 @@ export function createAirflow(scene) {
     u_colorBand:         { value: new THREE.Color(palette.band).multiplyScalar(LOOK.bandGain) },
     u_bandStrength:      { value: a.bandStrength },
     u_opacity:           { value: a.opacity },
+    u_fadeNear:          { value: 1e5 },
+    u_fadeFar:           { value: 2e5 },
+    u_fadeMin:           { value: 1 },
   }
 
   const material = new THREE.ShaderMaterial({
@@ -566,7 +578,29 @@ export function updateAirflow(field, camera) {
 
   // Pixel-accurate ribbon thickness: world units per pixel at distance d
   // equals d * 2*tan(fov/2) / viewportHeightPixels.
+  // The camera may render a scaled sub-window of its virtual frame (camera/rig.js, layout), in which
+  // case a pixel covers 1 / viewScale as much of the frame.
   const fovRad = (camera.fov * Math.PI) / 180
+  const viewScale = camera.userData.viewScale || 1
   u.u_projScale.value =
-    (2.0 * Math.tan(fovRad * 0.5)) / viewport.height
+    (2.0 * Math.tan(fovRad * 0.5)) / (viewport.height * viewScale)
+}
+
+// Restyle the field for a theme (theme.js). Colours, blending and the distance fade live on the
+// material; opacity and line thickness are re-read from `config.airflow` every frame, so the caller
+// writes those into the config.
+export function applyAirflowTheme(field, def) {
+  if (!field) return
+  const u = field.uniforms
+  const c = def.colors()
+  u.u_colorBase.value.copy(c.base)
+  u.u_colorViolet.value.copy(c.violet)
+  u.u_colorSeparation.value.copy(c.separation)
+  u.u_colorVortex.value.copy(c.vortex)
+  u.u_colorBand.value.copy(c.band)
+  u.u_fadeNear.value = def.fade.near
+  u.u_fadeFar.value = def.fade.far
+  u.u_fadeMin.value = def.fade.min
+  field.material.blending = def.additive ? THREE.AdditiveBlending : THREE.NormalBlending
+  field.material.needsUpdate = true
 }
