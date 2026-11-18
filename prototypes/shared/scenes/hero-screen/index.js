@@ -10,6 +10,10 @@ export const variants = {
   ribbons: () => import('./ribbons.js'),
   cubes: () => import('./cubes.js'),
   globe: () => import('./globe.js'),
+  wall: () => import('./wall.js'),
+  gyro: () => import('./gyro.js'),
+  dice: () => import('./dice.js'),
+  lattice: () => import('./lattice.js'),
 }
 export const variantNames = Object.keys(variants)
 export const defaultVariant = 'hands'

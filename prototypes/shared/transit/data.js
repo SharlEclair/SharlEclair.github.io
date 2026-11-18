@@ -119,24 +119,57 @@ function buildField() {
     nts[i] = nodes.arrivalFrame[i] / TIME_SCALE
   }
   const pace = 1 / 2600 // normalised time per metre
+  // Exact, but pruned: nodes sorted by arrival time let the min-search stop once arrival alone beats `best`,
+  // and a 120 m bucket grid finds the nearest node by ring search instead of scanning all of them.
+  const order = Array.from({ length: n }, (_, i) => i).sort((a, b) => nts[a] - nts[b])
+  const CELL = 120
+  const gw = Math.ceil((x1 - x0) / CELL) + 1
+  const gh = Math.ceil((z1 - z0) / CELL) + 1
+  const buckets = Array.from({ length: gw * gh }, () => [])
+  for (let k = 0; k < n; k += 1) {
+    const gx = Math.min(gw - 1, Math.max(0, Math.floor((nxs[k] - x0) / CELL)))
+    const gz = Math.min(gh - 1, Math.max(0, Math.floor((nzs[k] - z0) / CELL)))
+    buckets[gz * gw + gx].push(k)
+  }
   const data = new Uint16Array(nx * nz * 2)
   for (let j = 0; j < nz; j += 1) {
     const z = z0 + ((j + 0.5) / nz) * (z1 - z0)
     for (let i = 0; i < nx; i += 1) {
       const x = x0 + ((i + 0.5) / nx) * (x1 - x0)
       let best = 9
-      let near = 1e5
-      for (let k = 0; k < n; k += 1) {
+      for (let q = 0; q < n; q += 1) {
+        const k = order[q]
+        if (nts[k] >= best) break
         const dx = x - nxs[k]
         const dz = z - nzs[k]
-        const d = Math.sqrt(dx * dx + dz * dz)
-        const t = nts[k] + d * pace
+        const t = nts[k] + Math.sqrt(dx * dx + dz * dz) * pace
         if (t < best) best = t
-        if (d < near) near = d
+      }
+      let near2 = 2000 * 2000
+      const cx = Math.floor((x - x0) / CELL)
+      const cz = Math.floor((z - z0) / CELL)
+      for (let r = 0; r <= 17; r += 1) {
+        // every node in ring r is at least (r - 1) * CELL away
+        const lo = (r - 1) * CELL
+        if (r > 0 && lo * lo > near2) break
+        for (let gz = cz - r; gz <= cz + r; gz += 1) {
+          if (gz < 0 || gz >= gh) continue
+          const edge = gz === cz - r || gz === cz + r
+          for (let gx = cx - r; gx <= cx + r; gx += edge ? 1 : 2 * r || 1) {
+            if (gx < 0 || gx >= gw) continue
+            const b = buckets[gz * gw + gx]
+            for (let m = 0; m < b.length; m += 1) {
+              const dx = x - nxs[b[m]]
+              const dz = z - nzs[b[m]]
+              const d2 = dx * dx + dz * dz
+              if (d2 < near2) near2 = d2
+            }
+          }
+        }
       }
       const o = (j * nx + i) * 2
       data[o] = THREE.DataUtils.toHalfFloat(best)
-      data[o + 1] = THREE.DataUtils.toHalfFloat(Math.min(near, 2000))
+      data[o + 1] = THREE.DataUtils.toHalfFloat(Math.sqrt(near2))
     }
   }
   const tex = new THREE.DataTexture(data, nx, nz, THREE.RGFormat, THREE.HalfFloatType)
@@ -174,6 +207,54 @@ function groundGeometry() {
   return g
 }
 
+/**
+ * Slim the baked building mesh. At poster scale a short block (under ~8 m, which the shader halves again)
+ * is a roof speck: its walls are sub-pixel, so keep only roofs for it. Taller walls stay, undersides go
+ * everywhere (never seen), and vertices are welded.
+ */
+const WALL_MIN_H = 8
+function slimBuildings(src) {
+  const pos = src.getAttribute('position').array
+  const idx = src.index.array
+  const outPos = []
+  const outIdx = []
+  const remap = new Map()
+  const put = (vi) => {
+    const x = pos[vi * 3]
+    const y = pos[vi * 3 + 1]
+    const z = pos[vi * 3 + 2]
+    const k = `${Math.round(x * 20)},${Math.round(y * 20)},${Math.round(z * 20)}`
+    let v = remap.get(k)
+    if (v === undefined) {
+      v = outPos.length / 3
+      remap.set(k, v)
+      outPos.push(x, y, z)
+    }
+    return v
+  }
+  for (let i = 0; i < idx.length; i += 3) {
+    const a = idx[i] * 3
+    const b = idx[i + 1] * 3
+    const c = idx[i + 2] * 3
+    // geometric normal of the triangle, y component
+    const ux = pos[b] - pos[a], uy = pos[b + 1] - pos[a + 1], uz = pos[b + 2] - pos[a + 2]
+    const vx = pos[c] - pos[a], vy = pos[c + 1] - pos[a + 1], vz = pos[c + 2] - pos[a + 2]
+    const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx
+    const len = Math.hypot(nx, ny, nz) || 1
+    const roof = Math.abs(ny / len) > 0.6
+    if (roof) {
+      if (pos[a + 1] < 0.01 && pos[b + 1] < 0.01 && pos[c + 1] < 0.01) continue // underside
+    } else if (Math.max(pos[a + 1], pos[b + 1], pos[c + 1]) < WALL_MIN_H) {
+      continue
+    }
+    outIdx.push(put(idx[i]), put(idx[i + 1]), put(idx[i + 2]))
+  }
+  const g = new THREE.BufferGeometry()
+  g.setAttribute('position', new THREE.Float32BufferAttribute(outPos, 3))
+  g.setIndex(new THREE.Uint32BufferAttribute(outIdx, 1))
+  return g
+}
+
 export async function loadMapData() {
   const gltf = await new GLTFLoader().loadAsync(ASSET_URL)
   const get = (name) => {
@@ -196,10 +277,7 @@ export async function loadMapData() {
     routeList.push([route[i][1], route[i][2], route[i + 1][1], route[i + 1][2], route[i][0], route[i + 1][0]])
   }
 
-  const buildings = get('Buildings').geometry
-  for (const name of Object.keys(buildings.attributes)) {
-    if (name !== 'position') buildings.deleteAttribute(name)
-  }
+  const buildings = slimBuildings(get('Buildings').geometry)
 
   const circ = circuitSegments()
   const key = []

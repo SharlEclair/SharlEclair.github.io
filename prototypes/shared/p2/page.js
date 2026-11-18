@@ -137,7 +137,7 @@ async function initHandheld(profile) {
   void samplePose
   const maxScroll = () => Math.max(1, document.documentElement.scrollHeight - innerHeight)
   const h = createHarness(stage, {
-    alpha: true, clearAlpha: 0, maxPixelRatio: pixelRatioCap(), pointerFrom: 'window',
+    alpha: true, antialias: true, clearAlpha: 0, maxPixelRatio: pixelRatioCap(), pointerFrom: 'window',
     progress: () => scrollY / maxScroll(),
   })
   const { THREE } = h
@@ -244,7 +244,9 @@ async function initHandheld(profile) {
       let op = 1
       if (profile === 'hero') {
         const hEnd = docY(hero) + hero.offsetHeight
-        showScreen(scrollY < hEnd - innerHeight * 0.2 ? 'hero' : null)
+        const onHero = scrollY < hEnd - innerHeight * 0.2
+        showScreen(onHero ? 'hero' : null)
+        gbs.interactiveHero = onHero
       } else if (harvest) {
         const p = runwayProgress(harvest)
         const inRun = scrollY > docY(harvest) - innerHeight && scrollY < docY(harvest) + harvest.offsetHeight
@@ -261,3 +263,8 @@ async function initHandheld(profile) {
   addEventListener('pointermove', () => { document.body.classList.toggle('gb-hover', Boolean(gbs.hover)) }, { passive: true })
   onScroll()
 }
+
+// ---------------------------------------------------------------------------------------------- easter eggs
+const baseTitle = document.title
+document.addEventListener('visibilitychange', () => { document.title = document.hidden ? 'come back, the undercut is still on' : baseTitle })
+console.log('%cLet it happen.', 'font:italic 20px Georgia;color:#39ff88', '\nPSA: the console on the contact section hides two games. Try START, then the Konami code at the menu.')

@@ -1,0 +1,96 @@
+/* Torn-page separators: the look. tear.js builds the layers and moves their clip-paths; page.css sizes the band. */
+html[data-theme='dark'] .tear {
+  --np-paper: #d3c9ae; --np-edge: #a99c78; --np-ink: #1d1a14;
+  --tear-rim: #ebe6d6; --tear-feather: rgba(235, 230, 214, .5);
+  --tear-sh1: rgba(0, 0, 0, .42); --tear-sh2: rgba(0, 0, 0, .22);
+  --tear-lip: rgba(255, 255, 255, .06);
+}
+html[data-theme='light'] .tear {
+  --np-paper: #c7b88f; --np-edge: #9c8a5c; --np-ink: #191610;
+  --tear-rim: #fcfaf2; --tear-feather: rgba(252, 250, 242, .62);
+  --tear-sh1: rgba(48, 34, 8, .36); --tear-sh2: rgba(48, 34, 8, .17);
+  --tear-lip: rgba(60, 50, 30, .10);
+}
+
+.tear > i { position: absolute; inset: 0; pointer-events: none; }
+.tear .tear-page { background: var(--bg); }
+.tear .tear-lip { background: var(--tear-lip); }
+.tear .tear-rim, .tear .tear-fb {
+  background-color: var(--tear-rim);
+  /* fibre grain: static, so moving the clip-path never re-runs it */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='60'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9 .08' numOctaves='3' seed='3'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .42 0 0 0 0 .36 0 0 0 .7 -.12'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
+}
+.tear .tear-fb { background-color: var(--tear-feather); opacity: .9; }
+.tear .tear-sh { background: var(--tear-sh1); }
+.tear .tear-sh.s2 { background: var(--tear-sh2); }
+
+/* ---------- the newspaper underneath ---------- */
+.tear .tear-np {
+  position: absolute; inset: -14% -2%; visibility: hidden; overflow: hidden; will-change: transform;
+  color: var(--np-ink); font: 400 clamp(7px, .3vw + 5px, 10px)/1.24 Georgia, 'Times New Roman', serif; font-kerning: normal;
+  background-color: var(--np-paper);
+  background-image:
+    radial-gradient(120% 90% at 50% 50%, transparent 40%, color-mix(in srgb, var(--np-edge) 55%, transparent)),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='3' seed='9'/%3E%3CfeColorMatrix values='0 0 0 0 .3 0 0 0 0 .26 0 0 0 0 .16 0 0 0 .5 -.08'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='300'%3E%3Cfilter id='s'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.008 .02' numOctaves='2' seed='2'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .36 0 0 0 0 .14 0 0 0 .9 -.35'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23s)'/%3E%3C/svg%3E");
+}
+.tear.is-open .tear-np { visibility: visible; }
+.tear .np-page { position: absolute; inset: 14% 3.2%; display: flex; flex-direction: column; justify-content: center; gap: .4em; transform: rotate(-.6deg); }
+.tear .np-page p { margin: 0; }
+.tear .np-folio { font: italic 400 1.05em/1.2 Georgia, serif; text-align: right; }
+.tear .np-row { display: flex; gap: 1.4em; min-height: 0; }
+.tear .np-cols {
+  flex: 1; min-width: 0; height: 8.6em; overflow: hidden;
+  column-width: 15em; column-gap: 1.3em; column-rule: 1px solid color-mix(in srgb, var(--np-ink) 45%, transparent); column-fill: auto;
+  text-align: justify; hyphens: auto; -webkit-hyphens: auto; opacity: .88;
+}
+.tear .np-cols p + p { text-indent: 1.1em; }
+.tear .np-fig { flex: 0 0 auto; width: 13em; margin: 0; }
+.tear .np-ht { display: block; height: 7.2em; background: center / cover no-repeat; border: 1px solid var(--np-ink); opacity: .82; }
+.tear .np-fig figcaption { margin-top: .35em; font-style: italic; font-size: .92em; line-height: 1.15; }
+
+/* a: broadsheet */
+.tear .np-mast { display: grid; grid-template-columns: 1fr auto 1fr; align-items: end; gap: 1em; padding-bottom: .35em; border-bottom: 3px double var(--np-ink); font-size: .95em; text-transform: uppercase; letter-spacing: .06em; }
+.tear .np-mast b { font: 400 2.8em/.9 var(--serif); letter-spacing: .01em; text-transform: none; }
+.tear .np-head { margin: 0; font: 400 3.3em/.9 var(--serif); text-transform: uppercase; letter-spacing: -.005em; }
+.tear .np-deck { font-style: italic; font-size: 1.3em; padding-bottom: .35em; border-bottom: 1px solid var(--np-ink); }
+
+/* b: classifieds */
+.tear .np-bar { display: grid; grid-template-columns: auto 1fr auto; align-items: baseline; gap: 1.2em; border-block: 2px solid var(--np-ink); padding: .25em 0; }
+.tear .np-bar b { font: 400 3em/1 var(--serif); text-transform: uppercase; letter-spacing: .04em; }
+.tear .np-bar span:nth-child(2) { font-style: italic; font-size: 1.2em; }
+.tear .np-ads { height: 12.6em; column-width: 12em; text-align: left; hyphens: manual; }
+.tear .np-ads p { text-indent: 0 !important; padding: .3em 0; border-bottom: 1px dotted var(--np-ink); break-inside: avoid; }
+.tear .np-ads p b { font-family: var(--sans); font-weight: 700; text-transform: uppercase; font-size: .9em; letter-spacing: .03em; }
+.tear .np-puzzle { flex: 0 0 auto; width: 17em; border: 1px solid var(--np-ink); padding: .5em; }
+.tear .np-puzzle h4 { margin: 0 0 .4em; font: 400 1.7em/1 var(--serif); text-transform: uppercase; }
+.tear .np-grid { display: grid; grid-template-columns: repeat(9, 1fr); border-top: 1px solid var(--np-ink); border-left: 1px solid var(--np-ink); margin-bottom: .45em; }
+.tear .np-grid i { font: 700 1em/1.75 var(--sans); font-style: normal; text-align: center; border-right: 1px solid var(--np-ink); border-bottom: 1px solid var(--np-ink); }
+.tear .np-grid i.c { border-radius: 50%; box-shadow: inset 0 0 0 1.2px var(--np-ink); }
+.tear .np-puzzle p { font-style: italic; font-size: .95em; }
+
+/* c: sports */
+.tear .np-flag { height: 1.3em; background: repeating-conic-gradient(var(--np-ink) 0 25%, transparent 0 50%) 0 0 / 1.3em 1.3em; opacity: .9; }
+.tear .np-sport { display: grid; grid-template-columns: auto 1fr auto; align-items: end; gap: 1.2em; padding-bottom: .4em; border-bottom: 1px solid var(--np-ink); }
+.tear .np-sport b { font: 800 2.4em/1 var(--sans); text-transform: uppercase; letter-spacing: -.02em; background: var(--np-ink); color: var(--np-paper); padding: .1em .3em; }
+.tear .np-sport h3 { margin: 0; font: 400 3em/.92 var(--serif); text-transform: uppercase; }
+.tear .np-table { flex: 0 0 auto; border-collapse: collapse; font: 400 1em/1.35 var(--sans); align-self: start; }
+.tear .np-table caption { text-align: left; font: italic 400 1.15em/1.4 Georgia, serif; }
+.tear .np-table th { text-align: left; font-weight: 700; text-transform: uppercase; font-size: .82em; letter-spacing: .05em; border-bottom: 2px solid var(--np-ink); padding: .1em .7em .1em 0; }
+.tear .np-table td { padding: .12em .7em .12em 0; border-bottom: 1px dotted var(--np-ink); white-space: nowrap; }
+.tear .np-table td:last-child { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.tear .np-c .np-fig { width: 15em; }
+
+@media (max-width: 760px) {
+  .tear .np-fig, .tear .np-mast span:first-child { display: none; }
+  .tear .np-puzzle { width: 12em; padding: .35em; }
+  .tear .np-puzzle h4 { font-size: 1.3em; }
+  .tear .np-row { gap: .9em; }
+  .tear .np-mast { grid-template-columns: auto 1fr; }
+  .tear .np-mast b { font-size: 2.6em; }
+  .tear .np-head { font-size: 2.6em; }
+  .tear .np-sport { grid-template-columns: auto 1fr; }
+  .tear .np-sport h3 { font-size: 2.1em; }
+  .tear .np-sport .np-folio, .tear .np-bar .np-folio { display: none; }
+  .tear .np-c .np-cols { display: none; }
+}

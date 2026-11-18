@@ -5,6 +5,7 @@ import { config, palette } from '../config.js'
 import { FINISHES } from './finishes.js'
 import { publishCarCenter } from './ref.js'
 import { createStudioEnvironment } from '../look.js'
+import { applyCarStyle } from './livery.js'
 
 // NOTE: DRACOLoader is deliberately NOT imported.
 //
@@ -299,6 +300,11 @@ export function applyCarMaterial(car, envMap) {
 
   releaseOriginalMaterials()
 
+  // Livery body, carbon parts and rubber tyres (car/livery.js), per theme.
+  applyCarStyle(car, envMap)
+  return
+
+  // eslint-disable-next-line no-unreachable
   const accent = c.accent
   let accentMat = null
   if (accent) {

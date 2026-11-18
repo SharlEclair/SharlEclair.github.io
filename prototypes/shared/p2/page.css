@@ -53,7 +53,7 @@ body.gb-hover { cursor: pointer; }
 .mono { font-family: var(--mono); }
 
 /* ---------- hero ---------- */
-.hero { --runway: 200vh; background: var(--stage); color: var(--on-stage); }
+.hero { --runway: 150vh; background: var(--stage); color: var(--on-stage); }
 .hero .stage { background: var(--stage); }
 .hero-viz { position: absolute; inset: 0; }
 .hero-copy { position: absolute; z-index: 3; left: var(--pad); bottom: clamp(3.5rem, 12vh, 8rem); max-width: 38rem; }
@@ -73,15 +73,9 @@ body.gb-hover { cursor: pointer; }
 .approach .copy p:first-child::first-line { color: var(--fg); }
 @media (max-width: 860px) { .approach { grid-template-columns: 1fr; } .approach h2 { position: static; } }
 
-/* ---------- torn paper (shapes are built and animated by tear.js) ---------- */
-.tear { position: relative; height: clamp(8rem, 24vh, 14rem); margin: -1px 0; z-index: 5; filter: drop-shadow(0 5px 7px var(--tear-shadow)); }
-.tear:not(.is-built) { height: 3rem; border-block: 1px dashed var(--line); }
-.tear i, .tear b { position: absolute; inset: 0; will-change: clip-path, transform; }
-.tear .tear-sheet { background: var(--tear-paper); }
-.tear .tear-sheet::before { content: ''; position: absolute; inset: 0; opacity: .5; mix-blend-mode: multiply; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .33 0 0 0 0 .27 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
-.tear .tear-fib { background: var(--tear-fib); }
-.tear .tear-gap { background: var(--tear-void); }
-.tear span { position: absolute; z-index: 1; left: var(--pad); top: 50%; transform: translateY(-50%); font: 500 .72rem/1 var(--mono); letter-spacing: .2em; text-transform: uppercase; color: var(--tear-label); opacity: 0; }
+/* ---------- torn paper (tear.js builds and animates it; its look lives in tear.css) ---------- */
+.tear { position: relative; height: clamp(12rem, 34vh, 20rem); margin: -1px 0; z-index: 5; overflow: hidden; contain: paint; background: var(--bg); }
+html:not(.js) .tear { height: 3rem; border-block: 1px dashed var(--line); }
 
 /* ---------- projects ---------- */
 .projects-head { padding: clamp(4rem, 10vh, 7rem) var(--pad) clamp(2rem, 5vh, 4rem); display: flex; justify-content: space-between; align-items: end; gap: 1rem; flex-wrap: wrap; }
@@ -194,3 +188,6 @@ body.gb-hover { cursor: pointer; }
 html[data-theme='dark'] .over-stage .top { --fg: #ecebe5; --muted: #b9b9b2; --line: rgba(236, 235, 229, .22); --bar: rgba(8, 8, 10, .55); }
 html[data-theme='dark'] .over-stage .top nav a:hover, html[data-theme='dark'] .over-stage .top nav a[aria-current='true'] { background: rgba(236, 235, 229, .14); }
 @media (max-width: 760px) { html[data-theme='dark'] .over-stage .top nav { background: #0b0b0c; } }
+
+/* phones: keep the animations clear of the sticky header (about 3.8rem) */
+@media (max-width: 760px) { .proj-viz { inset: 3.8rem 0 0 0; } }

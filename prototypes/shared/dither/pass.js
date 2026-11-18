@@ -13,15 +13,15 @@
  */
 export const LCD_PALETTES = {
   dmg: ['#0f380f', '#306230', '#8bac0f', '#9bbc0f'],          // classic green
-  pocket: ['#1b1d16', '#4b5444', '#8a967c', '#c4cfa9'],        // grey-green, calmer
-  night: ['#06100a', '#1d3b2a', '#4f8f67', '#b9ffd0'],          // phosphor on black (matches the hero hands)
+  pocket: ['#1b1d16', '#444c3e', '#788468', '#a3ae88'],        // grey-green, calmer
+  night: ['#06100a', '#1b3626', '#43795a', '#86cfa0'],          // phosphor on black (matches the hero hands)
   amber: ['#120700', '#4a1d00', '#c25a00', '#ffc766'],
   mono: ['#000000', '#ffffff'],
   // dark ink on light grey-cream. Listed dark -> light like the rest; scenes that want "ink on paper" (subject dark,
   // ground light) reverse it, see INK_PALETTES / paletteColors below.
-  ink: ['#1d1c1a', '#5a5852', '#a8a597', '#e7e3d6'],
+  ink: ['#2b2a27', '#56544e', '#807d73', '#aaa699'],
   ember: ['#140a06', '#4a2312', '#b4571c', '#ffbd62'], // dark brown to warm amber
-  ice: ['#071423', '#1f4766', '#5fa3c9', '#bfe9f7'], // deep navy to pale ice blue
+  ice: ['#071423', '#1c4260', '#4f8bad', '#98c6da'], // deep navy to pale ice blue
   berry: ['#1a0716', '#5a1a4c', '#c04a8e', '#ffc2e2'], // plum to pink
 }
 /** Palettes whose ground is the LIGHT end: scenes (bright subject on black) get the colour order reversed. */

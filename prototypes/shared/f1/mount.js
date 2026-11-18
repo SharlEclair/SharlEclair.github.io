@@ -26,6 +26,7 @@
  * (text over the bottom ~45%); 'auto' switches at canvas aspect 0.9. Resize is handled.
  */
 import { createExperience } from './core/experience.js'
+import { attachOrbit } from './camera/orbit.js'
 
 /**
  * @param {HTMLElement} stage element the canvas should fill
@@ -78,6 +79,8 @@ export function mountF1(stage, options = {}) {
   })
 
   // No explicit theme: track the page's data-theme attribute.
+  const detachOrbit = attachOrbit(stage, (yaw, pitch, held) => app.setOrbit(yaw, pitch, held))
+
   const themeWatch = theme === null && typeof MutationObserver === 'function'
     ? new MutationObserver(() => app.setTheme(document.documentElement.dataset.theme))
     : null
@@ -91,6 +94,7 @@ export function mountF1(stage, options = {}) {
     setLayout: (mode) => app.setLayout(mode),
     destroy() {
       themeWatch?.disconnect()
+      detachOrbit()
       app.destroy()
       canvas.remove()
     },

@@ -517,6 +517,9 @@ void main() {
   vec3 c = mix(u_ink, u_accent, vLit * 0.85);
   c = mix(c, u_hot, vHot * 0.8);
   float a = base + vLit * mix(0.03, 0.1, roof) + vHot * 0.3 * roof;
+  // The baked undersides are gone from the mesh; they only ever doubled the roof's own alpha, so do that here.
+  float under = u_roof * 0.8 + vLit * 0.1 + vHot * 0.3;
+  a = mix(a, a + under - a * under, roof);
   gl_FragColor = finish(c, a * vFog);
 }`,
     uniforms,

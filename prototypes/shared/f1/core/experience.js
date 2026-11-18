@@ -7,9 +7,10 @@ import { onViewportChange } from './viewport.js'
 import { applyLookToConfig, LOOK } from '../look.js'
 import { createRenderer } from './renderer.js'
 import { scene, updateScene, applySceneTheme } from '../scene/scene.js'
-import { camera, initCamera, updateCamera, rebuildCurves, setLayoutMode, resolveLayout } from '../camera/rig.js'
+import { camera, setOrbitTarget, initCamera, updateCamera, rebuildCurves, setLayoutMode, resolveLayout } from '../camera/rig.js'
 import { createAirflow, updateAirflow, applyAirflowTheme } from '../airflow/field.js'
 import { THEMES, normaliseTheme, readPageTheme } from '../theme.js'
+import { setCarStyle, updateCarWheels } from '../car/livery.js'
 import { loadCar, applyCarTransform, applyCarMaterial, applyFinish, createEnvironment } from '../car/loader.js'
 import { createPanel } from '../ui/panel.js'
 import {
@@ -200,6 +201,7 @@ export function createExperience({
   // the scene, the field's material, the post chain, the renderer's tone map and the car.
   function applyTheme(name) {
     themeName = normaliseTheme(name)
+    setCarStyle(themeName)
     const def = THEMES[themeName]
     renderer.toneMapping = def.toneMapping
     renderer.toneMappingExposure = def.exposure
@@ -225,6 +227,7 @@ export function createExperience({
     updateScroll()
     updateCamera()
     updateAirflow(airflow, camera)
+    updateCarWheels(car, time.elapsed, config.airflow.flowSpeed)
     updateScene(scroll.progress, camera)
     post.render(time.elapsed, !staticTime)
   }
@@ -376,6 +379,7 @@ export function createExperience({
       draw()
     },
     getTheme: () => themeName,
+    setOrbit: setOrbitTarget,
     setLayout(mode) {
       setLayoutMode(mode)
       syncWash()

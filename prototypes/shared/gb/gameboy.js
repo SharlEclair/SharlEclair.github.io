@@ -6,20 +6,22 @@
  * (shared/gb/lcd.js) as the screen texture. Local units: layout.js.
  *
  *   const gb = await createGameboy({ THREE, lcd })
- *   scene.add(gb.group); gb.update(dt); gb.tap('a'); gb.pick(ndc, camera) -> 'a' | 'b' | 'start' | 'up'... | 'screen' | null
+ *   scene.add(gb.group); gb.update(dt); gb.tap('a'); gb.pick(ndc, camera) -> 'a' | 'b' | 'start' | 'up'... | 'screen' | 'bezel' | 'body' | null
+ *   gb.pickInfo(ndc, camera) -> { part, px, py } (px, py = LCD pixel under the ray when part is 'screen')
  *   gb.setTheme('dark' | 'light')
  */
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { L } from './layout.js'
 import { makePcbTextures, makeLetterTexture, makeDiffuser, makeDpadMarks, makePrint, makeGlassWear } from './textures.js'
 import { mergeColored, box, cylZ } from './parts.js'
+import { makeGlowTexture } from './textures.js'
 
 const BASE = (import.meta.env?.BASE_URL ?? '/').replace(/\/$/, '')
 
 // Theme looks for the frosted plastic. Dark: milky, bright soft edge scatter. Light (cream paper): a darker smoke with
 // more body so it does not vanish into the page, and edges that darken rather than glow.
 const LOOKS = {
-  dark: { color: 0x9ba2a9, face: 0.24, edge: 0.94, back: 0.5, scatter: 0xdde7ef, scatterK: 0.42, diffuser: 0.75, diffuserColor: 0xd2d8de },
+  dark: { color: 0x585d64, face: 0.34, edge: 0.97, back: 0.6, scatter: 0xe9f2fa, scatterK: 0.8, diffuser: 0.42, diffuserColor: 0x9aa1a9 },
   light: { color: 0x8f969e, face: 0.5, edge: 0.95, back: 0.6, scatter: 0x3a3f46, scatterK: -0.18, diffuser: 0.8, diffuserColor: 0xb8bec6 },
 }
 
@@ -43,7 +45,7 @@ export async function createGameboy({ THREE, lcd, modelUrl = `${BASE}/models/gam
   }
   const frost = ({ color = 0xd3d8de, side = THREE.FrontSide, faceK = 1, scatterK = 1, rough = 0.5 } = {}) => {
     const m = new THREE.MeshPhysicalMaterial({
-      color, roughness: rough, metalness: 0, clearcoat: 0.22, clearcoatRoughness: 0.42, transparent: true,
+      color, roughness: rough, metalness: 0, clearcoat: 0.6, clearcoatRoughness: 0.16, transparent: true,
       envMapIntensity: 1.1 * envIntensity, side, depthWrite: false,
     })
     m.onBeforeCompile = (sh) => {
@@ -80,9 +82,10 @@ export async function createGameboy({ THREE, lcd, modelUrl = `${BASE}/models/gam
     // roughness 1 x the wear map's green channel (~0.1 glossy, scratches rougher)
     bezel: plastic(0x040405, 1, { roughnessMap: wear, clearcoat: 1, clearcoatRoughness: 0.06, envMapIntensity: 0.9 * envIntensity }),
     dpad: plastic(0x1c1d20, 0.5, { clearcoat: 0.25, clearcoatRoughness: 0.45 }),
-    btn_a: plastic(0xe0412f, 0.48, { clearcoat: 0.3, clearcoatRoughness: 0.4, sheen: 0.3, sheenColor: 0xff9a80 }),
-    btn_b: plastic(0xe0412f, 0.48, { clearcoat: 0.3, clearcoatRoughness: 0.4, sheen: 0.3, sheenColor: 0xff9a80 }),
-    start: plastic(0x1fa6d6, 0.22, { clearcoat: 0.9, clearcoatRoughness: 0.12, emissive: 0x0a6f95, emissiveIntensity: 0.25 }),
+    // glossy red-orange caps and a vivid cyan-blue pill; a same-hue emissive keeps them saturated under ACES
+    btn_a: plastic(0xff3b12, 0.3, { clearcoat: 1, clearcoatRoughness: 0.09, emissive: 0xff2a06, emissiveIntensity: 0.4 }),
+    btn_b: plastic(0xff3b12, 0.3, { clearcoat: 1, clearcoatRoughness: 0.09, emissive: 0xff2a06, emissiveIntensity: 0.4 }),
+    start: plastic(0x0088ff, 0.32, { clearcoat: 1, clearcoatRoughness: 0.08, emissive: 0x0080ff, emissiveIntensity: 0.7 }),
     port: plastic(0x16171a, 0.45, { metalness: 0.4 }),
     speaker: plastic(0xffffff, 0.34, { vertexColors: true, clearcoat: 0.6, clearcoatRoughness: 0.2 }),
     screws: plastic(0x2c2e33, 0.5),
@@ -200,6 +203,21 @@ export async function createGameboy({ THREE, lcd, modelUrl = `${BASE}/models/gam
     nodes.dpad.add(m)
     track.push(tex, geo, mat)
   }
+  // A faint coloured halo under each button (normal blending, so it composites over a transparent canvas)
+  const haloTex = makeGlowTexture(THREE)
+  track.push(haloTex)
+  const halos = []
+  for (const [name, color, w, h, op] of [['btn_a', 0xff4a1a, 0.78, 0.78, 0.4], ['btn_b', 0xff4a1a, 0.78, 0.78, 0.4], ['start', 0x1aa8ff, 0.95, 0.5, 0.5]]) {
+    if (!nodes[name]) continue
+    const mat = new THREE.SpriteMaterial({ map: haloTex, color, transparent: true, depthWrite: false, toneMapped: false, opacity: op, fog: false })
+    const sp = new THREE.Sprite(mat)
+    sp.scale.set(w, h, 1)
+    sp.position.set(0, 0, 0.01)
+    sp.renderOrder = 4
+    nodes[name].add(sp)
+    halos.push({ mat, op })
+    track.push(mat)
+  }
   // "on / off" printed under the pill
   const printTex = makePrint(THREE, 'on / off')
   const printGeo = new THREE.PlaneGeometry(0.4, 0.075)
@@ -230,29 +248,35 @@ export async function createGameboy({ THREE, lcd, modelUrl = `${BASE}/models/gam
   const press = { a: 0, b: 0, start: 0, up: 0, down: 0, left: 0, right: 0 }
   const rest = {}
   for (const n of ['dpad', 'btn_a', 'btn_b', 'start']) rest[n] = nodes[n]?.position.clone()
-  const pickables = ['btn_a', 'btn_b', 'start', 'dpad', 'screen', 'bezel'].map((n) => nodes[n]).filter(Boolean)
+  const pickables = ['btn_a', 'btn_b', 'start', 'dpad', 'screen', 'bezel', 'body'].map((n) => nodes[n]).filter(Boolean)
   const ray = new THREE.Raycaster()
   const tmp = new THREE.Vector3()
 
   const api = {
     group, nodes, mats, lcd, texture: screenTex, press, interactive: false, setTheme,
     /** Which control is under the raycaster, or null. D-pad returns its direction. */
-    pick(ndc, camera) {
+    pick(ndc, camera) { return api.pickInfo(ndc, camera).part },
+    pickInfo(ndc, camera) {
       ray.setFromCamera(ndc, camera)
       const hit = ray.intersectObjects(pickables, false)[0]
-      if (!hit) return null
+      if (!hit) return { part: null }
       const n = hit.object.name
-      if (n === 'btn_a') return 'a'
-      if (n === 'btn_b') return 'b'
-      if (n === 'start') return 'start'
-      if (n === 'screen' || n === 'bezel') return 'screen'
+      if (n === 'btn_a' || n === 'btn_b' || n === 'start') return { part: n === 'start' ? 'start' : n === 'btn_a' ? 'a' : 'b' }
+      if (n === 'screen' || n === 'bezel') {
+        // LCD pixel under the ray; the glass around the lit area is 'bezel' (never maps to a menu row)
+        group.worldToLocal(tmp.copy(hit.point))
+        const S = L.screen
+        const px = ((tmp.x - (S.cx - S.w / 2)) / S.w) * 160
+        const py = ((S.cy + S.h / 2 - tmp.y) / S.h) * 144
+        return px >= 0 && px < 160 && py >= 0 && py < 144 ? { part: 'screen', px, py } : { part: 'bezel' }
+      }
       if (n === 'dpad') {
         hit.object.worldToLocal(tmp.copy(hit.point))
         const dx = tmp.x
         const dy = tmp.y
-        return Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : dy > 0 ? 'up' : 'down'
+        return { part: Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : dy > 0 ? 'up' : 'down' }
       }
-      return null
+      return { part: n }
     },
     /**
      * Show another picture on the screen: pass a WebGLRenderTarget texture (bottom-up) or null to go back to the LCD UI.

@@ -199,7 +199,7 @@ export async function startEngine({
 
   /** The region of the stage the story should live in, in stage pixels. */
   function actionRect(w, h) {
-    if (phone) return { x0: 0.05 * w, x1: 0.95 * w, y0: 0.04 * h, y1: 0.54 * h }
+    if (phone) return { x0: 0.05 * w, x1: 0.95 * w, y0: Math.max(0.04 * h, 100), y1: Math.max(0.54 * h, 100 + 0.42 * h) }
     return { x0: 0.41 * w, x1: 0.985 * w, y0: 0.04 * h, y1: 0.96 * h }
   }
 

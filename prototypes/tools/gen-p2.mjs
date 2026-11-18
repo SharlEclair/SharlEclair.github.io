@@ -8,8 +8,8 @@ const { person, howIWork, projects, archive, work, education, skills } = await i
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 const rng = (seed) => { let a = seed; return () => { a = (a + 0x6d2b79f5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296 } }
 
-function tear(seed, label) {
-  return `<div class="tear" aria-hidden="true" data-seed="${seed}"${label ? ` data-label="${esc(label)}"` : ''}></div>`
+function tear(seed, label, variant) {
+  return `<div class="tear" aria-hidden="true" data-seed="${seed}"${variant ? ` data-variant="${variant}"` : ''}${label ? ` data-label="${esc(label)}"` : ''}></div>`
 }
 
 const icon = {
@@ -96,7 +96,7 @@ function page(id, profile) {
 <p class="cue">Scroll</p>
 </div>
 </section>`
-    : `<section id="top" class="hero runway hero--console" tabindex="-1" aria-labelledby="hero-h" style="--runway:200vh">
+    : `<section id="top" class="hero runway hero--console" tabindex="-1" aria-labelledby="hero-h" style="--runway:150vh">
 <div class="stage">
 <div class="hero-copy">
 <h1 id="hero-h">${esc(person.name)}</h1>
@@ -118,12 +118,12 @@ ${hero}
 <h2 id="approach-h" class="serif-caps">How I<br>work</h2>
 <div class="copy">${howIWork.paragraphs.map((t) => `<p>${esc(t)}</p>`).join('')}</div>
 </section>
-${tear(7, 'Next: the work')}
+${tear(7, 'Next: the work', 'a')}
 <section id="projects" tabindex="-1" aria-labelledby="projects-h">
 <div class="projects-head"><h2 id="projects-h" class="serif-caps">Projects</h2><a href="/variants/${id}/projects.html">View all projects</a></div>
 ${projs}
 </section>
-${tear(19, 'Where it was done')}
+${tear(19, 'Where it was done', 'c')}
 <section id="experience" class="xp" tabindex="-1" aria-labelledby="xp-h">
 <div class="group"><h2 id="xp-h" class="serif-caps">Work</h2>${work.map(job).join('')}</div>
 <div class="group"><h2 class="serif-caps">Education</h2>${education.map(job).join('')}</div>

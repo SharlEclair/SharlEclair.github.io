@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { config, palette } from '../config.js'
 import { carRef } from '../car/ref.js'
+import { time } from '../core/time.js'
 
 export const scene = new THREE.Scene()
 scene.background = new THREE.Color(palette.backgroundTop)
@@ -41,6 +42,64 @@ function makeGrid(centre, line) {
 let gridHelper = makeGrid(0x4a3a2a, 0x231a27)
 scene.add(gridHelper)
 let gridStyle = { base: 0.03, reveal: 0.2 }
+
+
+// Track surface under the car: asphalt grain plus a faint lane line and edge line, in a tinted
+// alpha texture that scrolls along -X at the airflow's speed, so the road reads as moving under the
+// car in step with the streamlines and the wheels.
+const TRACK_LEN = 96
+const TRACK_WID = 16
+const TRACK_TILE = 16
+function trackTextures() {
+  const N = 1024
+  const c = document.createElement('canvas')
+  c.width = c.height = N
+  const g = c.getContext('2d')
+  g.clearRect(0, 0, N, N)
+  let seed = 7
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647)
+  for (let i = 0; i < 26000; i++) {
+    g.fillStyle = `rgba(255,255,255,${(0.05 + rnd() * 0.22).toFixed(3)})`
+    const r = 0.6 + rnd() * 1.6
+    g.fillRect(rnd() * N, rnd() * N, r, r)
+  }
+  // Edge line (solid) and lane line (dashed), running along the tile's x axis.
+  g.fillStyle = 'rgba(255,255,255,0.32)'
+  g.fillRect(0, N * 0.14, N, 9)
+  for (let x = 0; x < N; x += N / 4) g.fillRect(x, N * 0.62, N / 8, 7)
+  // Kerb: broken blocks along the far edge.
+  for (let x = 0; x < N; x += N / 16) g.fillRect(x, N * 0.9, N / 32, 18)
+  const map = new THREE.CanvasTexture(c)
+  map.wrapS = map.wrapT = THREE.RepeatWrapping
+  map.repeat.set(TRACK_LEN / TRACK_TILE, 1)
+  map.anisotropy = 4
+
+  const a = document.createElement('canvas')
+  a.width = 256
+  a.height = 64
+  const ag = a.getContext('2d')
+  const grad = ag.createLinearGradient(0, 0, 256, 0)
+  grad.addColorStop(0, '#000'); grad.addColorStop(0.22, '#fff'); grad.addColorStop(0.78, '#fff'); grad.addColorStop(1, '#000')
+  ag.fillStyle = grad
+  ag.fillRect(0, 0, 256, 64)
+  const vg = ag.createLinearGradient(0, 0, 0, 64)
+  vg.addColorStop(0, 'rgba(0,0,0,1)'); vg.addColorStop(0.3, 'rgba(0,0,0,0)'); vg.addColorStop(0.7, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,1)')
+  ag.fillStyle = vg
+  ag.fillRect(0, 0, 256, 64)
+  const alpha = new THREE.CanvasTexture(a)
+  return { map, alpha }
+}
+const trackTex = trackTextures()
+const track = new THREE.Mesh(
+  new THREE.PlaneGeometry(TRACK_LEN, TRACK_WID),
+  new THREE.MeshBasicMaterial({
+    map: trackTex.map, alphaMap: trackTex.alpha, transparent: true, depthWrite: false,
+    color: 0x9a8fb0, opacity: 0.35, toneMapped: false,
+  })
+)
+track.rotation.x = -Math.PI / 2
+track.renderOrder = -3
+scene.add(track)
 
 // Soft radial blob, as a texture: the contact shadow (light theme) and the faint halo (dark theme).
 function radialTexture() {
@@ -104,6 +163,8 @@ export function applySceneTheme(def) {
 
   shadow.visible = Boolean(def.shadow.visible)
   if (def.shadow.visible) shadow.material.opacity = def.shadow.opacity
+  track.material.color.set(def.track.color)
+  track.material.opacity = def.track.opacity
   halo.visible = Boolean(def.glow.visible)
   if (def.glow.visible) {
     halo.material.color.set(def.glow.color)
@@ -115,6 +176,8 @@ export function updateScene(scrollProgress, camera = null) {
   // Follow the config if the ground has been moved, and fade the grid in as the
   // depth reveal opens the field up into a volume.
   gridHelper.position.y = config.airflow.groundY
+  track.position.y = config.airflow.groundY + 0.003
+  trackTex.map.offset.x = (time.elapsed * config.airflow.flowSpeed) / TRACK_TILE
   // Opens a little ahead of the field's own depth reveal and finishes with it.
   const a = config.airflow
   const reveal = Math.max(

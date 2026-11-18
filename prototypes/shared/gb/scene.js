@@ -1,10 +1,18 @@
 /**
  * Gameboy scene module (see shared/gl/harness.js for the contract). One handheld + one cartridge, posed along a
- * scroll "track" and playable: D-pad up/down selects, A opens, START launches the runner, B backs out. Mouse/touch
- * pressing the 3D buttons works, so does the keyboard while `api.interactive` is true.
+ * scroll "track" and playable: D-pad up/down selects, A opens, START launches the dino runner, B backs out, and the
+ * Konami code (up up down down left right B A) at the menu opens a hidden snake.
  *
- *   const m = await createScene({ THREE, renderer, size, track, cartridge, interactive, onOpen })
+ *   const m = await createScene({ THREE, renderer, size, track, cartridge, interactive, onOpen, onGame })
  *   track: [{ at, xf, y, z, rx, ry, rz, s, cart }]  xf = x in half-widths of the view, s = scale (1 = fits), cart = insert t
+ *
+ * Contact: while `api.interactive` is true the idle bob stops and the console only leans (damped) toward the cursor.
+ * A click/tap on the console sets `api.engaged`: it eases to a straight still pose, scales up 12% and then accepts
+ * input (buttons, LCD taps, keyboard). `interactive = false` disengages. Touch: a tap on a menu row selects it, a
+ * second tap on the selected row (or A) opens it; taps never open links in one go.
+ *
+ * Hero: `api.interactiveHero = true` while an attached screen shows; START (3D pill or the S key) switches the screen
+ * to the LCD dino game, B / Escape returns to the attached scene. `onGame(active)` fires when a game starts / ends.
  */
 import { createGameboy } from './gameboy.js'
 import { createCartridge } from './cartridge.js'
@@ -70,7 +78,7 @@ function openItem(item) {
 
 export async function createScene({
   THREE, renderer, size, track = DEMO_TRACK, palette = 'dmg', cartridge = {}, interactive = false, onOpen = openItem,
-  items, reducedAt = 1, fov = 30, idle = true, bootOnStart = true, theme = 'dark',
+  items, reducedAt = 1, fov = 30, idle = true, bootOnStart = true, theme = 'dark', onGame = null, interactiveHero = false,
 }) {
   const scene = new THREE.Scene()
   const camera = new THREE.PerspectiveCamera(fov, size.w / size.h, 0.1, 100)
@@ -96,7 +104,7 @@ export async function createScene({
     { label: 'LINKEDIN', href: person.linkedin.url },
     { label: 'GITHUB', display: `GITHUB/${person.github.handle.toUpperCase()}`, href: person.github.url },
   ]
-  const lcd = createLcd({ items: menu, palette: four(LCD_PALETTES[palette] ?? palette), onOpen: (it) => onOpen(it), boot: bootOnStart })
+  const lcd = createLcd({ items: menu, palette: four(LCD_PALETTES[palette] ?? palette), onOpen: (it) => onOpen(it), boot: bootOnStart, onMode: (m) => modeChanged(m) })
   const gb = await createGameboy({ THREE, lcd })
   const cart = createCartridge({ THREE, track: [], envIntensity: 1 })
   // Flat faces looking straight at the camera mirror the bright room light through a clearcoat: keep them matte.
@@ -131,10 +139,47 @@ export async function createScene({
     state.theme = light ? 'light' : 'dark'
   }
 
-  const state = { prevDown: false, hover: null, trackRef: track, pose: samplePose(track, 0), w: size.w, h: size.h, onscreen: true, attached: null, theme: 'dark', palette }
+  const state = { interactive, interactiveHero, engaged: false, eng: 0, calm: 0, moving: false, heroGame: false, playing: false, hover: null, trackRef: track, pose: samplePose(track, 0), w: size.w, h: size.h, onscreen: true, attached: null, theme: 'dark', palette }
   setTheme(theme)
+
+  // ---- games: onGame(active) fires when the LCD enters / leaves the dino or the Konami snake
+  function modeChanged(m) {
+    const playing = m === 'game' || m === 'konami'
+    if (playing !== state.playing) { state.playing = playing; onGame?.(playing) }
+    if (!playing) endHeroGame()
+  }
+  /** Hero START: swap the attached scene for the LCD and start the dino game. */
+  function heroStart() {
+    if (!state.attached || state.heroGame) return
+    state.heroGame = true
+    gb.setScreenSource(null)
+    lcd.startGame()
+  }
+  /** Back to the attached scene (B / Escape, or the page scrolled away). */
+  function endHeroGame() {
+    if (!state.heroGame) return
+    state.heroGame = false
+    if (state.attached) gb.setScreenSource(state.attached.target.texture)
+    if (lcd.mode === 'game') lcd.press('b')
+  }
+
   const api = {
-    scene, camera, gb, cart, lcd, interactive,
+    scene, camera, gb, cart, lcd,
+    /** Contact section live: idle bob off, cursor lean on. Setting it false also clears `engaged`. */
+    get interactive() { return state.interactive },
+    set interactive(v) { state.interactive = Boolean(v); if (!v) state.engaged = false },
+    /** True after the console was clicked/tapped: straight, still, 12% bigger, accepting input. */
+    get engaged() { return state.engaged },
+    setEngaged(v) { state.engaged = Boolean(v) && state.interactive },
+    /** Hero: true while the attached hero screen is visible and START may take it over. */
+    get interactiveHero() { return state.interactiveHero },
+    set interactiveHero(v) { state.interactiveHero = Boolean(v); if (!v) endHeroGame() },
+    /** True while the hero START game is showing on the LCD. */
+    get heroGame() { return state.heroGame },
+    /** Leave the hero game (if any) and show the attached scene again. */
+    endHeroGame,
+    /** Is a game (dino or Konami snake) on the LCD right now. */
+    get playing() { return state.playing },
     /** 'dark' (default, page #08080a) or 'light' (cream paper #e8e6db): shell look + the halo behind the console. */
     setTheme,
     get theme() { return state.theme },
@@ -152,7 +197,7 @@ export async function createScene({
     },
     get palette() { return state.palette },
     /** idle motion only costs frames while the handheld is actually in view */
-    get animated() { return idle && state.onscreen },
+    get animated() { return state.onscreen && (idle || state.moving) },
     get hover() { return state.hover },
     get pose() { return state.pose },
     /**
@@ -162,11 +207,18 @@ export async function createScene({
      * the handheld is on screen.
      */
     attachScreen(inner, { target, progress = (ctx) => ctx.p, pointer = null } = {}) {
+      state.heroGame = false
+      if (lcd.mode === 'game') lcd.press('b')
       state.attached = { inner, target, progress, pointer }
       if (typeof state.palette === 'string') inner.setPalette?.(state.palette)
       gb.setScreenSource(target.texture)
     },
-    detachScreen() { state.attached = null; gb.setScreenSource(null) },
+    detachScreen() {
+      state.heroGame = false
+      if (lcd.mode === 'game') lcd.press('b')
+      state.attached = null
+      gb.setScreenSource(null)
+    },
     beats: [
       { at: 0.0, id: '01', title: 'Tilt', text: 'Small and floating, cartridge hovering above the bay.' },
       { at: 0.3, id: '02', title: 'Approach', text: 'It turns toward you; the cartridge descends.' },
@@ -184,38 +236,44 @@ export async function createScene({
       // s = 1: the seated console (body + cart) fits 80% of the view height or width
       const fit = Math.min((halfH * 2 * 0.8) / (EXT.top - EXT.bottom), (halfW * 2 * 0.8) / (EXT.w + 0.1))
       const t = ctx.time
-      const floatY = idle && !ctx.reduced ? Math.sin(t * 0.9) * 0.06 : 0
-      const swayZ = idle && !ctx.reduced ? Math.sin(t * 0.6) * 0.012 : 0
+      // Envelopes: `calm` 0 -> 1 once the contact section is live (the idle bob fades out and is exactly zero after),
+      // `eng` 0 -> 1 when engaged (straight pose + 12% bigger). Both are dt-driven so they stay smooth at any frame rate.
+      const calmTo = state.interactive ? 1 : 0
+      state.calm += Math.max(-dt / 0.6, Math.min(dt / 0.6, calmTo - state.calm))
+      const engTo = state.engaged ? 1 : 0
+      state.eng = ctx.reduced ? engTo : Math.abs(engTo - state.eng) < 0.0005 ? engTo : state.eng + (engTo - state.eng) * (1 - Math.exp(-4 * dt))
+      state.moving = state.calm !== calmTo || state.eng !== engTo
+      const idleAmp = 1 - smooth(state.calm)
+      const e = smooth(state.eng)
+      const floatY = idle && !ctx.reduced ? Math.sin(t * 0.9) * 0.06 * idleAmp : 0
+      const swayZ = idle && !ctx.reduced ? Math.sin(t * 0.6) * 0.012 * idleAmp : 0
       // `fill` (0..1) blends toward "the LCD covers the whole view", centred on the screen: the dive into the cartridge.
       const fill = pose.fill || 0
       const S = L.screen
       const cover = Math.max((halfW * 2) / S.w, (halfH * 2) / S.h) * 1.06
-      const scale = Math.max(0.01, pose.s * fit) * (1 - fill) + cover * fill
+      const scale = Math.max(0.01, pose.s * fit) * (1 - fill) * (1 + 0.12 * e) + cover * fill
       const tilt = 1 - fill
       rig.position.set(pose.xf * halfW - fill * S.cx * scale, pose.y + floatY - fill * S.cy * scale, pose.z)
       glowMat.opacity = glowLook.opacity * (1 - smooth(clamp01(fill * 1.6)))
       glow.visible = glowMat.opacity > 0.002
       rig.scale.setScalar(scale)
-      rig.rotation.set(pose.rx - ctx.pointer.sy * 0.18 * tilt, pose.ry + ctx.pointer.sx * 0.28 * tilt, pose.rz + swayZ * tilt)
+      // cursor lean: smaller angles on the contact pose, and none once engaged
+      const lean = tilt * (1 - e) * (1 - 0.3 * smooth(state.calm))
+      rig.rotation.set(pose.rx * (1 - e) - ctx.pointer.sy * 0.18 * lean, pose.ry * (1 - e) + ctx.pointer.sx * 0.28 * lean, pose.rz * (1 - e) + swayZ * tilt)
       cart.insert(pose.cart)
       cart.update?.(dt)
       if (ctx.reduced) lcd.wake()
 
       state.onscreen = Math.abs(pose.xf) < 1.6 && pose.s > 0.03
 
-      // Pointer: hover + press on the pointerdown edge (the page turns `hover` into a cursor)
-      if (api.interactive && state.onscreen && ctx.pointer.inside) {
-        const hit = gb.pick({ x: ctx.pointer.x, y: ctx.pointer.y }, camera)
-        state.hover = hit && hit !== 'screen' ? hit : hit === 'screen' && lcd.mode !== 'boot' ? 'screen' : null
-      } else state.hover = null
-      // Presses are latched from the pointerdown event itself, so a quick tap that is released before the next frame still counts.
-      if (state.pending) {
-        const { x, y } = state.pending
-        state.pending = null
-        if (api.interactive && state.onscreen && !state.attached) {
-          const hit = gb.pick({ x, y }, camera)
-          if (hit) gb.tap(hit === 'screen' ? 'a' : hit)
-        }
+      // Hover (the page turns `hover` into a cursor). Before engaging, anywhere on the console counts.
+      state.hover = null
+      if ((state.interactive || state.interactiveHero) && state.onscreen && ctx.pointer.inside) {
+        const part = gb.pick({ x: ctx.pointer.x, y: ctx.pointer.y }, camera)
+        if (state.attached && !state.heroGame) state.hover = state.interactiveHero && part === 'start' ? 'start' : null
+        else if (!part) state.hover = null
+        else if (!state.heroGame && !state.engaged) state.hover = part
+        else state.hover = part === 'body' || part === 'bezel' ? null : part === 'screen' && lcd.mode === 'boot' ? null : part
       }
       gb.update(dt)
 
@@ -238,24 +296,70 @@ export async function createScene({
     },
   }
 
-  const KEYS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', Enter: 'a', ' ': 'a', z: 'a', x: 'b', Escape: 'b', Backspace: 'b', s: 'start' }
+  const KEYS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', Enter: 'a', ' ': 'a', z: 'a', a: 'a', x: 'b', b: 'b', Escape: 'b', Backspace: 'b', s: 'start' }
+  const DOM_TARGET = 'a,button,input,textarea,select,label,summary,[role="button"],[role="link"]'
+
+  /** May the console take input right now (and which buttons)? */
+  const accepts = (btn) => {
+    if (!state.onscreen) return false
+    if (state.heroGame) return state.interactiveHero
+    if (state.attached) return state.interactiveHero && btn === 'start'
+    return state.interactive && state.engaged
+  }
   function onKey(e) {
-    if (!api.interactive || e.metaKey || e.ctrlKey || e.altKey) return
-    const btn = KEYS[e.key]
-    if (!btn) return
+    if (e.metaKey || e.ctrlKey || e.altKey) return
+    const btn = KEYS[e.key.length === 1 ? e.key.toLowerCase() : e.key]
+    if (!btn || !accepts(btn)) return
     // Only steal keys the console uses, and never from form fields or links with focus
     const tag = document.activeElement?.tagName
-    if (tag === 'INPUT' || tag === 'TEXTAREA' || (tag === 'A' && (e.key === 'Enter' || e.key === ' '))) return
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (tag === 'A' && (e.key === 'Enter' || e.key === ' '))) return
     e.preventDefault()
-    gb.tap(btn)
+    if (state.attached && !state.heroGame) heroStart()
+    else gb.tap(btn)
   }
-  window.addEventListener('keydown', onKey)
-  function onDown(e) {
+
+  /** One deliberate press (mouse down, or a touch that lifted without dragging), resolved inside the event handler. */
+  function press(ndc, touch) {
+    if (!state.onscreen) return
+    const { part, px, py } = gb.pickInfo(ndc, camera)
+    if (!part) return
+    if (state.attached && !state.heroGame) { if (state.interactiveHero && part === 'start') heroStart(); return }
+    if (!(state.heroGame ? state.interactiveHero : state.interactive)) return
+    // The click that engages is swallowed: it presses nothing
+    if (!state.heroGame && !state.engaged) { state.engaged = true; return }
+    if (part === 'screen') lcd.tapAt(px, py, { confirm: touch })
+    else if (part in gb.press) gb.tap(part)
+  }
+  const ndcOf = (e) => {
     const r = renderer.domElement.getBoundingClientRect()
-    state.pending = { x: ((e.clientX - r.left) / r.width) * 2 - 1, y: -(((e.clientY - r.top) / r.height) * 2 - 1) }
+    return { x: ((e.clientX - r.left) / r.width) * 2 - 1, y: -(((e.clientY - r.top) / r.height) * 2 - 1) }
   }
+  const ignore = (e) => e.target instanceof Element && e.target.closest(DOM_TARGET)
+  const touches = new Map()
+  function onDown(e) {
+    if (ignore(e)) return
+    if (e.pointerType === 'mouse') { if (e.button === 0) press(ndcOf(e), false); return }
+    // touch / pen: wait for the lift, so a swipe that starts over the console (to scroll) never presses anything
+    touches.set(e.pointerId, { x: e.clientX, y: e.clientY, t: performance.now() })
+  }
+  function onUp(e) {
+    const g = touches.get(e.pointerId)
+    if (!g) return
+    touches.delete(e.pointerId)
+    if (Math.hypot(e.clientX - g.x, e.clientY - g.y) > 10 || performance.now() - g.t > 600 || ignore(e)) return
+    press(ndcOf(e), true)
+  }
+  const onCancel = (e) => touches.delete(e.pointerId)
+  window.addEventListener('keydown', onKey)
   window.addEventListener('pointerdown', onDown, { passive: true })
+  window.addEventListener('pointerup', onUp, { passive: true })
+  window.addEventListener('pointercancel', onCancel, { passive: true })
   const dispose = api.dispose
-  api.dispose = () => { window.removeEventListener('pointerdown', onDown); dispose() }
+  api.dispose = () => {
+    window.removeEventListener('pointerdown', onDown)
+    window.removeEventListener('pointerup', onUp)
+    window.removeEventListener('pointercancel', onCancel)
+    dispose()
+  }
   return api
 }

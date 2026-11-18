@@ -4,6 +4,7 @@ import { scroll, setScrollToProgress } from '../core/scroll.js'
 import { smoothstep } from '../utils/math.js'
 import { buildCurves, applyEasing, applyCarLock } from './trajectory.js'
 import { carRef } from '../car/ref.js'
+import { time } from '../core/time.js'
 import { viewport, onViewportChange } from '../core/viewport.js'
 
 export const camera = new THREE.PerspectiveCamera(
@@ -149,6 +150,33 @@ export function updateCamera() {
     p
   )
   camera.rotateZ(DEG(config.camera.dutchAngle) * dutchT)
+  applyOrbit()
+}
+
+// Drag-to-orbit: a small yaw/pitch offset about the car that springs back to zero on release.
+const ORBIT = { yaw: 0, pitch: 0, ty: 0, tp: 0, held: false }
+export function setOrbitTarget(yawDeg, pitchDeg, held = true) {
+  ORBIT.ty = THREE.MathUtils.clamp(yawDeg, -18, 18) * (Math.PI / 180)
+  ORBIT.tp = THREE.MathUtils.clamp(pitchDeg, -8, 8) * (Math.PI / 180)
+  ORBIT.held = held
+}
+const _oq = new THREE.Quaternion()
+const _oq2 = new THREE.Quaternion()
+const _oOff = new THREE.Vector3()
+const _oAxis = new THREE.Vector3()
+function applyOrbit() {
+  const k = 1 - Math.exp(-Math.min(time.delta || 0.016, 0.05) * (ORBIT.held ? 12 : 4.5))
+  ORBIT.yaw += (ORBIT.ty - ORBIT.yaw) * k
+  ORBIT.pitch += (ORBIT.tp - ORBIT.pitch) * k
+  if (Math.abs(ORBIT.yaw) < 1e-5 && Math.abs(ORBIT.pitch) < 1e-5 && !ORBIT.held) return
+  const centre = carRef.ready ? carRef.center : _tgt
+  _oq.setFromAxisAngle(_oAxis.set(0, 1, 0), ORBIT.yaw)
+  _oAxis.set(1, 0, 0).applyQuaternion(camera.quaternion)
+  _oq2.setFromAxisAngle(_oAxis, ORBIT.pitch)
+  _oq.premultiply(_oq2)
+  _oOff.copy(camera.position).sub(centre).applyQuaternion(_oq)
+  camera.position.copy(centre).add(_oOff)
+  camera.quaternion.premultiply(_oq)
 }
 
 export function snapToStart() {
