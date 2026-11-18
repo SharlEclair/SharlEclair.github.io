@@ -16,7 +16,7 @@ export const variants = {
   lattice: () => import('./lattice.js'),
 }
 export const variantNames = Object.keys(variants)
-export const defaultVariant = 'hands'
+export const defaultVariant = 'cubes'
 
 export function pickVariant(search = typeof location !== 'undefined' ? location.search : '') {
   const name = new URLSearchParams(search).get('screen')

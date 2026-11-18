@@ -165,6 +165,8 @@ export async function createScene({
 
   const api = {
     scene, camera, gb, cart, lcd,
+    /** Live handles for anim/gb-tune.html (the tuning page). */
+    tune: { key, rim, front, glow, glowMat, renderer, get glowOpacity() { return glowLook.opacity }, set glowOpacity(v) { glowLook.opacity = v } },
     /** Contact section live: idle bob off, cursor lean on. Setting it false also clears `engaged`. */
     get interactive() { return state.interactive },
     set interactive(v) { state.interactive = Boolean(v); if (!v) state.engaged = false },

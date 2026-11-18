@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>Gameboy tuner</title>
+    <style>
+      :root { --bg: #08080a; --panel: #121316; --line: #2a2c31; --fg: #e6e7ea; --mute: #8b8f98; --acc: #7fd4a8; }
+      * { box-sizing: border-box; }
+      body { margin: 0; font: 12px/1.35 ui-monospace, Menlo, Consolas, monospace; color: var(--fg); }
+      #panel { position: fixed; top: 0; right: 0; bottom: 0; width: 330px; background: var(--panel); border-left: 1px solid var(--line); overflow-y: auto; z-index: 10; padding: 0 0 40px; }
+      #panel header { position: sticky; top: 0; background: var(--panel); z-index: 2; padding: 10px 12px; border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+      #panel header b { flex: 1 0 100%; letter-spacing: .12em; text-transform: uppercase; font-size: 11px; color: var(--acc); }
+      button, select { font: inherit; color: var(--fg); background: #1c1d21; border: 1px solid var(--line); border-radius: 4px; padding: 4px 8px; cursor: pointer; }
+      button:hover { border-color: var(--acc); }
+      details { border-bottom: 1px solid var(--line); }
+      summary { padding: 9px 12px; cursor: pointer; letter-spacing: .1em; text-transform: uppercase; font-size: 11px; color: var(--mute); }
+      details[open] summary { color: var(--fg); }
+      .row { display: grid; grid-template-columns: 112px 1fr 46px; gap: 8px; align-items: center; padding: 3px 12px; }
+      .row.c { grid-template-columns: 112px 1fr; }
+      .row label { color: var(--mute); }
+      .row output { text-align: right; color: var(--fg); font-variant-numeric: tabular-nums; }
+      input[type='range'] { width: 100%; accent-color: var(--acc); margin: 0; }
+      input[type='color'] { width: 100%; height: 22px; padding: 0; border: 1px solid var(--line); background: none; }
+      .hint { padding: 4px 12px 8px; color: var(--mute); }
+      #out { display: none; position: fixed; left: 16px; bottom: 16px; width: min(560px, calc(100vw - 372px)); height: 220px; z-index: 11; background: #0c0d0f; color: var(--fg); border: 1px solid var(--acc); font: 11px/1.4 ui-monospace, Consolas, monospace; padding: 8px; }
+      .beat { display: none !important; }
+      #toast { position: fixed; left: 16px; top: 16px; z-index: 11; background: #0c0d0fcc; padding: 6px 10px; border: 1px solid var(--line); border-radius: 4px; opacity: 0; transition: opacity .2s; }
+      @media (max-width: 760px) { #panel { width: 100%; top: 52%; border-left: 0; border-top: 1px solid var(--line); } #out { width: calc(100vw - 32px); } }
+    </style>
+  </head>
+  <body>
+    <!--
+      Gameboy tuner. Sliders change the live console; "Copy" gives a JSON of every value to paste back to me.
+        ?bg=light   start on the light page    ?pose=front|hero|contact|ref1|ref3   start pose
+      Settings auto-save in this browser (localStorage) and can be exported or imported as JSON.
+    -->
+    <div id="panel"></div>
+    <textarea id="out" spellcheck="false"></textarea>
+    <div id="toast"></div>
+    <script type="module">
+      import { runStandalone } from '/shared/gl/standalone.js'
+      import { L } from '/shared/gb/layout.js'
+      import { LCD_PALETTES } from '/shared/dither/pass.js'
+      import { createGlassVariant } from '/shared/gb/glass.js'
+
+      const q = new URLSearchParams(location.search)
+      const STORE = 'gb-tune-v1'
+      const POSES = {
+        front: { rx: 0, ry: 0, rz: 0 },
+        hero: { rx: -0.05, ry: -0.32, rz: 0.05 },
+        contact: { rx: -0.05, ry: -0.2, rz: 0 },
+        ref1: { rx: -0.55, ry: -0.3, rz: -0.78 },
+        ref3: { rx: -0.38, ry: 0, rz: 0 },
+      }
+      const saved = (() => { try { return JSON.parse(localStorage.getItem(STORE) || '{}') } catch { return {} } })()
+      let theme = saved.theme ?? (q.get('bg') === 'light' ? 'light' : 'dark')
+      const BG = { dark: '#08080a', light: '#e8e6db' }
+      const startPose = POSES[q.get('pose')] ?? POSES.hero
+
+      // The panel eats the right 330px, so centre the console in the remaining area
+      const track = [{ at: 0, xf: -0.2, y: 0, z: 0, s: 0.92, cart: 1, ...startPose }]
+      await runStandalone(() => import('/shared/gb/scene.js'), {
+        scene: { interactive: false, palette: 'dmg', bootOnStart: false, theme, idle: false, track, cartridge: { title: 'PORTFOLIO', subtitle: 'ASHWIN PILLAI' } },
+        runway: 100,
+        harness: { alpha: false, clearColor: parseInt(BG[theme].slice(1), 16), antialias: true },
+        background: BG[theme],
+      })
+      const sc = window.__SCENE
+      const h = window.__HARNESS
+      const gb = sc.gb
+      const T = gb.tune
+      const S = sc.tune
+      const U = T.U
+      const body = gb.mats.body
+      const shellBack = T.frost[1]
+      const pose = track[0]
+      let follow = false // the console leans toward the cursor in the page; off here so the pose you set stays put
+      h.setPointer(0, 0)
+      const redraw = () => h.invalidate?.()
+      setInterval(redraw, 100) // held pose does not animate; keep frames coming for the LCD and glow
+      sc.lcd.wake?.()
+
+      const hex = (c) => '#' + c.getHexString()
+      const bgOf = () => document.body.style.background
+
+      // ---- control schema -------------------------------------------------------------------------------------
+      // get() reads the live value, set(v) writes it. Defaults are read once, before any saved value is applied.
+      const each = (arr, fn) => arr.forEach(fn)
+      const sec = []
+      const S_ = (title, controls, open = false) => sec.push({ title, controls, open })
+      const num = (id, label, min, max, step, get, set) => ({ id, label, type: 'num', min, max, step, get, set })
+      const col = (id, label, get, set) => ({ id, label, type: 'col', get, set })
+      const chk = (id, label, get, set) => ({ id, label, type: 'chk', get, set })
+      const sel = (id, label, options, get, set) => ({ id, label, type: 'sel', options, get, set })
+
+      const glass = createGlassVariant(h.THREE, gb, S.renderer)
+      const G = glass.mats[0], G2 = glass.mats[1]
+      const g2 = (fn) => { fn(G); fn(G2) }
+      S_('Shell material', [
+        sel('variant', 'Variant', ['fake frost (live page)', 'transmission glass'], () => (glass.enabled ? 'transmission glass' : 'fake frost (live page)'), (v) => glass.enable(v === 'transmission glass')),
+      ], true)
+      S_('Glass variant (transmission)', [
+        num('gtrans', 'Transmission', 0, 1, 0.01, () => G.transmission, (v) => g2((m) => (m.transmission = v))),
+        num('gthick', 'Thickness', 0, 3, 0.01, () => G.thickness, (v) => { G.thickness = v; G2.thickness = v * 0.5 }),
+        num('gior', 'IOR (bend)', 1, 2.2, 0.01, () => G.ior, (v) => g2((m) => (m.ior = v))),
+        num('grough', 'Frosting (roughness)', 0, 1, 0.005, () => G.roughness, (v) => { G.roughness = v; G2.roughness = Math.max(0, v - 0.15) }),
+        num('grvar', 'Roughness patchiness', 0, 1, 0.01, () => 0.35, (v) => glass.grain.setVariation(v)),
+        num('ggrain', 'Grain strength', 0, 1, 0.005, () => G.normalScale.x, (v) => glass.setGrain(v)),
+        num('ggsize', 'Grain size', 0, 1, 0.01, () => 0.125, (v) => glass.grain.setCoarseness(v)),
+        num('ggscale', 'Grain density', 1, 40, 0.5, () => 5, (v) => glass.grain.setScale(v)),
+        num('ggcoat', 'Grain on gloss coat', 0, 1, 0.005, () => 0, (v) => glass.setCoatGrain(v)),
+        num('gsheen', 'Powder sheen', 0, 1, 0.01, () => G.sheen, (v) => g2((m) => (m.sheen = v))),
+        num('gsheenr', 'Sheen roughness', 0, 1, 0.01, () => G.sheenRoughness, (v) => g2((m) => (m.sheenRoughness = v))),
+        col('gsheenc', 'Sheen colour', () => hex(G.sheenColor), (v) => g2((m) => m.sheenColor.set(v))),
+        col('gspecc', 'Specular colour', () => hex(G.specularColor), (v) => g2((m) => m.specularColor.set(v))),
+        col('gcol', 'Tint', () => hex(G.color), (v) => g2((m) => m.color.set(v))),
+        col('gatt', 'Absorb colour', () => hex(G.attenuationColor), (v) => g2((m) => m.attenuationColor.set(v))),
+        num('gattd', 'Absorb distance', 0.05, 5, 0.01, () => G.attenuationDistance, (v) => g2((m) => (m.attenuationDistance = v))),
+        num('gdisp', 'Dispersion', 0, 5, 0.01, () => G.dispersion, (v) => g2((m) => (m.dispersion = v))),
+        num('gspec', 'Specular', 0, 1, 0.01, () => G.specularIntensity, (v) => g2((m) => (m.specularIntensity = v))),
+        num('gcc', 'Clearcoat', 0, 1, 0.01, () => G.clearcoat, (v) => g2((m) => (m.clearcoat = v))),
+        num('gccr', 'Clearcoat rough', 0, 1, 0.01, () => G.clearcoatRoughness, (v) => g2((m) => (m.clearcoatRoughness = v))),
+        num('genv', 'Reflection amount', 0, 3, 0.01, () => G.envMapIntensity, (v) => g2((m) => (m.envMapIntensity = v))),
+        num('ghaze', 'Milky haze', 0, 0.6, 0.005, () => glass.U.uHaze.value, (v) => (glass.U.uHaze.value = v)),
+        col('ghazec', 'Haze colour', () => hex(glass.U.uHazeColor.value), (v) => glass.U.uHazeColor.value.set(v)),
+        num('gedge', 'Edge glow', 0, 2, 0.01, () => glass.U.uEdgeK.value, (v) => (glass.U.uEdgeK.value = v)),
+        col('gedgec', 'Edge glow colour', () => hex(glass.U.uEdgeColor.value), (v) => glass.U.uEdgeColor.value.set(v)),
+        num('gpcb', 'Board brightness', 0, 4, 0.01, () => T.pcbMat.color.r, (v) => T.pcbMat.color.setRGB(v, v, v)),
+        num('gparts', 'Chips brightness', 0, 4, 0.01, () => T.partMat.color.r, (v) => T.partMat.color.setRGB(v, v, v)),
+        num('gres', 'Blur quality', 0.1, 1, 0.01, () => 1, (v) => glass.setResolution(v)),
+      ])
+      S_('Plastic transparency (fake frost)', [
+        num('face', 'Front opacity', 0, 1, 0.01, () => U.uFace.value, (v) => (U.uFace.value = v)),
+        num('edge', 'Edge opacity', 0, 1, 0.01, () => U.uEdge.value, (v) => (U.uEdge.value = v)),
+        num('back', 'Back-wall opacity', 0, 1, 0.01, () => U.uBack.value, (v) => (U.uBack.value = v)),
+        num('diffuser', 'Milky layer', 0, 1, 0.01, () => T.difMat.opacity, (v) => (T.difMat.opacity = v)),
+        col('difcol', 'Milky colour', () => hex(T.difMat.color), (v) => T.difMat.color.set(v)),
+      ], true)
+      S_('Plastic look (fake frost)', [
+        col('tint', 'Shell tint', () => hex(body.color), (v) => each(T.frost, (m) => m.color.set(v))),
+        col('scat', 'Edge glow colour', () => hex(U.uScatter.value), (v) => U.uScatter.value.set(v)),
+        num('scatk', 'Edge glow amount', -0.5, 2, 0.01, () => U.uScatterK.value, (v) => (U.uScatterK.value = v)),
+        num('rough', 'Roughness', 0, 1, 0.01, () => body.roughness, (v) => each(T.frost, (m) => (m.roughness = v))),
+        num('cc', 'Clearcoat', 0, 1, 0.01, () => body.clearcoat, (v) => each(T.frost, (m) => (m.clearcoat = v))),
+        num('ccr', 'Clearcoat rough', 0, 1, 0.01, () => body.clearcoatRoughness, (v) => each(T.frost, (m) => (m.clearcoatRoughness = v))),
+        num('env', 'Reflection amount', 0, 3, 0.01, () => body.envMapIntensity, (v) => each(T.frost, (m) => (m.envMapIntensity = v))),
+      ])
+      const btnA = gb.mats.btn_a, btnB = gb.mats.btn_b, pill = gb.mats.start
+      const both = (fn) => { fn(btnA); fn(btnB) }
+      S_('Buttons', [
+        col('abcol', 'A / B colour', () => hex(btnA.color), (v) => both((m) => m.color.set(v))),
+        col('abem', 'A / B glow colour', () => hex(btnA.emissive), (v) => both((m) => m.emissive.set(v))),
+        num('abemk', 'A / B glow', 0, 2, 0.01, () => btnA.emissiveIntensity, (v) => both((m) => (m.emissiveIntensity = v))),
+        num('abgloss', 'A / B roughness', 0, 1, 0.01, () => btnA.roughness, (v) => both((m) => (m.roughness = v))),
+        num('abhalo', 'A / B halo', 0, 1.5, 0.01, () => T.halos[0].mat.opacity, (v) => { T.halos[0].mat.opacity = v; T.halos[1].mat.opacity = v }),
+        col('pcol', 'Pill colour', () => hex(pill.color), (v) => pill.color.set(v)),
+        col('pem', 'Pill glow colour', () => hex(pill.emissive), (v) => pill.emissive.set(v)),
+        num('pemk', 'Pill glow', 0, 2, 0.01, () => pill.emissiveIntensity, (v) => (pill.emissiveIntensity = v)),
+        num('phalo', 'Pill halo', 0, 1.5, 0.01, () => T.halos[2].mat.opacity, (v) => (T.halos[2].mat.opacity = v)),
+        col('dcol', 'D-pad colour', () => hex(gb.mats.dpad.color), (v) => gb.mats.dpad.color.set(v)),
+      ])
+      const bez = gb.mats.bezel
+      S_('Screen glass', [
+        col('bzcol', 'Glass colour', () => hex(bez.color), (v) => bez.color.set(v)),
+        num('bzcc', 'Glass clearcoat', 0, 1, 0.01, () => bez.clearcoat, (v) => (bez.clearcoat = v)),
+        num('bzccr', 'Glass clearcoat rough', 0, 1, 0.01, () => bez.clearcoatRoughness, (v) => (bez.clearcoatRoughness = v)),
+        num('bzenv', 'Glass reflection', 0, 3, 0.01, () => bez.envMapIntensity, (v) => (bez.envMapIntensity = v)),
+        sel('pal', 'LCD colours', Object.keys(LCD_PALETTES), () => sc.palette, (v) => sc.setPalette(v)),
+      ])
+      S_('Lighting', [
+        num('expo', 'Exposure', 0.3, 2.5, 0.01, () => S.renderer.toneMappingExposure, (v) => (S.renderer.toneMappingExposure = v)),
+        num('envi', 'Environment', 0, 3, 0.01, () => sc.scene.environmentIntensity, (v) => (sc.scene.environmentIntensity = v)),
+        num('key', 'Key light', 0, 4, 0.01, () => S.key.intensity, (v) => (S.key.intensity = v)),
+        col('keyc', 'Key colour', () => hex(S.key.color), (v) => S.key.color.set(v)),
+        num('rim', 'Rim light', 0, 4, 0.01, () => S.rim.intensity, (v) => (S.rim.intensity = v)),
+        col('rimc', 'Rim colour', () => hex(S.rim.color), (v) => S.rim.color.set(v)),
+        num('front', 'Front light', 0, 4, 0.01, () => S.front.intensity, (v) => (S.front.intensity = v)),
+        col('frontc', 'Front colour', () => hex(S.front.color), (v) => S.front.color.set(v)),
+        num('glow', 'Backglow', 0, 0.6, 0.005, () => S.glowOpacity, (v) => (S.glowOpacity = v)),
+        col('glowc', 'Backglow colour', () => hex(S.glowMat.color), (v) => S.glowMat.color.set(v)),
+      ])
+      S_('Pose and view', [
+        num('rx', 'Tilt up/down', -1.2, 1.2, 0.01, () => pose.rx, (v) => (pose.rx = v)),
+        num('ry', 'Turn left/right', -1.2, 1.2, 0.01, () => pose.ry, (v) => (pose.ry = v)),
+        num('rz', 'Roll', -1.6, 1.6, 0.01, () => pose.rz, (v) => (pose.rz = v)),
+        num('ps', 'Size', 0.3, 1.6, 0.01, () => pose.s, (v) => (pose.s = v)),
+        num('px', 'Shift sideways', -1, 1, 0.01, () => pose.xf, (v) => (pose.xf = v)),
+        chk('follow', 'Follow cursor', () => follow, (v) => { follow = v; h.setPointer(v ? null : 0, 0) }),
+        chk('cart', 'Cartridge', () => pose.cart > 0.5, (v) => { pose.cart = v ? 1 : 0 }),
+        sel('bgm', 'Page background', ['dark', 'light'], () => theme, (v) => setPage(v)),
+        col('bgc', 'Background colour', () => document.body.style.background ? toHex(document.body.style.background) : BG[theme], (v) => { document.body.style.background = v; h.renderer.setClearColor(v, 1) }),
+      ])
+
+      function toHex(c) { const d = document.createElement('canvas').getContext('2d'); d.fillStyle = c; return d.fillStyle }
+      function setPage(name) {
+        theme = name
+        sc.setTheme(name) // resets the plastic to that theme's preset; sliders below re-read
+        document.body.style.background = BG[name]
+        h.renderer.setClearColor(BG[name], 1)
+        syncAll()
+      }
+
+      // ---- defaults, saved values, UI ------------------------------------------------------------------------
+      const all = sec.flatMap((s) => s.controls)
+      const byId = Object.fromEntries(all.map((c) => [c.id, c]))
+      const defaults = () => Object.fromEntries(all.filter((c) => c.id !== 'bgm').map((c) => [c.id, c.get()]))
+      let base = defaults()
+      const state = { ...base }
+      const ui = {}
+
+      const panel = document.getElementById('panel')
+      panel.innerHTML = `<header><b>Gameboy tuner</b>
+        <button data-a="copy">Copy JSON</button><button data-a="paste">Paste JSON</button>
+        <button data-a="dl">Download</button><button data-a="reset">Reset all</button>
+        <select data-a="pose">${Object.keys(POSES).map((k) => `<option>${k}</option>`).join('')}</select></header>`
+      for (const s of sec) {
+        const d = document.createElement('details')
+        d.open = s.open
+        d.innerHTML = `<summary>${s.title}</summary>`
+        for (const c of s.controls) {
+          const row = document.createElement('div')
+          row.className = 'row' + (c.type === 'num' ? '' : ' c')
+          const id = 'c_' + c.id
+          let inner = `<label for="${id}">${c.label}</label>`
+          if (c.type === 'num') inner += `<input id="${id}" type="range" min="${c.min}" max="${c.max}" step="${c.step}"><output></output>`
+          else if (c.type === 'col') inner += `<input id="${id}" type="color">`
+          else if (c.type === 'chk') inner += `<input id="${id}" type="checkbox" style="justify-self:start">`
+          else inner += `<select id="${id}">${c.options.map((o) => `<option>${o}</option>`).join('')}</select>`
+          row.innerHTML = inner
+          d.appendChild(row)
+          const el = row.querySelector('input,select')
+          const out = row.querySelector('output')
+          ui[c.id] = { el, out }
+          el.addEventListener('input', () => {
+            const v = c.type === 'num' ? Number(el.value) : c.type === 'chk' ? el.checked : el.value
+            c.set(v)
+            if (c.id !== 'bgm') state[c.id] = v
+            if (out) out.textContent = Number(v).toFixed(2)
+            redraw(); persist()
+          })
+        }
+        panel.appendChild(d)
+      }
+      const hint = document.createElement('p')
+      hint.className = 'hint'
+      hint.textContent = 'Changing "Page background" reloads the plastic preset for that theme, then your sliders can adjust from there.'
+      panel.appendChild(hint)
+
+      function show(c, v) {
+        const { el, out } = ui[c.id]
+        if (c.type === 'chk') el.checked = Boolean(v)
+        else el.value = v
+        if (out) out.textContent = Number(v).toFixed(2)
+      }
+      function syncAll() { for (const c of all) { const v = c.get(); show(c, v); if (c.id !== 'bgm') state[c.id] = v } }
+      function applyState(s) {
+        for (const c of all) if (c.id !== 'bgm' && s[c.id] !== undefined) { c.set(s[c.id]); show(c, s[c.id]); state[c.id] = s[c.id] }
+        redraw()
+      }
+      function persist() { try { localStorage.setItem(STORE, JSON.stringify({ theme, ...state })) } catch {} }
+      const toast = (t) => { const el = document.getElementById('toast'); el.textContent = t; el.style.opacity = 1; clearTimeout(toast.t); toast.t = setTimeout(() => (el.style.opacity = 0), 1600) }
+
+      // Apply saved values on top of the page's theme preset
+      if (saved.theme && saved.theme !== 'dark' && q.get('bg') !== 'dark') sc.setTheme(theme)
+      base = defaults()
+      show(byId.bgm, theme)
+      syncAll()
+      const { theme: _t, ...savedVals } = saved
+      applyState(savedVals)
+      redraw()
+
+      const out = document.getElementById('out')
+      const json = () => JSON.stringify({ theme, ...state }, null, 2)
+      panel.addEventListener('click', async (e) => {
+        const a = e.target.dataset?.a
+        if (a === 'copy') { try { await navigator.clipboard.writeText(json()); toast('Copied settings JSON') } catch { out.value = json(); out.style.display = 'block'; out.select(); toast('Select and copy the box') } }
+        if (a === 'dl') { const l = document.createElement('a'); l.href = URL.createObjectURL(new Blob([json()], { type: 'application/json' })); l.download = 'gameboy-settings.json'; l.click() }
+        if (a === 'reset') { sc.setTheme(theme); const p = POSES.hero; Object.assign(pose, { s: 0.92, xf: -0.2, cart: 1, ...p }); applyState(base); syncAll(); persist(); toast('Reset') }
+        if (a === 'paste') {
+          if (out.style.display === 'block' && out.value.trim()) {
+            try { const v = JSON.parse(out.value); if (v.theme && v.theme !== theme) setPage(v.theme); const { theme: _x, ...rest } = v; applyState(rest); persist(); out.style.display = 'none'; toast('Applied') } catch { toast('That is not valid JSON') }
+          } else { out.value = ''; out.placeholder = 'Paste settings JSON here, then press "Paste JSON" again'; out.style.display = 'block'; out.focus() }
+        }
+      })
+      panel.querySelector('[data-a=pose]').addEventListener('change', (e) => { Object.assign(pose, POSES[e.target.value]); for (const id of ['rx', 'ry', 'rz']) { show(byId[id], pose[id]); state[id] = pose[id] }; redraw(); persist() })
+      window.__TUNE = { state, applyState, json }
+      window.__GB_READY = true
+    </script>
+  </body>
+</html>

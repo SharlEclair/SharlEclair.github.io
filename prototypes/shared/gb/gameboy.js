@@ -20,8 +20,15 @@ const BASE = (import.meta.env?.BASE_URL ?? '/').replace(/\/$/, '')
 
 // Theme looks for the frosted plastic. Dark: milky, bright soft edge scatter. Light (cream paper): a darker smoke with
 // more body so it does not vanish into the page, and edges that darken rather than glow.
+// Dark is the baked "transmission glass" look chosen in anim/gb-tune.html: near-clear blue-grey plastic with a faintly
+// blurred, brightened board inside. Fitted (by a numeric search over sample points on the console, two poses) to the
+// real-transmission render so the live page gets it without the extra transmission pass. `rough`, `coat`, `env` are
+// the frost materials' roughness / clearcoat / reflection; `pcb` and `parts` scale the board and chips seen through it.
 const LOOKS = {
-  dark: { color: 0x585d64, face: 0.34, edge: 0.97, back: 0.6, scatter: 0xe9f2fa, scatterK: 0.8, diffuser: 0.42, diffuserColor: 0x9aa1a9 },
+  dark: {
+    color: 0x415964, face: 0.26, edge: 0.42, back: 0.6, scatter: 0xe9f2fa, scatterK: 0.8, diffuser: 0.21, diffuserColor: 0x5d6796,
+    rough: 0.28, coat: 1, env: 1.1, pcb: 1.95, parts: 0.69,
+  },
   light: { color: 0x8f969e, face: 0.5, edge: 0.95, back: 0.6, scatter: 0x3a3f46, scatterK: -0.18, diffuser: 0.8, diffuserColor: 0xb8bec6 },
 }
 
@@ -207,13 +214,18 @@ export async function createGameboy({ THREE, lcd, modelUrl = `${BASE}/models/gam
   const haloTex = makeGlowTexture(THREE)
   track.push(haloTex)
   const halos = []
-  for (const [name, color, w, h, op] of [['btn_a', 0xff4a1a, 0.78, 0.78, 0.4], ['btn_b', 0xff4a1a, 0.78, 0.78, 0.4], ['start', 0x1aa8ff, 0.95, 0.5, 0.5]]) {
+  // The light bleeds into the plastic around each cap's base, as in the reference photos: a flat additive disc sitting
+  // inside the shell, in the opaque pass (not a camera-facing sprite floating over it), so the frosted shell above it
+  // blurs and scatters it, and it can never appear to hover in front of the console.
+  const haloGeo = new THREE.PlaneGeometry(1, 1)
+  track.push(haloGeo)
+  for (const [name, color, w, h, op] of [['btn_a', 0xff4a1a, 0.5, 0.5, 0.3], ['btn_b', 0xff4a1a, 0.5, 0.5, 0.3], ['start', 0x1aa8ff, 0.66, 0.34, 0.35]]) {
     if (!nodes[name]) continue
-    const mat = new THREE.SpriteMaterial({ map: haloTex, color, transparent: true, depthWrite: false, toneMapped: false, opacity: op, fog: false })
-    const sp = new THREE.Sprite(mat)
+    const mat = new THREE.MeshBasicMaterial({ map: haloTex, color, blending: THREE.AdditiveBlending, transparent: false, depthWrite: false, toneMapped: false, opacity: op, fog: false })
+    const sp = new THREE.Mesh(haloGeo, mat)
     sp.scale.set(w, h, 1)
-    sp.position.set(0, 0, 0.01)
-    sp.renderOrder = 4
+    sp.position.set(0, 0, -0.015) // right under the cap base: deeper discs slide away from the cap when the console tilts
+    sp.frustumCulled = false
     nodes[name].add(sp)
     halos.push({ mat, op })
     track.push(mat)
@@ -241,6 +253,15 @@ export async function createGameboy({ THREE, lcd, modelUrl = `${BASE}/models/gam
     difMat.color.set(k.diffuserColor)
     difMat.opacity = k.diffuser
     printMat.color.set(name === 'light' ? 0x2a2d33 : 0xffffff)
+    for (const m of [shell, shellBack, clear, collar]) {
+      m.userData.r0 ??= m.roughness
+      m.userData.c0 ??= m.clearcoat
+      m.roughness = k.rough ?? m.userData.r0
+      m.clearcoat = k.coat ?? m.userData.c0
+      m.envMapIntensity = (k.env ?? 1.1) * envIntensity
+    }
+    pcbMat.color.setScalar(k.pcb ?? 1)
+    partMesh.material.color.setScalar(k.parts ?? 1)
   }
   setTheme(theme)
 
@@ -254,6 +275,8 @@ export async function createGameboy({ THREE, lcd, modelUrl = `${BASE}/models/gam
 
   const api = {
     group, nodes, mats, lcd, texture: screenTex, press, interactive: false, setTheme,
+    /** Live handles for anim/gb-tune.html (the tuning page): shared frost uniforms, the diffuser and button halos. */
+    tune: { U, frost: [shell, shellBack, clear, collar], difMat, diffuser, halos, printMat, pcbMat, partMat: partMesh.material },
     /** Which control is under the raycaster, or null. D-pad returns its direction. */
     pick(ndc, camera) { return api.pickInfo(ndc, camera).part },
     pickInfo(ndc, camera) {

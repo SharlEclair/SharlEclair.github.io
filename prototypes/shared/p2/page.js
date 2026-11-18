@@ -142,7 +142,7 @@ async function initHandheld(profile) {
   })
   const { THREE } = h
   const label = profile === 'cartridge' ? { title: 'HARVEST SURPRISE', subtitle: 'RICE FROM ORBIT' } : { title: 'PORTFOLIO', subtitle: 'ASHWIN PILLAI' }
-  const gbs = await createScene({ THREE, renderer: h.renderer, size: h.size, track: [{ at: 0, xf: 2, y: 0, s: 1, cart: 1 }], cartridge: label, interactive: false, palette: new URLSearchParams(location.search).get('lcd') || 'dmg', theme: currentTheme() })
+  const gbs = await createScene({ THREE, renderer: h.renderer, size: h.size, track: [{ at: 0, xf: 2, y: 0, s: 1, cart: 1 }], cartridge: label, interactive: false, palette: new URLSearchParams(location.search).get('lcd') || 'ink', theme: currentTheme() })
   h.add(gbs)
   gbs.attachScreen = gbs.attachScreen.bind(gbs)
   h.start()
