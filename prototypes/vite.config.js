@@ -14,7 +14,12 @@ import { join } from 'node:path'
 const root = fileURLToPath(new URL('.', import.meta.url))
 
 function htmlInputs() {
-  const inputs = { index: join(root, 'index.html') }
+  const inputs = {}
+  for (const file of readdirSync(root)) {
+    if (file.endsWith('.html')) {
+      inputs[file.replace(/\.html$/, '')] = join(root, file)
+    }
+  }
   const animDir = join(root, 'anim')
   if (existsSync(animDir)) {
     for (const file of readdirSync(animDir)) {

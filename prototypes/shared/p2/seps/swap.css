@@ -1,0 +1,9 @@
+/* ?sep=swap. Slot 1 is a 100svh band the fixed console canvas flies through; slot 2 is a slim spacer. */
+.sep.swap { height: 100vh; height: 100svh; }
+.sep.swap-spacer { height: 3rem; }
+.swap-cap { position: absolute; left: var(--pad); bottom: var(--pad); margin: 0; font: 500 .74rem/1.4 var(--mono); letter-spacing: .08em; color: var(--muted); }
+.swap-static { display: none; margin: 0; font: 500 .74rem/1.4 var(--mono); letter-spacing: .08em; color: var(--muted); }
+/* reduced motion or no WebGL: no console to fly, so the band collapses to one static line */
+.sep.swap--static, html.no-gl .sep.swap { height: auto; padding: 4rem var(--pad); }
+.sep.swap--static .swap-cap, html.no-gl .sep.swap .swap-cap { display: none; }
+.sep.swap--static .swap-static, html.no-gl .sep.swap .swap-static { display: block; }

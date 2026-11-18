@@ -1,0 +1,70 @@
+/* ?sep=query : Self-Healing Query. Static end state by default; scroll-driven only where supported and motion allowed. */
+.q-band {
+  view-timeline: --q block;
+  box-sizing: border-box;
+  height: clamp(13rem, 36svh, 20rem);
+  padding: var(--pad);
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  overflow: hidden;
+  font-family: var(--mono);
+  font-size: clamp(0.72rem, 1.6vw, 0.95rem);
+  line-height: 1.9;
+}
+.ql {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  white-space: pre;
+  color: var(--fg);
+}
+.qt {
+  display: inline-block;
+  vertical-align: top;
+}
+.q-p, .q-a { color: var(--accent); }
+.q-t { color: var(--fg); }
+.q-m { color: var(--muted); }
+.q-x {
+  color: var(--fg);
+  text-decoration: wavy underline var(--accent) 1px;
+  text-underline-offset: 0.25em;
+}
+.ql4::after {
+  content: '\25AE';
+  color: var(--accent);
+  margin-left: 0.15ch;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ql4::after { animation: q-blink 1.1s steps(1, end) infinite; }
+  @keyframes q-blink { 50% { color: transparent; } }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ql4::after { content: none; }
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .ql2, .ql3, .ql5 {
+      animation: var(--q-anim) 1s linear both;
+      animation-timeline: --q;
+      animation-range: entry 50% cover 50%;
+    }
+    .ql1 .qt, .ql4 .qt {
+      animation: var(--q-anim) 1s linear both;
+      animation-timeline: --q;
+      animation-range: entry 50% cover 50%;
+    }
+    .ql4::after {
+      animation:
+        q-caret-on 1s linear both,
+        q-blink 1.1s steps(1, end) infinite;
+      animation-timeline: --q, auto;
+      animation-range: entry 50% cover 50%, normal;
+    }
+  }
+}

@@ -87,6 +87,9 @@ body.gb-hover { cursor: pointer; }
 /* ---------- torn paper (tear.js builds and animates it; its look lives in tear.css) ---------- */
 .tear { position: relative; height: clamp(12rem, 34vh, 20rem); margin: -1px 0; z-index: 5; overflow: hidden; contain: paint; background: var(--bg); }
 html:not(.js) .tear { height: 3rem; border-block: 1px dashed var(--line); }
+/* section separator slots: the chosen variant (shared/p2/seps/) builds inside. They own their height. */
+.sep { position: relative; margin: -1px 0; z-index: 5; background: var(--bg); }
+html:not(.js) .sep { height: 3rem; border-block: 1px dashed var(--line); }
 
 /* ---------- projects ---------- */
 .projects-head { padding: clamp(4rem, 10vh, 7rem) var(--pad) clamp(2rem, 5vh, 4rem); display: flex; justify-content: space-between; align-items: end; gap: 1rem; flex-wrap: wrap; }

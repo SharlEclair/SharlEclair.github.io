@@ -7,9 +7,9 @@
  * the same place, so the hand-off is invisible. Scrolling back up plays it in reverse.
  *
  * Configure with the URL:
- *   ?brand=morph         (default) the name shrinks and flies into the header
+ *   ?brand=morph         the name shrinks and flies into the header
  *   ?brand=fade          the hero name fades out while the header name fades in, no travel
- *   ?brand=touch         the hero name stays put and scrolls away normally; the header name fades in only once the
+ *   ?brand=touch         (default) the hero name stays put and scrolls away normally; the header name fades in only once the
  *                        hero name's top edge reaches the header (?brandfade=0.6: fade length, x the name's height)
  *   ?brand=static        old behaviour: the name stays in the header the whole time
  *   ?brandstart=0.1      how far you must scroll before it starts, in viewport heights (0 to 1; default 0)
@@ -34,7 +34,7 @@ function textRect(el) {
 export function initNameMorph({ h1, brand, reduced = false }) {
   if (!h1 || !brand) return
   const q = new URLSearchParams(location.search)
-  const mode = ['fade', 'touch'].includes(q.get('brand')) ? q.get('brand') : 'morph'
+  const mode = ['fade', 'morph', 'touch'].includes(q.get('brand')) ? q.get('brand') : 'touch'
   if (reduced || q.get('brand') === 'static') return
   // touch: the hero name is left alone and scrolls away with the page; the header name fades in as the hero name's
   // top edge reaches the header's bottom edge, and is fully in once the whole name has passed under it.

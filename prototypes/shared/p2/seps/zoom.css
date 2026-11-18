@@ -1,0 +1,11 @@
+/* ?sep=zoom: the slot is a short spacer; the next heading resolves through 1-bit dithered zoom levels. */
+html[data-sep='zoom'] .sep { height: 4rem; }
+.zoom-h { position: relative; }
+.zoom-h.is-resolving { color: transparent; }
+.zoom-cv { position: absolute; left: 0; top: 0; pointer-events: none; image-rendering: pixelated; image-rendering: crisp-edges; image-rendering: pixelated; }
+.zoom-tag { position: absolute; bottom: .35em; font: 500 .7rem/1 var(--mono); letter-spacing: .16em; color: var(--muted); text-transform: none; pointer-events: none; white-space: nowrap; }
+.zoom-h:not(.is-resolving) .zoom-cv, .zoom-h:not(.is-resolving) .zoom-tag { display: none; }
+@media (prefers-reduced-motion: reduce), (forced-colors: active) {
+  .zoom-cv, .zoom-tag { display: none !important; }
+  .zoom-h.is-resolving { color: inherit; }
+}

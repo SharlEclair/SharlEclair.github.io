@@ -8,7 +8,7 @@
  * sections' real positions, so it works at any viewport. Everything lazy: three.js loads only when a section is near.
  */
 import { initThemeToggle, currentTheme } from '/shared/ui/theme.js'
-import { initTears } from '/shared/p2/tear.js'
+import { initSeps } from '/shared/p2/seps/index.js'
 import { initNameMorph } from '/shared/p2/name-morph.js'
 import { stableVh } from '/shared/ui/viewport.js'
 import { initDisclosure, initScrollSpy } from '/shared/ui/nav.js'
@@ -51,7 +51,7 @@ function onTheme(theme) {
 }
 
 export function initPage({ profile }) {
-  initTears()
+  initSeps()
   initNameMorph({ h1: $('.hero--console .hero-copy h1'), brand: $('.top .brand'), reduced: reducedMotion })
   swapConsolePosters(currentTheme())
   document.addEventListener('themechange', (e) => onTheme(e.detail))
@@ -121,6 +121,8 @@ async function initHandheld(profile) {
   const harvest = $('[data-viz="harvest"]')?.closest('.runway')
   const contact = $('#contact')
   const narrow = () => innerWidth < 760
+  // ?sep=swap: the Cartridge Swap separator drives extra pose keys, the cartridge label, the LCD card and the canvas fade
+  const swap = document.documentElement.dataset.sep === 'swap' ? await import('/shared/p2/seps/swap.js') : null
 
   // The Harvest full-bleed scene (cartridge profile fades it in behind the dive, hero profile just scrubs it)
   const harvestEl = $('[data-viz="harvest"]')
@@ -196,6 +198,7 @@ async function initHandheld(profile) {
         k(hv(0.36), hide),
       )
     }
+    if (swap) track.push(...swap.swapKeys({ k, hide, vh, narrow: narrow() }))
     track.push(
       k(cTop - vh * 1.05, { ...hide, cart: 0 }),
       k(cTop - vh * 0.7, { ...rest, xf: rest.xf + 1.2, ry: 0.5, rz: -0.25, cart: 0, s: rest.s * 0.85 }),
@@ -258,6 +261,7 @@ async function initHandheld(profile) {
         const full = $('[data-viz="harvest"]')
         if (full) full.style.opacity = String(profile === 'cartridge' ? smooth(0.27, 0.33, p) : 1)
       }
+      if (swap) op *= swap.swapTick(gbs, scrollY, stableVh())
       stage.style.opacity = String(op)
       document.body.classList.toggle('gb-hover', Boolean(gbs.hover))
     })

@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Portfolio prototypes</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <script>(function(){try{var t=localStorage.getItem('portfolio-theme');if(t!=='light'&&t!=='dark')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.dataset.theme=t}catch(e){document.documentElement.dataset.theme='dark'}})()</script>
+    <link rel="stylesheet" href="/shared/ui/base.css" />
+    <style>
+      html[data-theme="dark"] { --bg: #111113; --ink: #ECEAE4; --muted: #A09E98; --line: #2B2B2F; --card: #18181B; --focus: #C9B8FF; }
+      html[data-theme="light"] { --bg: #F3F1EB; --ink: #17171A; --muted: #5E5C57; --line: #D6D2C8; --card: #FBFAF6; --focus: #4B32C3; }
+      body { background: var(--bg); color: var(--ink); font: 400 16px/1.55 ui-sans-serif, system-ui, "Segoe UI", sans-serif; }
+      main { max-width: 1120px; margin: 0 auto; padding: clamp(1.5rem, 5vw, 4rem) clamp(1rem, 4vw, 2.5rem) 5rem; }
+      header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 1rem 2rem; margin-bottom: 2.5rem; }
+      h1 { font: 600 clamp(1.6rem, 3.4vw, 2.4rem)/1.1 ui-serif, Georgia, serif; letter-spacing: -.01em; }
+      header p { color: var(--muted); max-width: 58ch; margin-top: .6rem; }
+      .actions { display: flex; gap: .75rem; align-items: center; }
+      .toggle { padding: .6rem .9rem; border: 1px solid var(--line); border-radius: 999px; min-height: 44px; text-decoration: none; color: inherit; display: inline-flex; align-items: center; }
+      .toggle:hover { border-color: var(--ink); }
+      h2 { font: 600 .8rem/1 ui-monospace, Consolas, monospace; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 2.75rem 0 1rem; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); gap: 1rem; }
+      .card { display: grid; grid-template-rows: auto 1fr auto; gap: .9rem; padding: 1.25rem; background: var(--card); border: 1px solid var(--line); border-radius: 6px; text-decoration: none;
+        transition: transform .25s cubic-bezier(.16,1,.3,1), border-color .25s; }
+      .card:hover { transform: translateY(-3px); border-color: var(--ink); }
+      .card h3 { font: 600 1.2rem/1.2 ui-serif, Georgia, serif; display: flex; align-items: center; gap: .6rem; }
+      .card p { color: var(--muted); font-size: .94rem; }
+      .sw { display: inline-flex; border-radius: 3px; overflow: hidden; border: 1px solid var(--line); }
+      .sw i { width: 14px; height: 14px; }
+      dl { display: grid; grid-template-columns: auto 1fr; gap: .3rem .8rem; font-size: .82rem; }
+      dt { color: var(--muted); font-family: ui-monospace, Consolas, monospace; }
+      .row { display: flex; flex-wrap: wrap; gap: .75rem; }
+      .row a { padding: .7rem 1rem; border: 1px solid var(--line); border-radius: 6px; text-decoration: none; min-height: 44px; display: inline-flex; align-items: center; }
+      .row a:hover { border-color: var(--ink); }
+      footer { margin-top: 3rem; color: var(--muted); font-size: .85rem; }
+      code { font-family: ui-monospace, Consolas, monospace; font-size: .9em; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div>
+          <h1>Portfolio prototypes</h1>
+          <p>Six design directions for the same page and the same copy. Each has a light and a dark mode, a mobile layout, and a <code>projects.html</code> archive page. Use the pill at the top of any variant to step between them.</p>
+        </div>
+        <div class="actions">
+          <a class="toggle" href="/">&larr; Main Portfolio</a>
+          <button class="toggle" type="button" data-theme-toggle>Light / dark</button>
+        </div>
+      </header>
+
+      <h2>Design variants</h2>
+      <div class="grid" id="variants"></div>
+
+      <h2>Animations on their own</h2>
+      <div class="row">
+        <a href="/anim/transit.html">Transit Desert (A* replay, tuning panel)</a>
+        <a href="/anim/f1.html">F1 &times; Currents (tuning panel)</a>
+        <a href="/anim/embed-test.html">Both, embedded and lazy-loaded</a>
+      </div>
+
+      <footer>Local prototype workspace. Run <code>npm run dev</code> in <code>prototypes/</code>, then open <code>http://127.0.0.1:5310/</code>.</footer>
+    </main>
+    <script type="module">
+      import { variants } from '/variants/manifest.js'
+      import { initThemeToggle } from '/shared/ui/theme.js'
+      initThemeToggle(document.querySelector('[data-theme-toggle]'))
+      const grid = document.querySelector('#variants')
+      for (const [i, v] of variants.entries()) {
+        const a = document.createElement('a')
+        a.className = 'card'
+        a.href = `/variants/${v.id}/`
+        const h = document.createElement('h3')
+        const sw = document.createElement('span')
+        sw.className = 'sw'
+        for (const c of v.swatch) { const s = document.createElement('i'); s.style.background = c; sw.appendChild(s) }
+        h.append(sw, `${i + 1}. ${v.name}`)
+        const p = document.createElement('p')
+        p.textContent = v.line
+        const dl = document.createElement('dl')
+        for (const [k, val] of [['Nav', v.nav], ['Archive', v.archive]]) {
+          const dt = document.createElement('dt'); dt.textContent = k
+          const dd = document.createElement('dd'); dd.textContent = val
+          dl.append(dt, dd)
+        }
+        a.append(h, p, dl)
+        grid.appendChild(a)
+      }
+    </script>
+  </body>
+</html>

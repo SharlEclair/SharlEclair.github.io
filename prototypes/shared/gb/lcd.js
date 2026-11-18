@@ -213,8 +213,58 @@ export function createLcd({ items = [], palette = ['#0f380f', '#306230', '#8bac0
     if (s.flash > 0) { check(0, 0, W, H, 3, 2); s.flash -= 1 }
   }
 
+  // Card overlay (the page's Cartridge Swap separator): a static, scroll-driven card that sits over every other mode.
+  //   card = { head, tag, rows: [title], n: visible row count, splash: [line, line] | null, dissolve: 0..1, to: '#rrggbb' }
+  // Nothing is drawn but the ground until a header is wanted (n > 0); `dissolve` is a 4x4 Bayer wipe to the palette colour
+  // nearest `to`, so the last frame of a dive can match the page behind it.
+  const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5]
+  function wrapTitle(t, max = 148) {
+    const lines = []
+    let cur = ''
+    for (const w of String(t).split(' ')) {
+      const next = cur ? `${cur} ${w}` : w
+      if (cur && measureText(next) > max) { lines.push(cur); cur = w } else cur = next
+    }
+    if (cur) lines.push(cur)
+    return lines
+  }
+  function drawCard(c) {
+    rect(0, 0, W, H, 3)
+    if (c.splash) {
+      text(c.splash[0], W / 2 - measureText(c.splash[0], 2) / 2, 52, 0, 2)
+      if (c.splash[1]) text(c.splash[1], W / 2 - measureText(c.splash[1]) / 2, 72, 1, 1)
+    } else if (c.n > 0) {
+      rect(0, 0, W, 17, 0)
+      text(c.head, 6, 5, 3, 1)
+      if (c.tag) text(c.tag, W - 6 - measureText(c.tag), 5, 2, 1)
+      let y = 26
+      c.rows.slice(0, c.n).forEach((title, i) => {
+        const lines = wrapTitle(title)
+        const hh = lines.length * 8 + 4
+        const on = i === c.n - 1
+        if (on) rect(3, y - 3, W - 6, hh + 2, 0)
+        lines.forEach((ln, j) => text(ln, 6, y + j * 8, on ? 3 : 0, 1))
+        if (!on) rect(6, y + hh - 2, W - 12, 1, 1)
+        y += hh + 9
+      })
+    }
+    if (c.dissolve > 0) {
+      const to = c.to?.match(/^#?([0-9a-f]{6})$/i)?.[1]
+      const rgb = to ? [0, 2, 4].map((i) => parseInt(to.slice(i, i + 2), 16)) : null
+      let idx = 0
+      if (rgb) {
+        let best = 1e9
+        pal.forEach((p, i) => { const n = parseInt(p.slice(1), 16); const d = [16, 8, 0].reduce((a, sh, j) => a + (((n >> sh) & 255) - rgb[j]) ** 2, 0); if (d < best) { best = d; idx = i } })
+      }
+      g.fillStyle = pal[idx]
+      if (c.dissolve >= 1) g.fillRect(0, 0, W, H)
+      else for (let yy = 0; yy < H; yy += 1) for (let xx = 0; xx < W; xx += 1) if (BAYER[(xx & 3) + (yy & 3) * 4] < c.dissolve * 16) g.fillRect(xx, yy, 1, 1)
+    }
+  }
+
   function draw() {
-    if (s.mode === 'boot') drawBoot()
+    if (s.card) drawCard(s.card)
+    else if (s.mode === 'boot') drawBoot()
     else if (s.mode === 'game') drawGame()
     else if (s.mode === 'konami') drawSnake()
     else drawMenu()
@@ -287,8 +337,18 @@ export function createLcd({ items = [], palette = ['#0f380f', '#306230', '#8bac0
       }
     },
     /** Advance timers; returns true when the picture changed. */
+    /** Show (or with null clear) the static card overlay; redraws only when it actually changed. */
+    setCard(c) {
+      const next = c ? { ...c, dissolve: Math.round((c.dissolve || 0) * 8) / 8 } : null
+      const key = next ? `${next.n}|${next.dissolve}|${next.splash ?? ''}|${next.to}|${pal.join()}` : ''
+      if (key === s.cardKey) return
+      s.cardKey = key
+      s.card = next
+      s.dirty = true
+    },
     update(dt, reduced = false) {
       s.t += dt
+      if (s.card) { if (!s.dirty) return false; draw(); return true }
       if (s.mode === 'boot' && s.t > 2.4) setMode('menu')
       let changed = s.dirty
       if (s.mode === 'game') {

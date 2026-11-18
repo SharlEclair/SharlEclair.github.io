@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Projects, Ashwin Pillai</title>
+<meta name="description" content="Ashwin Pillai. I build systems for making sense of complicated things.">
+<link rel="icon" href="/favicon.svg">
+<script>(function(){var d=document.documentElement;d.classList.add('js');try{var t=localStorage.getItem('portfolio-theme');if(t!=='light'&&t!=='dark')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';d.dataset.theme=t}catch(e){d.dataset.theme='dark'}})()</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Inter:wght@400..700&family=JetBrains+Mono:ital,wght@0,400..700;1,400&display=swap">
+<link rel="stylesheet" href="/shared/ui/base.css">
+<link rel="stylesheet" href="/shared/p2/page.css">
+
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="top">
+<a class="brand" href="/#top">Ashwin Pillai</a>
+<nav aria-label="Sections" id="site-nav"><ul>
+<li><a href="/#approach">How I work</a></li>
+<li><a href="/#projects">Projects</a></li>
+<li><a href="/#experience">Experience</a></li>
+<li><a href="/#contact">Contact</a></li>
+</ul></nav>
+<a class="ibtn" href="mailto:ashwinrajesh@yahoo.com" aria-label="Email ashwinrajesh@yahoo.com"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 6.5h17v11h-17zM3.5 7l8.5 6.5L20.5 7"/></svg></a>
+<button class="ibtn" type="button" data-theme-toggle aria-label="Switch theme"><svg class="i-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg><svg class="i-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.5 14.5A8 8 0 0 1 9.5 4.5a8 8 0 1 0 10 10z"/></svg></button>
+<button class="menu-btn" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
+</header>
+<main id="main" class="archive">
+<p class="eyebrow">Archive</p>
+<h1 class="serif-caps">All projects</h1>
+<article class="arc-row"><span class="kind">Data platform · 2026</span><h2>F1 Pitwall Platform</h2><p>Formula 1 produces huge amounts of live timing data, and some of it is wrong. I built a system that collects it automatically every week, runs 23 checks on it, and proves that all 84,140 laps from 88 race sessions arrive safely in a cloud database, with none lost or altered.</p><a class="arc-link" href="https://github.com/SharlEclair/f1-pitwall-platform" target="_blank" rel="noopener">GitHub ↗</a></article><article class="arc-row"><span class="kind">Geospatial analysis · 2026</span><h2>Transit Desert</h2><p>Some parts of a city are hard to get out of without a car. I mapped a city into more than 10,000 small squares and measured how long it takes to reach places from each one. Modelling 177 planned metro stations shows travel time falling in about one square in five (20.2%).</p><a class="arc-link" href="https://github.com/SharlEclair/transit-desert-platform" target="_blank" rel="noopener">GitHub ↗</a></article><article class="arc-row"><span class="kind">Agentic AI · 2026</span><h2>Self-Healing SQL Agent</h2><p>Most people can’t ask a database a question without knowing a query language. This tool lets you ask in plain English: an AI writes the database query, safety checks review it before it runs, and if it fails, the tool diagnoses the error and fixes it itself. It went from 9 correct answers to a perfect 10 out of 10 on a test set, and 45 automated tests keep it reliable.</p><a class="arc-link" href="https://github.com/SharlEclair/home-credit-agent" target="_blank" rel="noopener">GitHub ↗</a></article><article class="arc-row"><span class="kind">Research · 2026</span><h2>Harvest Surprise</h2><p>Can free satellite photos tell us how the economy is doing? I tested it. Satellite images of three California reservoirs tracked their real water levels closely, and those water levels helped predict how much rice farmers plant, even on years the model hadn’t seen.</p><a class="arc-link" href="https://github.com/SharlEclair/harvest-surprise" target="_blank" rel="noopener">GitHub ↗</a></article>
+<article class="arc-row"><span class="kind">Simulation · 2026</span><h2>F1 Strategy Engine</h2><p>Could an undercut have won Monza 2024? 10,000 race permutations evaluated in about 0.2 seconds; the honest answer is a coin toss (53.77%).</p><a class="arc-link" href="https://github.com/SharlEclair/f1-strategy-engine" target="_blank" rel="noopener">GitHub ↗</a></article><article class="arc-row"><span class="kind">Optimisation · 2026</span><h2>MILP Roster Optimizer</h2><p>An exact fantasy-roster optimiser for the Valorant Champions Tour. Mean solve time 8.76 ms on a 28-player pool.</p><a class="arc-link" href="https://github.com/SharlEclair/vct-prediction-engine" target="_blank" rel="noopener">GitHub ↗</a></article><article class="arc-row"><span class="kind">Team hackathon · 2026</span><h2>AssignMate</h2><p>An assignment workspace with a rule-based AI guardrail that refuses by default. Built with a team; 765 tests.</p><a class="arc-link" href="https://github.com/SharlEclair/rmit-hackathon" target="_blank" rel="noopener">GitHub ↗</a></article><article class="arc-row"><span class="kind">Exercise · 2026</span><h2>Retail Supplier Scorecard</h2><p>A weekly supplier scorecard on public sample data with Power Query, Excel and Power Automate.</p></article>
+</main>
+<footer class="foot"><a href="/">Back to the portfolio</a></footer>
+<script type="module">
+import { initThemeToggle } from '/shared/ui/theme.js'
+import { initDisclosure } from '/shared/ui/nav.js'
+initThemeToggle(document.querySelector('[data-theme-toggle]'))
+initDisclosure(document.querySelector('.menu-btn'), document.querySelector('.top nav'))
+</script>
+</body>
+</html>
