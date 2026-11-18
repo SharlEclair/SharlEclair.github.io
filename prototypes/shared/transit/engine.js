@@ -11,6 +11,7 @@
  * The camera is a poster-map view with a slight tilt; it only drifts a few percent over the whole run.
  */
 import * as THREE from 'three'
+import { glParams } from '/shared/gl/params.js'
 import { loadMapData } from './data.js'
 import {
   buildSegmentGeometry,
@@ -62,8 +63,8 @@ export async function startEngine({
   layout = 'auto',
   onReady = null
 }) {
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, premultipliedAlpha: true })
-  const ratio = Math.min(window.devicePixelRatio || 1, maxPixelRatio)
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: glParams.aa ?? true, alpha: true, premultipliedAlpha: true })
+  const ratio = Math.min(window.devicePixelRatio || 1, glParams.dpr ?? maxPixelRatio) * (glParams.quality === 'auto' ? 1 : glParams.quality)
   renderer.setPixelRatio(ratio)
   renderer.setClearColor(0x000000, 0)
   renderer.autoClear = true

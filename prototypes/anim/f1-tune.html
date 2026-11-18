@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>F1 currents tuner</title>
+    <style>
+      :root { --bg: #08080a; --panel: #121316; --line: #2a2c31; --fg: #e6e7ea; --mute: #8b8f98; --acc: #7fd4a8; --pw: 330px; }
+      :root[data-theme="light"] { --bg: #e8e6db; }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; background: var(--bg); overflow-x: hidden; }
+      body { font: 12px/1.35 ui-monospace, Menlo, Consolas, monospace; color: var(--fg); }
+      /* One 100vh of scroll maps to progress 0..1 (when "follow page scroll" is on). */
+      #runway { position: relative; height: 200vh; margin-right: var(--pw); }
+      #stage { position: sticky; top: 0; height: 100vh; overflow: hidden; }
+      #panel { position: fixed; top: 0; right: 0; bottom: 0; width: var(--pw); background: var(--panel); border-left: 1px solid var(--line); overflow-y: auto; z-index: 10; padding: 0 0 40px; }
+      #panel header { position: sticky; top: 0; background: var(--panel); z-index: 2; padding: 10px 12px; border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+      #panel header b { flex: 1 0 100%; letter-spacing: .12em; text-transform: uppercase; font-size: 11px; color: var(--acc); }
+      button, select { font: inherit; color: var(--fg); background: #1c1d21; border: 1px solid var(--line); border-radius: 4px; padding: 4px 8px; cursor: pointer; }
+      button:hover { border-color: var(--acc); }
+      details { border-bottom: 1px solid var(--line); }
+      summary { padding: 9px 12px; cursor: pointer; letter-spacing: .1em; text-transform: uppercase; font-size: 11px; color: var(--mute); }
+      details[open] summary { color: var(--fg); }
+      .row { display: grid; grid-template-columns: 124px 1fr 46px; gap: 8px; align-items: center; padding: 3px 12px; }
+      .row.c { grid-template-columns: 124px 1fr; }
+      .row label { color: var(--mute); }
+      .row output { text-align: right; color: var(--fg); font-variant-numeric: tabular-nums; }
+      input[type='range'] { width: 100%; accent-color: var(--acc); margin: 0; }
+      input[type='color'] { width: 100%; height: 22px; padding: 0; border: 1px solid var(--line); background: none; }
+      .hint { padding: 4px 12px 8px; color: var(--mute); }
+      .btns { display: flex; gap: 6px; padding: 4px 12px 8px; flex-wrap: wrap; }
+      #stats { margin: 4px 12px 8px; padding: 8px; border: 1px solid var(--line); border-radius: 4px; white-space: pre-wrap; overflow-x: auto; color: var(--fg); font-size: 11px; }
+      #out { display: none; position: fixed; left: 16px; bottom: 16px; width: min(560px, calc(100vw - 372px)); height: 220px; z-index: 11; background: #0c0d0f; color: var(--fg); border: 1px solid var(--acc); font: 11px/1.4 ui-monospace, Consolas, monospace; padding: 8px; }
+      #toast { position: fixed; left: 16px; top: 16px; z-index: 11; background: #0c0d0fcc; color: #e6e7ea; padding: 6px 10px; border: 1px solid var(--line); border-radius: 4px; opacity: 0; transition: opacity .2s; }
+      @media (max-width: 760px) { :root { --pw: 0px; } #panel { width: 100%; top: 52%; border-left: 0; border-top: 1px solid var(--line); } #out { width: calc(100vw - 32px); } }
+    </style>
+  </head>
+  <body>
+    <!--
+      F1 currents tuner. Sliders drive the real scene (shared/f1/mount.js); "Copy JSON" gives every value to paste back.
+        ?theme=light|dark   starting theme     ?preset=classic|optimised   starting preset
+      Settings auto-save in this browser (localStorage), per theme and preset, and can be exported or imported as JSON.
+      The scene's own API (also on window.__F1): setCurrents(partial), setPreset(name), setLivery(partial), measure().
+    -->
+    <div id="runway"><div id="stage"></div></div>
+    <div id="panel"></div>
+    <textarea id="out" spellcheck="false"></textarea>
+    <div id="toast"></div>
+    <script type="module">
+      import { mountF1 } from '/shared/f1/mount.js'
+      import { PRESETS, DEFAULT_PRESET, CURRENT_FIELDS, CURRENT_COLOURS, LIVERY_FIELDS, LIVERY_DEFAULTS } from '/shared/f1/tune.js'
+
+      const q = new URLSearchParams(location.search)
+      const STORE = 'f1-tune-v1'
+      const saved = (() => { try { return JSON.parse(localStorage.getItem(STORE) || '{}') } catch { return {} } })()
+      let theme = saved.theme ?? (q.get('theme') === 'light' ? 'light' : 'dark')
+      let preset = PRESETS[q.get('preset')] ? q.get('preset') : PRESETS[saved.preset] ? saved.preset : DEFAULT_PRESET
+      // Edits are kept per theme and preset: ov[theme][preset] = { key: value }
+      const ov = { dark: { classic: {}, optimised: {} }, light: { classic: {}, optimised: {} } }
+      for (const t of Object.keys(ov)) for (const p of Object.keys(ov[t])) Object.assign(ov[t][p], saved.ov?.[t]?.[p] ?? {})
+      const livery = { ...LIVERY_DEFAULTS, ...(saved.livery ?? {}) }
+      let liveryTheme = saved.liveryTheme ?? 'follow page'
+      let followScroll = false
+      let progress = saved.progress ?? 0
+
+      document.documentElement.dataset.theme = theme
+      const m = mountF1(document.getElementById('stage'), {
+        runway: document.getElementById('runway'),
+        currents: { preset, ...ov[theme][preset] },
+        maxPixelRatio: 1.5,
+      })
+      const app = m.app
+      window.__F1 = app
+      window.__F1_MOUNT = m
+      window.__TEST_SET_PROGRESS = (v) => m.setProgress(v)
+      const ready = setInterval(() => { if (app.getCar()) { clearInterval(ready); boot() } }, 100)
+
+      // ---- control schema ---------------------------------------------------------------------------------------
+      const sec = []
+      const S_ = (title, controls, open = false) => sec.push({ title, controls, open })
+      const num = (id, label, min, max, step, get, set) => ({ id, label, type: 'num', min, max, step, get, set })
+      const col = (id, label, get, set) => ({ id, label, type: 'col', get, set })
+      const chk = (id, label, get, set) => ({ id, label, type: 'chk', get, set })
+      const sel = (id, label, options, get, set) => ({ id, label, type: 'sel', options, get, set })
+
+      const cur = () => app.getCurrents()
+      const setCur = (key, v) => { ov[theme][preset][key] = v; app.setCurrents({ [key]: v }) }
+      const curNum = ([key, label, min, max, step]) => num('c_' + key, label, min, max, step, () => cur()[key], (v) => setCur(key, v))
+
+      S_('View', [
+        sel('theme', 'Theme', ['dark', 'light'], () => theme, (v) => setTheme(v)),
+        sel('preset', 'Preset', Object.keys(PRESETS), () => preset, (v) => setPreset(v)),
+        chk('follow', 'Follow page scroll', () => followScroll, (v) => { followScroll = v; m.setProgress(v ? null : progress) }),
+        num('progress', 'Progress (0 top, 1 chase)', 0, 1, 0.005, () => progress, (v) => { progress = v; if (!followScroll) m.setProgress(v) }),
+      ], true)
+      for (const [title, fields] of CURRENT_FIELDS) S_(title === 'Lines' ? 'Currents: lines' : 'Currents: ' + title.toLowerCase(), fields.map(curNum), title === 'Lines')
+      S_('Currents: colours', [
+        ...CURRENT_COLOURS.map(([key, label]) => col('c_' + key, label, () => cur()[key], (v) => setCur(key, v))),
+        chk('c_additive', 'Additive blending', () => Boolean(cur().additive), (v) => setCur('additive', v ? 1 : 0)),
+        chk('c_vortex', 'Vortex stage in shader', () => Boolean(cur().vortex), (v) => setCur('vortex', v ? 1 : 0)),
+        chk('c_edgeSoft', 'Soft ribbon edges', () => Boolean(cur().edgeSoft), (v) => setCur('edgeSoft', v ? 1 : 0)),
+      ])
+      S_('Car livery', [
+        sel('liv', 'Livery theme', ['follow page', 'dark', 'light'], () => liveryTheme, (v) => { liveryTheme = v; app.setLiveryTheme(v === 'follow page' ? null : v) }),
+        ...LIVERY_FIELDS.map(([key, label, min, max, step]) => num('l_' + key, label, min, max, step, () => app.getLivery()[key], (v) => { livery[key] = v; app.setLivery({ [key]: v }) })),
+      ])
+
+      // ---- panel -------------------------------------------------------------------------------------------------
+      const all = sec.flatMap((s) => s.controls)
+      const ui = {}
+      const panel = document.getElementById('panel')
+      panel.innerHTML = `<header><b>F1 currents tuner</b>
+        <button data-a="copy">Copy JSON</button><button data-a="paste">Paste JSON</button>
+        <button data-a="dl">Download</button><button data-a="reset">Reset all</button></header>`
+      for (const s of sec) {
+        const d = document.createElement('details')
+        d.open = s.open
+        d.innerHTML = `<summary>${s.title}</summary>`
+        for (const c of s.controls) {
+          const row = document.createElement('div')
+          row.className = 'row' + (c.type === 'num' ? '' : ' c')
+          const id = 'x_' + c.id
+          let inner = `<label for="${id}">${c.label}</label>`
+          if (c.type === 'num') inner += `<input id="${id}" type="range" min="${c.min}" max="${c.max}" step="${c.step}"><output></output>`
+          else if (c.type === 'col') inner += `<input id="${id}" type="color">`
+          else if (c.type === 'chk') inner += `<input id="${id}" type="checkbox" style="justify-self:start">`
+          else inner += `<select id="${id}">${c.options.map((o) => `<option>${o}</option>`).join('')}</select>`
+          row.innerHTML = inner
+          d.appendChild(row)
+          const el = row.querySelector('input,select')
+          const out = row.querySelector('output')
+          ui[c.id] = { el, out }
+          el.addEventListener('input', () => {
+            const v = c.type === 'num' ? Number(el.value) : c.type === 'chk' ? el.checked : el.value
+            c.set(v)
+            if (out) out.textContent = fmt(Number(v))
+            persist(); scheduleStats()
+          })
+        }
+        panel.appendChild(d)
+      }
+      const fmt = (v) => (Math.abs(v) >= 100 ? v.toFixed(0) : v.toFixed(2))
+
+      // Performance readout: renderer.info for one frame, plus a classic vs optimised comparison.
+      const statsBox = document.createElement('details')
+      statsBox.open = true
+      statsBox.innerHTML = `<summary>Performance (renderer.info)</summary>
+        <div class="btns"><button data-a="measure">Measure now</button><button data-a="compare">Compare presets</button></div>
+        <div id="stats">press Measure</div>
+        <p class="hint">Draw calls and triangles are counted for one frame (scene plus bloom and grade passes). Headless or software GL cannot judge frame rate; use these counts.</p>`
+      panel.appendChild(statsBox)
+      const statsEl = statsBox.querySelector('#stats')
+      const line = (label, x) => `${label.padEnd(9)} lines ${String(x.instances).padStart(5)}  pts ${String(x.pointsPerLine).padStart(2)}  verts ${String(x.fieldVertices).padStart(6)}  tris ${String(x.fieldTriangles).padStart(6)}  calls ${x.frame.calls}  frame tris ${x.frame.triangles}`
+      const measure = () => { const x = app.measure(); statsEl.textContent = line(preset, x); return x }
+      let statsTimer = 0
+      const scheduleStats = () => { clearTimeout(statsTimer); statsTimer = setTimeout(measure, 500) }
+      function compare() {
+        const keep = { ...ov[theme][preset] }
+        const rows = []
+        for (const p of Object.keys(PRESETS)) {
+          app.setPreset(p)
+          rows.push(line(p, app.measure()))
+        }
+        app.setPreset(preset, keep)
+        statsEl.textContent = rows.join('\n') + `\n(${theme} theme, progress ${progress.toFixed(2)})`
+      }
+
+      // ---- state ---------------------------------------------------------------------------------------------------
+      function show(c) {
+        const { el, out } = ui[c.id]
+        const v = c.get()
+        if (c.type === 'chk') el.checked = Boolean(v)
+        else el.value = v
+        if (out) out.textContent = fmt(Number(v))
+      }
+      const syncAll = () => { for (const c of all) show(c) }
+      function persist() { try { localStorage.setItem(STORE, JSON.stringify({ theme, preset, ov, livery, liveryTheme, progress })) } catch {} }
+      const toast = (t) => { const el = document.getElementById('toast'); el.textContent = t; el.style.opacity = 1; clearTimeout(toast.t); toast.t = setTimeout(() => (el.style.opacity = 0), 1600) }
+
+      function setTheme(name) {
+        theme = name
+        document.documentElement.dataset.theme = name
+        m.setTheme(name) // loads this theme's table of the active preset
+        app.setCurrents({ ...ov[theme][preset] })
+        syncAll(); persist(); scheduleStats()
+      }
+      function setPreset(name) {
+        preset = name
+        app.setPreset(name, ov[theme][name])
+        syncAll(); persist(); scheduleStats()
+      }
+      function applyLivery() {
+        app.setLivery({ ...livery })
+        app.setLiveryTheme(liveryTheme === 'follow page' ? null : liveryTheme)
+      }
+
+      // The full values for both themes of the active preset, ready to paste into tune.js PRESETS.
+      function bakeable() {
+        const out = {}
+        for (const t of ['dark', 'light']) out[t] = { ...PRESETS[preset][t], ...ov[t][preset] }
+        return out
+      }
+      const json = () => JSON.stringify({ theme, preset, currents: bakeable(), livery, liveryTheme, progress }, null, 2)
+
+      const outBox = document.getElementById('out')
+      panel.addEventListener('click', async (e) => {
+        const a = e.target.dataset?.a
+        if (a === 'measure') measure()
+        if (a === 'compare') compare()
+        if (a === 'copy') { try { await navigator.clipboard.writeText(json()); toast('Copied settings JSON') } catch { outBox.value = json(); outBox.style.display = 'block'; outBox.select(); toast('Select and copy the box') } }
+        if (a === 'dl') { const l = document.createElement('a'); l.href = URL.createObjectURL(new Blob([json()], { type: 'application/json' })); l.download = 'f1-currents-settings.json'; l.click() }
+        if (a === 'reset') {
+          for (const t of Object.keys(ov)) for (const p of Object.keys(ov[t])) ov[t][p] = {}
+          Object.assign(livery, LIVERY_DEFAULTS)
+          liveryTheme = 'follow page'
+          app.setPreset(preset)
+          applyLivery(); syncAll(); persist(); scheduleStats(); toast('Reset')
+        }
+        if (a === 'paste') {
+          if (outBox.style.display === 'block' && outBox.value.trim()) {
+            try {
+              const v = JSON.parse(outBox.value)
+              if (v.preset && PRESETS[v.preset]) preset = v.preset
+              if (v.currents) for (const t of ['dark', 'light']) if (v.currents[t]) ov[t][preset] = { ...v.currents[t] }
+              if (v.livery) Object.assign(livery, v.livery)
+              if (v.liveryTheme) liveryTheme = v.liveryTheme
+              if (v.theme && v.theme !== theme) { setTheme(v.theme) }
+              app.setPreset(preset, ov[theme][preset])
+              applyLivery(); syncAll(); persist(); scheduleStats()
+              outBox.style.display = 'none'; toast('Applied')
+            } catch { toast('That is not valid JSON') }
+          } else { outBox.value = ''; outBox.placeholder = 'Paste settings JSON here, then press "Paste JSON" again'; outBox.style.display = 'block'; outBox.focus() }
+        }
+      })
+
+      function boot() {
+        applyLivery()
+        m.setProgress(followScroll ? null : progress)
+        syncAll()
+        scheduleStats()
+        window.__F1_READY = true
+        window.__TUNE = { ov, livery, json, setTheme, setPreset, compare, measure }
+      }
+    </script>
+  </body>
+</html>

@@ -109,7 +109,7 @@ export function createStudioEnvironment(renderer, theme = 'dark') {
     card('#FFFFFF', 7.0, 0.9, 0.9, 3.5, 7, 8) //  one hard glint
     return finishEnvironment(renderer, scene)
   }
-  card('#FFE4B8', 7.0, 12, 2.0, 0, 9, 1.5) //  long warm strip overhead: the window
+  card('#FFE4B8', 4.5, 12, 2.0, 0, 9, 1.5) //  long warm strip overhead: the window
   card('#F2B25C', 4.0, 3, 6, 9, 3, -3) //       gold side key
   card('#8E68D8', 5.0, 4, 7, -9, 2.5, 4) //     violet rim
   card('#E5113C', 3.0, 9, 0.8, 0, -4, -6) //    red underglow, the focal band reflected

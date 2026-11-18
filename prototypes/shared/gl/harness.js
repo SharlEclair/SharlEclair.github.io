@@ -33,22 +33,37 @@
  * Test hooks (used by tools/shot.mjs --progress): h.setProgress(v | null), h.setPointer(x, y | null).
  */
 import * as THREE from 'three'
+import { stableVh } from '/shared/ui/viewport.js'
+import { glParams } from '/shared/gl/params.js'
 
 const reducedQuery = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null
 const damp = (a, b, k, dt) => a + (b - a) * (1 - Math.exp(-k * dt))
+
+// Adaptive resolution. Every harness watches its own frame times while it animates; when the average drops under
+// ~48 fps it renders at a lower pixel ratio (x0.8 per step, never below MIN_Q) and the page remembers the result, so
+// the other scenes start at that level too. Only ever steps down: a 60 Hz display gives no headroom signal to step
+// back up on, and flip-flopping is worse than a slightly softer image. ?quality=1 pins full resolution (testing).
+const MIN_Q = 0.65
+const SLOW_MS = 21
+// ?quality=0.5..1 pins the scale (no adapting); ?quality=auto (default) adapts. ?aa= and ?dpr= override per stage.
+// See shared/gl/params.js.
+const pinned = glParams.quality !== 'auto'
+let sharedQ = pinned ? glParams.quality : 1
 
 export function createHarness(stage, options = {}) {
   const {
     runway = stage.parentElement,
     progress: external = null,
-    maxPixelRatio = 1.25,
-    antialias = false,
+    maxPixelRatio: maxPixelRatioOpt = 1.25,
+    antialias: antialiasOpt = false,
     alpha = false,
     clearColor = 0x000000,
     clearAlpha = 1,
     pointerFrom = 'window', // 'window' maps the page pointer onto the stage rect; 'stage' only listens on the stage
   } = options
 
+  const antialias = glParams.aa ?? antialiasOpt
+  const maxPixelRatio = glParams.dpr ?? maxPixelRatioOpt
   if (getComputedStyle(stage).position === 'static') stage.style.position = 'relative'
   const canvas = document.createElement('canvas')
   canvas.style.cssText = 'display:block;width:100%;height:100%'
@@ -64,12 +79,14 @@ export function createHarness(stage, options = {}) {
   const mods = []
   const state = { progress: 0, p: 0, override: null, pointerOverride: null, time: 0, last: 0, raf: 0, visible: true, dirty: true, started: false }
   const reduced = () => Boolean(reducedQuery?.matches)
+  const perf = { n: 0, sum: 0, warm: 30 }
 
   function resize() {
     const w = Math.max(1, stage.clientWidth)
     const h = Math.max(1, stage.clientHeight)
     const coarse = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches
-    const dpr = Math.min(window.devicePixelRatio || 1, coarse ? 1 : maxPixelRatio)
+    const dpr = Math.min(window.devicePixelRatio || 1, coarse && glParams.dpr == null ? 1 : maxPixelRatio) * sharedQ
+    perf.warm = 30; perf.n = 0; perf.sum = 0 // new buffers and shader compiles: do not judge the next few frames
     size.w = w
     size.h = h
     size.dpr = dpr
@@ -83,7 +100,7 @@ export function createHarness(stage, options = {}) {
 
   const fromRunway = () => {
     const rect = runway.getBoundingClientRect()
-    const range = rect.height - window.innerHeight
+    const range = rect.height - stableVh()
     return range > 0 ? Math.min(1, Math.max(0, -rect.top / range)) : 0
   }
   const readProgress = () => (state.override ?? (external ? external() : fromRunway()))
@@ -115,7 +132,8 @@ export function createHarness(stage, options = {}) {
   function frame(now) {
     state.raf = 0
     if (!state.visible || document.hidden) return
-    const dt = Math.min(0.05, (now - state.last) / 1000 || 0.016)
+    const raw = now - state.last
+    const dt = Math.min(0.05, raw / 1000 || 0.016)
     state.last = now
     state.time += dt
     const still = reduced()
@@ -129,6 +147,17 @@ export function createHarness(stage, options = {}) {
     pointer.sy = still ? 0 : damp(pointer.sy, py, 5, dt)
     if (Math.abs(state.p - progress) > 1e-4 || Math.abs(pointer.sx - px) > 1e-3 || Math.abs(pointer.sy - py) > 1e-3) state.dirty = true
     const animated = !still && mods.some((m) => m.animated)
+    if (animated && !pinned && raw > 0 && raw < 500) {
+      if (perf.warm > 0) perf.warm -= 1
+      else {
+        perf.sum += raw; perf.n += 1
+        if (perf.n >= 45) {
+          const avg = perf.sum / perf.n
+          perf.sum = 0; perf.n = 0
+          if (avg > SLOW_MS && sharedQ > MIN_Q) { sharedQ = Math.max(MIN_Q, sharedQ * 0.8); resize() }
+        }
+      }
+    } else if (!animated) { perf.n = 0; perf.sum = 0 }
     if (animated || state.dirty) {
       const ctx = { progress, p: state.p, pointer, dt, time: state.time, size, reduced: still, renderer, THREE }
       for (const m of mods) {
@@ -152,6 +181,8 @@ export function createHarness(stage, options = {}) {
     size,
     pointer,
     get progress() { return state.progress },
+    /** Current resolution scale (1 = full), shared by every scene on the page. */
+    get quality() { return sharedQ },
     add(mod) { mods.push(mod); mod.resize?.(size.w, size.h, size.dpr); state.dirty = true; return mod },
     start() { state.started = true; resize(); state.last = performance.now(); schedule() },
     invalidate() { state.dirty = true; schedule() },

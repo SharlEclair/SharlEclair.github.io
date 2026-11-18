@@ -28,10 +28,13 @@
         runway: document.getElementById('runway'),
         gui: q.has('gui'),
         layout: q.get('layout') || 'auto',
+        // ?currents=classic|optimised (default: the scene's default preset)
+        ...(q.has('currents') ? { currents: q.get('currents') } : {}),
         maxPixelRatio: q.has('pr') ? Number(q.get('pr')) : 1.25,
       })
       // Verification hooks (tools/shot.mjs).
       window.__F1 = f1.app
+      window.__F1_MOUNT = f1
       window.__TEST_SET_PROGRESS = (value) => f1.setProgress(value)
       window.__setTheme = (value) => { document.documentElement.dataset.theme = value }
       const ready = setInterval(() => {

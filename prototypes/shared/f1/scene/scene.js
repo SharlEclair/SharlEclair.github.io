@@ -130,6 +130,19 @@ shadow.renderOrder = -2
 shadow.visible = false
 scene.add(shadow)
 
+// Paper (light theme only): a big white sheet under the car with a radial falloff, so the ground reads
+// as the white track of the reference near the car and melts into the page's cream toward the edges
+// (the stage background has to stay the page colour or the stage would show a seam).
+const paper = new THREE.Mesh(
+  new THREE.PlaneGeometry(1, 1),
+  new THREE.MeshBasicMaterial({ map: blob, color: 0xffffff, transparent: true, opacity: 0.7, depthWrite: false, toneMapped: false })
+)
+paper.rotation.x = -Math.PI / 2
+paper.renderOrder = -4
+paper.scale.set(120, 80, 1)
+paper.visible = false
+scene.add(paper)
+
 // Halo: a barely-there glow BEHIND the car (dark theme only). A camera-facing sprite pushed back
 // along the view ray, depth tested so the car and lines sit in front of it.
 const halo = new THREE.Sprite(
@@ -161,6 +174,8 @@ export function applySceneTheme(def) {
   gridStyle = def.grid
   scene.add(gridHelper)
 
+  paper.visible = Boolean(def.paper?.visible)
+  if (def.paper?.visible) paper.material.opacity = def.paper.opacity
   shadow.visible = Boolean(def.shadow.visible)
   if (def.shadow.visible) shadow.material.opacity = def.shadow.opacity
   track.material.color.set(def.track.color)
@@ -177,7 +192,7 @@ export function updateScene(scrollProgress, camera = null) {
   // depth reveal opens the field up into a volume.
   gridHelper.position.y = config.airflow.groundY
   track.position.y = config.airflow.groundY + 0.003
-  trackTex.map.offset.x = (time.elapsed * config.airflow.flowSpeed) / TRACK_TILE
+  trackTex.map.offset.x = time.flow / TRACK_TILE
   // Opens a little ahead of the field's own depth reveal and finishes with it.
   const a = config.airflow
   const reveal = Math.max(
@@ -187,6 +202,7 @@ export function updateScene(scrollProgress, camera = null) {
   gridHelper.material.opacity = gridStyle.base + reveal * gridStyle.reveal
 
   if (carRef.ready) {
+    if (paper.visible) paper.position.set(carRef.center.x, config.airflow.groundY - 0.004, carRef.center.z)
     if (shadow.visible) {
       shadow.position.set(carRef.center.x, config.airflow.groundY + 0.01, carRef.center.z)
       shadow.scale.set(carRef.size.x * 1.7, carRef.size.z * 2.7, 1)

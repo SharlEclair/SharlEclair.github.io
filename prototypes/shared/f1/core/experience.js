@@ -10,7 +10,8 @@ import { scene, updateScene, applySceneTheme } from '../scene/scene.js'
 import { camera, setOrbitTarget, initCamera, updateCamera, rebuildCurves, setLayoutMode, resolveLayout } from '../camera/rig.js'
 import { createAirflow, updateAirflow, applyAirflowTheme } from '../airflow/field.js'
 import { THEMES, normaliseTheme, readPageTheme } from '../theme.js'
-import { setCarStyle, updateCarWheels } from '../car/livery.js'
+import { setCarStyle, updateCarWheels, tuneLivery, liveryTune } from '../car/livery.js'
+import { PRESETS, DEFAULT_PRESET, REBUILD_KEYS, LIVERY_DEFAULTS } from '../tune.js'
 import { loadCar, applyCarTransform, applyCarMaterial, applyFinish, createEnvironment } from '../car/loader.js'
 import { createPanel } from '../ui/panel.js'
 import {
@@ -69,12 +70,15 @@ export function createExperience({
   // 'auto' | 'right' | 'top' | 'center': which part of the canvas the car and flow are framed in
   // (camera/rig.js). 'auto' is right on landscape, top on portrait.
   layout = 'auto',
+  // Currents (streamline) look: a preset name ('optimised' | 'classic'), or { preset, ...overrides of tune.js keys }.
+  currents = DEFAULT_PRESET,
 } = {}) {
   // The upgraded look is written onto the live config BEFORE anything reads it.
   applyLookToConfig()
   if (progress) setProgressSource(progress)
 
   let themeName = normaliseTheme(theme ?? readPageTheme())
+  let liveryTheme = null // null follows the page theme
   setLayoutMode(layout)
 
   const renderer = createRenderer(canvas, { sizeTo: container, maxPixelRatio })
@@ -83,7 +87,55 @@ export function createExperience({
   const disposeScroll = initScroll()
   const disposeCamera = initCamera()
 
-  let airflow = createAirflow(scene)
+  // ---- currents settings (tune.js) -------------------------------------------------------------------
+  // One flat object drives the field. The tuner writes it through setCurrents(); the live page only picks
+  // a preset. Colours, blending and fade go to the material, the rest through config.airflow each frame.
+  const currentsOption = typeof currents === 'string' ? { preset: currents } : { preset: DEFAULT_PRESET, ...currents }
+  let presetName = PRESETS[currentsOption.preset] ? currentsOption.preset : DEFAULT_PRESET
+  const { preset: _p, ...currentsOverrides } = currentsOption
+  let cur = { ...PRESETS[presetName][themeName], ...currentsOverrides }
+  let curTheme = themeName
+
+  function syncCurrentsConfig() {
+    const a = config.airflow
+    a.countLines = cur.lines
+    a.sheetCount = cur.sheets
+    a.lateralSpread = cur.spread
+    a.lineLength = cur.length
+    a.cycleLength = cur.length * cur.cycleRatio
+    a.flowSpeed = cur.speed
+    a.influenceSplay = cur.bend
+    a.influenceUpstream = cur.upstream
+    a.wakeLateral = cur.wake
+    a.turbStrength = cur.turb
+    a.microOscillation = cur.wobble
+    a.bandWidth = cur.bandWidth
+    a.violetMix = cur.midMix
+    a.opacity = cur.opacity
+    a.lineThickness = cur.thickness
+    a.additive = Boolean(cur.additive)
+    a.taper = cur.taper
+    a.endFade = cur.endFade
+    a.widthVar = cur.widthVar
+    a.alphaVar = cur.alphaVar
+    a.nearMix = cur.nearMix
+    // Soft edges only matter for ribbons wider than a hairline; the shader ramps over ~1.5 px.
+    a.edgeSoft = cur.edgeSoft ? Math.min(1, Math.max(0.2, 1.5 / Math.max(cur.thickness, 0.5))) : 0
+  }
+  const airflowDef = () => ({
+    colors: () => ({
+      base: new THREE.Color(cur.colFar),
+      violet: new THREE.Color(cur.colMid),
+      separation: new THREE.Color(cur.colSep),
+      vortex: new THREE.Color(cur.colMid),
+      band: new THREE.Color(cur.colNear).multiplyScalar(cur.nearGain),
+    }),
+    additive: Boolean(cur.additive),
+    fade: { near: cur.fadeNear, far: Math.max(cur.fadeFar, cur.fadeNear + 1), min: cur.fadeMin },
+  })
+  syncCurrentsConfig()
+
+  let airflow = createAirflow(scene, cur)
 
   // The airflow field is rebuilt whenever a change alters the instance buffers
   // (line count, sheet count, focal band width). Those cannot be expressed as
@@ -95,8 +147,9 @@ export function createExperience({
       airflow.mesh.geometry.dispose()
       airflow.mesh.material.dispose()
     }
-    airflow = createAirflow(scene)
-    applyAirflowTheme(airflow, THEMES[themeName].airflow)
+    syncCurrentsConfig()
+    airflow = createAirflow(scene, cur)
+    applyAirflowTheme(airflow, airflowDef())
     return airflow
   }
 
@@ -201,16 +254,21 @@ export function createExperience({
   // the scene, the field's material, the post chain, the renderer's tone map and the car.
   function applyTheme(name) {
     themeName = normaliseTheme(name)
-    setCarStyle(themeName)
+    setCarStyle(liveryTheme ?? themeName)
     const def = THEMES[themeName]
     renderer.toneMapping = def.toneMapping
     renderer.toneMappingExposure = def.exposure
     Object.assign(config.car, def.car, { environment: true })
-    config.airflow.opacity = def.airflow.opacity
-    config.airflow.lineThickness = def.airflow.lineThickness
-    config.airflow.additive = def.airflow.additive
+    // A theme change reloads that theme's table of the active preset (the tuner re-applies its edits).
+    if (curTheme !== themeName) {
+      curTheme = themeName
+      cur = { ...PRESETS[presetName][themeName] }
+      rebuildAirflow()
+    } else {
+      syncCurrentsConfig()
+    }
     applySceneTheme(def)
-    applyAirflowTheme(airflow, def.airflow)
+    applyAirflowTheme(airflow, airflowDef())
     post.setTheme(def, scene.background)
     syncWash()
     // The reflections come from a theme-specific studio, so drop the old one before the car is re-lit.
@@ -223,11 +281,16 @@ export function createExperience({
   applyTheme(themeName)
   refreshCar()
 
+  let wheelDist = 0
+  let lastFlow = time.flow
+
   function draw() {
     updateScroll()
     updateCamera()
     updateAirflow(airflow, camera)
-    updateCarWheels(car, time.elapsed, config.airflow.flowSpeed)
+    wheelDist += (time.flow - lastFlow) * cur.wheelSync
+    lastFlow = time.flow
+    updateCarWheels(car, wheelDist)
     updateScene(scroll.progress, camera)
     post.render(time.elapsed, !staticTime)
   }
@@ -392,6 +455,72 @@ export function createExperience({
       draw()
     },
     getAirflow: () => airflow,
+    // ---- tuning API (anim/f1-tune.html drives this; the live page can bake the numbers into tune.js) ----
+    getCurrents: () => ({ ...cur }),
+    getPreset: () => presetName,
+    // Merge tune.js keys into the live currents. Keys that change the buffers rebuild the field.
+    setCurrents(partial) {
+      const rebuild = Object.keys(partial).some((k) => REBUILD_KEYS.has(k) && partial[k] !== cur[k])
+      Object.assign(cur, partial)
+      syncCurrentsConfig()
+      if (rebuild) rebuildAirflow()
+      else applyAirflowTheme(airflow, airflowDef())
+      draw()
+    },
+    // Load a preset ('classic' | 'optimised') for the current theme, then layer optional overrides on it.
+    setPreset(name, overrides = {}) {
+      if (!PRESETS[name]) return null
+      presetName = name
+      cur = { ...PRESETS[name][themeName], ...overrides }
+      rebuildAirflow()
+      draw()
+      return { ...cur }
+    },
+    getLivery: () => ({ ...liveryTune }),
+    setLivery(partial) {
+      tuneLivery(car, partial)
+      draw()
+    },
+    resetLivery() {
+      tuneLivery(car, { ...LIVERY_DEFAULTS })
+      draw()
+    },
+    // 'dark' | 'light' | null: dress the car for a theme other than the page's (null follows the page).
+    setLiveryTheme(name) {
+      liveryTheme = name ? normaliseTheme(name) : null
+      setCarStyle(liveryTheme ?? themeName)
+      refreshCar()
+      draw()
+    },
+    getLiveryTheme: () => liveryTheme ?? themeName,
+    // Render cost of one frame, read from renderer.info (all passes of the composer, then the scene pass alone).
+    measure() {
+      const info = renderer.info
+      const prev = info.autoReset
+      info.autoReset = false
+      info.reset()
+      draw()
+      const frame = { calls: info.render.calls, triangles: info.render.triangles, lines: info.render.lines }
+      info.reset()
+      renderer.render(scene, camera)
+      const scenePass = { calls: info.render.calls, triangles: info.render.triangles }
+      info.autoReset = prev
+      const g = airflow.mesh.geometry
+      const perInstance = g.getAttribute('position').count
+      return {
+        preset: presetName,
+        instances: airflow.instanceCount,
+        pointsPerLine: airflow.points,
+        vertsPerInstance: perInstance,
+        trianglesPerInstance: g.index.count / 3,
+        fieldVertices: airflow.instanceCount * perInstance,
+        fieldTriangles: airflow.instanceCount * (g.index.count / 3),
+        frame,
+        scenePass,
+        geometries: info.memory.geometries,
+        programs: info.programs?.length ?? 0,
+      }
+    },
     getPresetId: () => currentPresetId,
     getCar: () => car,
     rebuildAirflow,

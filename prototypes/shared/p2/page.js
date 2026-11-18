@@ -9,6 +9,8 @@
  */
 import { initThemeToggle, currentTheme } from '/shared/ui/theme.js'
 import { initTears } from '/shared/p2/tear.js'
+import { initNameMorph } from '/shared/p2/name-morph.js'
+import { stableVh } from '/shared/ui/viewport.js'
 import { initDisclosure, initScrollSpy } from '/shared/ui/nav.js'
 import { lazyF1, lazyTransit, canRunWebGL, pixelRatioCap } from '/shared/lazy.js'
 import { lazyScene } from '/shared/gl/lazy-scene.js'
@@ -22,7 +24,7 @@ const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches
 /** 0..1 progress through an element's pinned runway (scroll distance minus one viewport). */
 function runwayProgress(el) {
   const rect = el.getBoundingClientRect()
-  const range = rect.height - innerHeight
+  const range = rect.height - stableVh()
   return range > 0 ? clamp(-rect.top / range) : 0
 }
 const docY = (el) => el.getBoundingClientRect().top + scrollY
@@ -50,6 +52,7 @@ function onTheme(theme) {
 
 export function initPage({ profile }) {
   initTears()
+  initNameMorph({ h1: $('.hero--console .hero-copy h1'), brand: $('.top .brand'), reduced: reducedMotion })
   swapConsolePosters(currentTheme())
   document.addEventListener('themechange', (e) => onTheme(e.detail))
   initThemeToggle($('[data-theme-toggle]'))
@@ -135,7 +138,7 @@ async function initHandheld(profile) {
     import('/shared/gl/harness.js'), import('/shared/gb/scene.js'), import('/shared/dither/pass.js'),
   ])
   void samplePose
-  const maxScroll = () => Math.max(1, document.documentElement.scrollHeight - innerHeight)
+  const maxScroll = () => Math.max(1, document.documentElement.scrollHeight - stableVh())
   const h = createHarness(stage, {
     alpha: true, antialias: true, clearAlpha: 0, maxPixelRatio: pixelRatioCap(), pointerFrom: 'window',
     progress: () => scrollY / maxScroll(),
@@ -161,12 +164,12 @@ async function initHandheld(profile) {
   // ---- pose track from real section positions (rebuilt on resize / content load)
   function buildTrack() {
     const H = maxScroll()
-    const vh = innerHeight
+    const vh = stableVh()
     const k = (px, pose) => ({ at: clamp(px / H), ...pose })
     const hide = { xf: 1.9, y: -0.2, z: -1, rx: 0, ry: 0.5, rz: -0.3, s: 0.7, cart: 1, fill: 0 }
     const cTop = docY(contact)
     const rest = narrow()
-      ? { xf: 0, y: -1.05, z: 0, rx: -0.04, ry: -0.08, rz: 0, s: 0.5, cart: 1, fill: 0 }
+      ? { xf: 0, y: -1.0, z: 0, rx: -0.04, ry: -0.08, rz: 0, s: 0.74, cart: 1, fill: 0 }
       : { xf: 0.34, y: -0.4, z: 0, rx: -0.05, ry: -0.2, rz: 0, s: 0.92, cart: 1, fill: 0 }
     const track = []
     if (profile === 'hero') {
@@ -244,12 +247,12 @@ async function initHandheld(profile) {
       let op = 1
       if (profile === 'hero') {
         const hEnd = docY(hero) + hero.offsetHeight
-        const onHero = scrollY < hEnd - innerHeight * 0.2
+        const onHero = scrollY < hEnd - stableVh() * 0.2
         showScreen(onHero ? 'hero' : null)
         gbs.interactiveHero = onHero
       } else if (harvest) {
         const p = runwayProgress(harvest)
-        const inRun = scrollY > docY(harvest) - innerHeight && scrollY < docY(harvest) + harvest.offsetHeight
+        const inRun = scrollY > docY(harvest) - stableVh() && scrollY < docY(harvest) + harvest.offsetHeight
         showScreen(inRun && p < 0.4 ? 'harvest' : null)
         if (inRun) op = 1 - smooth(0.29, 0.34, p) * (p < 0.7 ? 1 : 0)
         const full = $('[data-viz="harvest"]')

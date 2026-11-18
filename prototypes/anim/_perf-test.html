@@ -1,0 +1,9 @@
+<!doctype html><html><body style="margin:0"><div id="s" style="width:400px;height:300px"></div>
+<script type="module">
+import { createHarness } from '/shared/gl/harness.js'
+const h = createHarness(document.getElementById('s'), { runway: document.body })
+const slow = new URLSearchParams(location.search).get('slow') === '1'
+h.add({ scene: new h.THREE.Scene(), camera: new h.THREE.PerspectiveCamera(), animated: true, update() { if (slow) { const t = performance.now(); while (performance.now() - t < 30); } } })
+h.start()
+window.__H = h
+</script></body></html>

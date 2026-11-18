@@ -1,3 +1,4 @@
+import { stableVh } from '/shared/ui/viewport.js'
 /**
  * Torn-page separators: the page itself rips open as you scroll and an old newspaper shows through the gap.
  *
@@ -331,7 +332,7 @@ export async function initTears(selector = '.tear') {
     if (reduced) return 0.5
     const rect = s.el.getBoundingClientRect()
     // a quarter of a viewport of scroll: closed with the band's centre at 76% of the viewport, fully open at 51%
-    return clamp((innerHeight * 0.76 - (rect.top + rect.height / 2)) / (innerHeight * 0.25))
+    return clamp((stableVh() * 0.76 - (rect.top + rect.height / 2)) / (stableVh() * 0.25))
   }
   const draw = (s, force) => {
     const t = progress(s)

@@ -48,6 +48,7 @@ export const THEMES = {
     grade: { vignette: 0.12, aberration: LOOK.aberration, grain: LOOK.grain, edgeFade: 0, wash: 0 },
     glow: { visible: true, color: '#7c5cc4', opacity: 0.09 },
     shadow: { visible: false },
+    paper: { visible: false },
     track: { color: '#a79cc4', opacity: 0.3 },
     lights: {
       hemi: [0x8a6a9a, 0x0c080e, 0.4],
@@ -90,6 +91,7 @@ export const THEMES = {
     grade: { vignette: 0, aberration: 0, grain: 0, edgeFade: 0, wash: 0.5 },
     glow: { visible: false },
     shadow: { visible: true, opacity: 0.4 },
+    paper: { visible: true, opacity: 0.75 },
     track: { color: '#2b3347', opacity: 0.4 },
     lights: {
       hemi: [0xffffff, 0xcfc8b6, 0.7],

@@ -38,6 +38,7 @@ import { attachOrbit } from './camera/orbit.js'
  * @param {boolean} [options.reducedMotion] freeze the flow field's clock; defaults to the OS setting
  * @param {'dark'|'light'} [options.theme] defaults to document.documentElement.dataset.theme
  * @param {'auto'|'right'|'top'|'center'} [options.layout='auto'] where the focal action sits in the stage
+ * @param {string|object} [options.currents='optimised'] streamline look: 'optimised' | 'classic', or { preset, ...tune.js keys }
  */
 export function mountF1(stage, options = {}) {
   const {
@@ -48,6 +49,7 @@ export function mountF1(stage, options = {}) {
     reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false,
     theme = null,
     layout = 'auto',
+    currents = undefined,
   } = options
 
   if (getComputedStyle(stage).position === 'static') {
@@ -75,6 +77,7 @@ export function mountF1(stage, options = {}) {
     staticTime: reducedMotion,
     theme,
     layout,
+    ...(currents !== undefined ? { currents } : {}),
     storageKey: 'f1-currents-embedded',
   })
 

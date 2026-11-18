@@ -23,6 +23,7 @@
  * One instance per page (it installs the `window.__TEST_SET_PROGRESS` hook).
  */
 import { startEngine } from './engine.js'
+import { stableVh } from '/shared/ui/viewport.js'
 import { THEMES, resolveTheme } from './theme.js'
 
 const LABEL_CSS = `
@@ -95,7 +96,7 @@ export async function mountTransit(stage, options = {}) {
   // 0 when the runway's top reaches the top of the viewport, 1 when its bottom reaches the bottom.
   const fromRunway = () => {
     const rect = runway.getBoundingClientRect()
-    const range = rect.height - window.innerHeight
+    const range = rect.height - stableVh()
     return range > 0 ? Math.min(1, Math.max(0, -rect.top / range)) : 0
   }
 

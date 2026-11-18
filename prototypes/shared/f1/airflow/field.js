@@ -8,7 +8,7 @@ import { hash1 } from '../utils/math.js'
 
 // Ribbon resolution. 34 points is enough for the deformation to read smoothly
 // while keeping the vertex bill manageable at high line counts.
-const N_POINTS = 34
+const N_POINTS = 34 // classic ribbon resolution; the currents settings can override it (points)
 
 const vertexShader = /* glsl */ `
   attribute float a_phase;      // flow offset within the cycle
@@ -21,6 +21,13 @@ const vertexShader = /* glsl */ `
   attribute float a_lineSeed;   // deterministic per-line seed
 
   uniform float u_time;
+  // Distance the flow has travelled (integral of speed over time, kept on the CPU so changing the speed
+  // never makes the lines jump), plus the constant head start that used to be u_timeSeed * speed.
+  uniform float u_flow;
+  uniform float u_flowSeed;
+  uniform float u_taper;
+  uniform float u_widthVar;
+  uniform float u_alphaVar;
   // Added to u_time by the vertex shader. Lets the flow field begin "already
   // running" instead of starting from a cold, lockstep state -- see the note in
   // step 1 of main(). A uniform rather than a CPU-side addition to u_time so
@@ -89,6 +96,9 @@ const vertexShader = /* glsl */ `
   varying float v_band;
   varying float v_violet;
   varying float v_depth;
+  varying float v_side;
+  varying float v_ends;
+  varying float v_var;
 
   // Guard degenerate ramps. smoothstep with edge0 == edge1 divides by zero and
   // yields NaN, and a single NaN vertex makes the GPU discard the ENTIRE draw
@@ -115,8 +125,7 @@ const vertexShader = /* glsl */ `
     // first cycle lets the speed variation separate them, so the field is fully
     // developed and evenly populated on the very first frame instead of visibly
     // "starting".
-    float flowTime = u_time + u_timeSeed;
-    float offsetBase = -flowTime * u_flowSpeed * a_speed;
+    float offsetBase = -(u_flow + u_flowSeed) * a_speed;
     float offset = mod(offsetBase + a_phase, u_cycleLength) - u_cycleLength * 0.5;
 
     float localX = (t - 0.5) * u_lineLength;
@@ -226,7 +235,9 @@ const vertexShader = /* glsl */ `
     Z += turbZ * turbAmount * turbMix * u_turbLateral;
 
     // 7. Vortex (Act 5).
-    float vortexAmount = safeStep(u_vortexStart, u_vortexEnd, u_scroll);
+    float vortexAmount = 0.0;
+#ifdef USE_VORTEX
+    vortexAmount = safeStep(u_vortexStart, u_vortexEnd, u_scroll);
     if (vortexAmount > 0.001 && X < rearX + 0.5) {
       float depth = (rearX + 0.5) - X;
       float dir = (a_laneZ >= 0.0) ? 1.0 : -1.0;
@@ -244,6 +255,7 @@ const vertexShader = /* glsl */ `
       Y = mix(Y, newY, blend);
       Z = mix(Z, newZ, blend);
     }
+#endif
 
     // 7b. GROUND. Nothing may go below the floor.
     //
@@ -280,13 +292,21 @@ const vertexShader = /* glsl */ `
 
     float dist = -viewPos.z;
     float worldPerPixel = max(dist, 0.001) * u_projScale;
-    viewPos.xy += perp * side * u_thickness * worldPerPixel * 0.5;
+    // 0 at either end of the line, 1 in the middle: drives the taper and the end fade.
+    float ends = 1.0 - abs(t * 2.0 - 1.0);
+    float widthScale = mix(1.0, smoothstep(0.0, 0.9, ends), u_taper);
+    // Per-line variety (deterministic from the line seed): some lines thicker, some fainter.
+    widthScale *= mix(1.0, 0.45 + 1.1 * a_lineSeed, u_widthVar);
+    v_var = mix(1.0, 0.4 + 0.9 * fract(a_lineSeed * 7.13), u_alphaVar);
+    viewPos.xy += perp * side * u_thickness * widthScale * worldPerPixel * 0.5;
 
     v_influence = splay;
     v_wake = wakeZone * vortexAmount;
     v_band = a_band;
     v_violet = a_violet;
     v_depth = dist;
+    v_side = side;
+    v_ends = ends;
 
     gl_Position = projectionMatrix * vec4(viewPos, 1.0);
   }
@@ -305,12 +325,18 @@ const fragmentShader = /* glsl */ `
   uniform float u_fadeNear;
   uniform float u_fadeFar;
   uniform float u_fadeMin;
+  uniform float u_nearMix;
 
   varying float v_influence;
   varying float v_wake;
   varying float v_band;
   varying float v_violet;
   varying float v_depth;
+  varying float v_side;
+  varying float v_ends;
+  varying float v_var;
+  uniform float u_endFade;
+  uniform float u_edgeSoft;
 
   void main() {
     // Tonal variety: most lines pale lavender, a minority leaning violet.
@@ -321,15 +347,23 @@ const fragmentShader = /* glsl */ `
 
     // Disturbed flow washes toward the separation colour, but never as
     // strongly as the band, so the band stays the loudest thing on screen.
-    col = mix(col, u_colorSeparation, smoothstep(0.25, 0.9, v_influence) * 0.45);
+    col = mix(col, u_colorSeparation, smoothstep(0.25, 0.9, v_influence) * u_nearMix);
     col = mix(col, u_colorVortex, v_wake * 0.75);
 
     float fade = 1.0 - (1.0 - u_fadeMin) * smoothstep(u_fadeNear, u_fadeFar, v_depth);
-    gl_FragColor = vec4(col, u_opacity * fade);
+    float a = u_opacity * fade * v_var;
+    if (u_endFade > 0.0) a *= smoothstep(0.0, u_endFade, v_ends);
+    // Soft ribbon edge: anti-aliasing for lines wider than a hairline (the canvas has no MSAA).
+    if (u_edgeSoft > 0.0) a *= 1.0 - smoothstep(1.0 - u_edgeSoft, 1.0, abs(v_side));
+    gl_FragColor = vec4(col, a);
   }
 `
 
-export function createAirflow(scene) {
+// opts: the currents settings (tune.js). Only the keys that change the buffers or the program matter here
+// (points, laneBias, vortex); everything else reaches the shader through config.airflow every frame.
+export function createAirflow(scene, opts = {}) {
+  const nPoints = opts.points ?? N_POINTS
+  const laneBias = opts.laneBias ?? 1
   const a = config.airflow
   const perSheet = a.countLines
   const sheets = a.sheetCount
@@ -337,10 +371,10 @@ export function createAirflow(scene) {
 
   const geom = new THREE.InstancedBufferGeometry()
 
-  // A ribbon: N_POINTS along the line, 2 vertices across (side = -1 / +1).
-  const positions = new Float32Array(N_POINTS * 2 * 3)
-  for (let i = 0; i < N_POINTS; i++) {
-    const t = i / (N_POINTS - 1)
+  // A ribbon: nPoints along the line, 2 vertices across (side = -1 / +1).
+  const positions = new Float32Array(nPoints * 2 * 3)
+  for (let i = 0; i < nPoints; i++) {
+    const t = i / (nPoints - 1)
     positions[i * 6 + 0] = t
     positions[i * 6 + 1] = -1
     positions[i * 6 + 2] = 0
@@ -351,7 +385,7 @@ export function createAirflow(scene) {
   geom.setAttribute('position', new THREE.BufferAttribute(positions, 3))
 
   const indices = []
-  for (let i = 0; i < N_POINTS - 1; i++) {
+  for (let i = 0; i < nPoints - 1; i++) {
     const v0 = i * 2
     const v1 = i * 2 + 1
     const v2 = i * 2 + 2
@@ -382,7 +416,9 @@ export function createAirflow(scene) {
     for (let i = 0; i < perSheet; i++) {
       // Stratified lateral position: exactly even spacing, no clumping.
       const t = perSheet === 1 ? 0.5 : i / (perSheet - 1)
-      const laneZ = -halfZ + 2 * halfZ * t
+      // laneBias > 1 packs the lanes toward the car (u^bias keeps the order, so lines still never cross).
+      const u = 2 * t - 1
+      const laneZ = halfZ * Math.sign(u) * Math.pow(Math.abs(u), laneBias)
 
       laneZs[idx] = laneZ
       // The "flat" vertical lane. Small, and opened up by the depth reveal.
@@ -411,6 +447,14 @@ export function createAirflow(scene) {
   const uniforms = {
     u_time:              { value: 0 },
     u_timeSeed:          { value: a.timeSeed },
+    u_flow:              { value: time.flow },
+    u_flowSeed:          { value: a.timeSeed * 1.7 },
+    u_taper:             { value: a.taper ?? 0 },
+    u_widthVar:          { value: a.widthVar ?? 0 },
+    u_alphaVar:          { value: a.alphaVar ?? 0 },
+    u_endFade:           { value: a.endFade ?? 0 },
+    u_edgeSoft:          { value: a.edgeSoft ?? 0 },
+    u_nearMix:           { value: a.nearMix ?? 0.45 },
     u_scroll:            { value: 0 },
     u_flowSpeed:         { value: a.flowSpeed },
     u_lineLength:        { value: a.lineLength },
@@ -496,14 +540,14 @@ export function createAirflow(scene) {
     // materials, not for a custom ShaderMaterial on an InstancedBufferGeometry.
     // Without it the vertex shader fails to compile and the program is marked
     // non-runnable, which also renders nothing.
-    defines: { USE_INSTANCING: '' },
+    defines: opts.vortex === 0 ? { USE_INSTANCING: '' } : { USE_INSTANCING: '', USE_VORTEX: '' },
   })
 
   const mesh = new THREE.Mesh(geom, material)
   mesh.frustumCulled = false
   scene.add(mesh)
 
-  return { mesh, material, uniforms, instanceCount }
+  return { mesh, material, uniforms, instanceCount, points: nPoints, lastElapsed: time.elapsed }
 }
 
 // Push the live config into the shader uniforms.
@@ -563,6 +607,12 @@ export function applyAirflowConfig(field) {
   u.u_groundClamp.value = a.groundClamp
   u.u_groundSoftness.value = a.groundSoftness
   u.u_bandStrength.value = a.bandStrength
+  u.u_taper.value = a.taper ?? 0
+  u.u_widthVar.value = a.widthVar ?? 0
+  u.u_alphaVar.value = a.alphaVar ?? 0
+  u.u_endFade.value = a.endFade ?? 0
+  u.u_edgeSoft.value = a.edgeSoft ?? 0
+  u.u_nearMix.value = a.nearMix ?? 0.45
   u.u_opacity.value = a.opacity
 
   u.u_carCenter.value.set(a.carCenter.x, a.carCenter.y, a.carCenter.z)
@@ -572,6 +622,12 @@ export function applyAirflowConfig(field) {
 export function updateAirflow(field, camera) {
   const u = field.uniforms
   u.u_time.value = time.elapsed
+  // Flow distance accumulates speed * dt, so a live speed change never makes the lines jump. The wheels
+  // and the road texture read the same counter (time.flow) so all three stay in step.
+  const dt = time.elapsed - field.lastElapsed
+  field.lastElapsed = time.elapsed
+  if (dt > 0) time.flow += dt * config.airflow.flowSpeed
+  u.u_flow.value = time.flow
   u.u_scroll.value = scroll.progress
 
   applyAirflowConfig(field)

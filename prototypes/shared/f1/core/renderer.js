@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { setViewport } from './viewport.js'
+import { glParams } from '/shared/gl/params.js'
 
 // The renderer is created on demand rather than at module scope.
 //
@@ -17,7 +18,7 @@ export function createRenderer(canvas, { sizeTo = null, maxPixelRatio = 1.5 } = 
 
   const renderer = new THREE.WebGLRenderer({
     canvas: el,
-    antialias: true,
+    antialias: glParams.aa ?? true,
     alpha: false,
     powerPreference: 'high-performance',
   })
@@ -28,7 +29,9 @@ export function createRenderer(canvas, { sizeTo = null, maxPixelRatio = 1.5 } = 
   const resize = () => {
     const width = sizeTo ? sizeTo.clientWidth : window.innerWidth
     const height = sizeTo ? sizeTo.clientHeight : window.innerHeight
-    const ratio = Math.min(window.devicePixelRatio || 1, maxPixelRatio)
+    const cap = glParams.dpr ?? maxPixelRatio
+    const scale = typeof glParams.quality === 'number' ? glParams.quality : 1
+    const ratio = Math.min(window.devicePixelRatio || 1, cap) * scale
     renderer.setPixelRatio(ratio)
     renderer.setSize(Math.max(1, width), Math.max(1, height), !sizeTo)
     setViewport(width, height, ratio)
