@@ -15,9 +15,13 @@ const root = fileURLToPath(new URL('.', import.meta.url))
 
 function htmlInputs() {
   const inputs = { index: join(root, 'index.html') }
-  for (const name of ['transit', 'f1']) {
-    const file = join(root, 'anim', `${name}.html`)
-    if (existsSync(file)) inputs[`anim-${name}`] = file
+  const animDir = join(root, 'anim')
+  if (existsSync(animDir)) {
+    for (const file of readdirSync(animDir)) {
+      if (file.endsWith('.html')) {
+        inputs[`anim-${file.replace(/\.html$/, '')}`] = join(animDir, file)
+      }
+    }
   }
   const variants = join(root, 'variants')
   if (existsSync(variants)) {
