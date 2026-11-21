@@ -13,6 +13,7 @@
 import * as THREE from 'three'
 import { glParams } from '/shared/gl/params.js'
 import { createFxaaPass } from '/shared/gl/fxaa.js'
+import { createFsaaPass } from '/shared/gl/fsaa.js'
 import { loadMapData } from './data.js'
 import {
   buildSegmentGeometry,
@@ -66,8 +67,10 @@ export async function startEngine({
   onReady = null
 }) {
   const isFxaa = glParams.aa === 'fxaa'
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: isFxaa ? false : (glParams.aa ?? true), alpha: true, premultipliedAlpha: true })
-  const fxaa = isFxaa ? createFxaaPass(THREE) : null
+  const isFsaa = glParams.aa === 'fsaa'
+  const hasPostAa = isFxaa || isFsaa
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: hasPostAa ? false : (glParams.aa ?? true), alpha: true, premultipliedAlpha: true })
+  const aaPass = isFxaa ? createFxaaPass(THREE) : isFsaa ? createFsaaPass(THREE) : null
   const ratio = Math.min(window.devicePixelRatio || 1, glParams.dpr ?? maxPixelRatio) * (glParams.quality === 'auto' ? 1 : glParams.quality)
   renderer.setPixelRatio(ratio)
   renderer.setClearColor(0x000000, 0)
@@ -306,7 +309,7 @@ export async function startEngine({
     const w = stage.clientWidth || window.innerWidth
     const h = stage.clientHeight || window.innerHeight
     renderer.setSize(w, h, false)
-    if (fxaa) fxaa.setSize(w, h, ratio)
+    if (aaPass) aaPass.setSize(w, h, ratio)
     stageWidth = w
     stageHeight = h
     shared.u_res.value.set(renderer.domElement.width, renderer.domElement.height)
@@ -385,11 +388,11 @@ export async function startEngine({
     goalMarker.material.uniforms.u_alpha.value = lerp(0.4, 1, lit)
     goalMarker.material.uniforms.u_ink.value.copy(v3(lit > 0.5 ? palette.route : palette.ink))
 
-    if (fxaa) {
-      renderer.setRenderTarget(fxaa.target)
+    if (aaPass) {
+      renderer.setRenderTarget(aaPass.target)
       renderer.clear()
       renderer.render(scene, camera)
-      fxaa.render(renderer, null)
+      aaPass.render(renderer, null)
     } else {
       renderer.render(scene, camera)
     }
@@ -475,7 +478,7 @@ export async function startEngine({
         o.material?.dispose()
       })
       data.field.dispose()
-      fxaa?.dispose()
+      aaPass?.dispose()
       renderer.dispose()
     }
   }

@@ -92,15 +92,17 @@ const GradeShader = {
 
 export function createPost(renderer, scene, camera, { samples = 0 } = {}) {
   const isFxaa = glParams.aa === 'fxaa'
+  const isFsaa = glParams.aa === 'fsaa'
+  const fsaaScale = isFsaa ? 2 : 1
   const size = renderer.getDrawingBufferSize(new THREE.Vector2())
-  const target = new THREE.WebGLRenderTarget(size.x, size.y, {
+  const target = new THREE.WebGLRenderTarget(size.x * fsaaScale, size.y * fsaaScale, {
     type: THREE.HalfFloatType,
-    samples: isFxaa ? 0 : samples,
+    samples: (isFxaa || isFsaa) ? 0 : samples,
   })
   const composer = new EffectComposer(renderer, target)
   composer.setPixelRatio(1)
 
-  const bloom = new UnrealBloomPass(new THREE.Vector2(size.x, size.y), LOOK.bloomStrength, LOOK.bloomRadius, LOOK.bloomThreshold)
+  const bloom = new UnrealBloomPass(new THREE.Vector2(size.x * fsaaScale, size.y * fsaaScale), LOOK.bloomStrength, LOOK.bloomRadius, LOOK.bloomThreshold)
   const grade = new ShaderPass(GradeShader)
   composer.addPass(new RenderPass(scene, camera))
   composer.addPass(bloom)
@@ -133,7 +135,7 @@ export function createPost(renderer, scene, camera, { samples = 0 } = {}) {
       grade.uniforms.u_wash.value.set(axis === 'left' ? 1 : axis === 'bottom' ? 2 : 0, extent, strength)
     },
     setSize(width, height) {
-      composer.setSize(width, height)
+      composer.setSize(width * fsaaScale, height * fsaaScale)
       if (fxaaPass) {
         fxaaPass.uniforms['resolution'].value.set(1 / width, 1 / height)
       }

@@ -36,6 +36,7 @@ import * as THREE from 'three'
 import { stableVh } from '/shared/ui/viewport.js'
 import { glParams } from '/shared/gl/params.js'
 import { createFxaaPass } from '/shared/gl/fxaa.js'
+import { createFsaaPass } from '/shared/gl/fsaa.js'
 
 const reducedQuery = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null
 const damp = (a, b, k, dt) => a + (b - a) * (1 - Math.exp(-k * dt))
@@ -64,7 +65,9 @@ export function createHarness(stage, options = {}) {
   } = options
 
   const isFxaa = glParams.aa === 'fxaa'
-  const antialias = isFxaa ? false : (glParams.aa ?? antialiasOpt)
+  const isFsaa = glParams.aa === 'fsaa'
+  const hasPostAa = isFxaa || isFsaa
+  const antialias = hasPostAa ? false : (glParams.aa ?? antialiasOpt)
   const maxPixelRatio = glParams.dpr ?? maxPixelRatioOpt
   if (getComputedStyle(stage).position === 'static') stage.style.position = 'relative'
   const canvas = document.createElement('canvas')
@@ -73,7 +76,7 @@ export function createHarness(stage, options = {}) {
   stage.appendChild(canvas)
 
   const renderer = new THREE.WebGLRenderer({ canvas, antialias, alpha, powerPreference: 'high-performance' })
-  const fxaa = isFxaa ? createFxaaPass(THREE) : null
+  const postAa = isFxaa ? createFxaaPass(THREE) : isFsaa ? createFsaaPass(THREE) : null
   renderer.setClearColor(clearColor, clearAlpha)
   renderer.outputColorSpace = THREE.SRGBColorSpace
 
@@ -95,7 +98,7 @@ export function createHarness(stage, options = {}) {
     size.dpr = dpr
     renderer.setPixelRatio(dpr)
     renderer.setSize(w, h, false)
-    if (fxaa) fxaa.setSize(w, h, dpr)
+    if (postAa) postAa.setSize(w, h, dpr)
     for (const m of mods) m.resize?.(w, h, dpr)
     state.dirty = true
   }
@@ -164,8 +167,8 @@ export function createHarness(stage, options = {}) {
     } else if (!animated) { perf.n = 0; perf.sum = 0 }
     if (animated || state.dirty) {
       const ctx = { progress, p: state.p, pointer, dt, time: state.time, size, reduced: still, renderer, THREE }
-      const outTarget = fxaa ? fxaa.target : null
-      if (fxaa) {
+      const outTarget = postAa ? postAa.target : null
+      if (postAa) {
         renderer.setRenderTarget(outTarget)
         renderer.clear()
       }
@@ -174,8 +177,8 @@ export function createHarness(stage, options = {}) {
         if (m.render) m.render(renderer, ctx, outTarget)
         else { renderer.setRenderTarget(outTarget); renderer.render(m.scene, m.camera) }
       }
-      if (fxaa) {
-        fxaa.render(renderer, null)
+      if (postAa) {
+        postAa.render(renderer, null)
       }
       state.dirty = false
     }
@@ -210,7 +213,7 @@ export function createHarness(stage, options = {}) {
       document.removeEventListener('visibilitychange', onVisibility)
       for (const m of mods) m.dispose?.()
       mods.length = 0
-      fxaa?.dispose()
+      postAa?.dispose()
       renderer.dispose()
       renderer.forceContextLoss()
       canvas.remove()
