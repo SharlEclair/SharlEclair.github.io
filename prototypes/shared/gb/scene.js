@@ -243,6 +243,7 @@ export async function createScene({
     // unlike additive it writes valid premultiplied alpha, so it composites the same over the page's transparent canvas.
     glowMat.color.set(glowLook.color)
     gb.setTheme(light ? 'light' : 'dark')
+    cart.setTheme?.(light ? 'light' : 'dark')
     // brighter room on cream so the frosted shell does not go muddy
     scene.environmentIntensity = light ? 1.15 : 1
     state.theme = light ? 'light' : 'dark'
