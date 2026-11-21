@@ -16,9 +16,10 @@ export function createRenderer(canvas, { sizeTo = null, maxPixelRatio = 1.5 } = 
   const el = canvas || document.querySelector('#webgl')
   if (!el) throw new Error('[F1 x Currents] no canvas available to render into')
 
+  const isFxaa = glParams.aa === 'fxaa'
   const renderer = new THREE.WebGLRenderer({
     canvas: el,
-    antialias: glParams.aa ?? true,
+    antialias: isFxaa ? false : (glParams.aa ?? true),
     alpha: false,
     powerPreference: 'high-performance',
   })

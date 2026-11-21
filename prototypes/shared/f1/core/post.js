@@ -17,6 +17,8 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js'
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
+import { FXAAShader } from 'three/examples/jsm/shaders/FXAAShader.js'
+import { glParams } from '/shared/gl/params.js'
 import { LOOK } from '../look.js'
 
 const GradeShader = {
@@ -89,10 +91,11 @@ const GradeShader = {
 }
 
 export function createPost(renderer, scene, camera, { samples = 0 } = {}) {
+  const isFxaa = glParams.aa === 'fxaa'
   const size = renderer.getDrawingBufferSize(new THREE.Vector2())
   const target = new THREE.WebGLRenderTarget(size.x, size.y, {
     type: THREE.HalfFloatType,
-    samples,
+    samples: isFxaa ? 0 : samples,
   })
   const composer = new EffectComposer(renderer, target)
   composer.setPixelRatio(1)
@@ -102,6 +105,14 @@ export function createPost(renderer, scene, camera, { samples = 0 } = {}) {
   composer.addPass(new RenderPass(scene, camera))
   composer.addPass(bloom)
   composer.addPass(grade)
+
+  let fxaaPass = null
+  if (isFxaa) {
+    fxaaPass = new ShaderPass(FXAAShader)
+    fxaaPass.uniforms['resolution'].value.set(1 / size.x, 1 / size.y)
+    composer.addPass(fxaaPass)
+  }
+
   composer.addPass(new OutputPass())
 
   return {
@@ -123,6 +134,9 @@ export function createPost(renderer, scene, camera, { samples = 0 } = {}) {
     },
     setSize(width, height) {
       composer.setSize(width, height)
+      if (fxaaPass) {
+        fxaaPass.uniforms['resolution'].value.set(1 / width, 1 / height)
+      }
     },
     render(elapsed, animateGrain = true) {
       grade.uniforms.u_time.value = animateGrain ? elapsed : 0
