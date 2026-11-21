@@ -11,6 +11,8 @@
  *   ?shell=mono                  the console matches the page: dark smoke case, dark LCD and dark cartridge on the dark
  *                                theme; pale frosted case, light LCD and light cartridge on the light theme (default:
  *                                blue frosted case in dark, smoke case in light)
+ *   ?shell=swap                  mono the other way round: pale frosted case, light LCD and light cartridge on the dark
+ *                                theme; dark smoke case, dark LCD and dark cartridge on the light theme
  *   ?pill=gel                   the blue on/off pill as a glossy gel gradient (default: flat)
  *   ?btn=gel                     the A / B caps as red-orange gel (opt-in only; default: flat)
  *   ?dpad=gel | glass | rubber   the D-pad: dark gel with a teal rim light | smoked glass with glowing arrows | matte soft-touch
@@ -21,7 +23,7 @@ const q = typeof location === 'undefined' ? new URLSearchParams() : new URLSearc
 const pick = (key, allowed, dflt = allowed[0]) => (allowed.includes(q.get(key)) ? q.get(key) : dflt)
 
 export const GLOW_MODES = ['default', 'floor', 'floor-pulse', 'floor-drain', 'scroll', 'grid', 'grid-pulse', 'grid-drain', 'off']
-export const SHELL_MODES = ['default', 'mono']
+export const SHELL_MODES = ['default', 'mono', 'swap']
 export const PILL_MODES = ['flat', 'gel']
 export const BTN_MODES = ['flat', 'gel']
 export const DPAD_MODES = ['flat', 'gel', 'glass', 'rubber']

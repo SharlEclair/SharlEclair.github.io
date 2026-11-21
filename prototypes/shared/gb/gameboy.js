@@ -354,7 +354,10 @@ export async function createGameboy({ THREE, lcd, modelUrl = `${BASE}/models/gam
   setDpad(VARIANTS.dpad)
 
   function setTheme(name) {
-    const k = (VARIANTS.shell === 'mono' ? LOOKS[`mono-${name}`] : null) ?? LOOKS[name] ?? LOOKS.dark
+    // ?shell=swap is ?shell=mono with the two themes' consoles exchanged
+    const solid = VARIANTS.shell === 'mono' || VARIANTS.shell === 'swap'
+    if (VARIANTS.shell === 'swap') name = name === 'light' ? 'dark' : 'light'
+    const k = (solid ? LOOKS[`mono-${name}`] : null) ?? LOOKS[name] ?? LOOKS.dark
     U.uFace.value = k.face
     U.uEdge.value = k.edge
     U.uBack.value = k.back

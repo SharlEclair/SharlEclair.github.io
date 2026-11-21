@@ -243,7 +243,8 @@ export async function createScene({
     // unlike additive it writes valid premultiplied alpha, so it composites the same over the page's transparent canvas.
     glowMat.color.set(glowLook.color)
     gb.setTheme(light ? 'light' : 'dark')
-    cart.setTheme?.(light ? 'light' : 'dark', VARIANTS.shell === 'mono')
+    const swap = VARIANTS.shell === 'swap'
+    cart.setTheme?.(light !== swap ? 'light' : 'dark', VARIANTS.shell === 'mono' || swap)
     // brighter room on cream so the frosted shell does not go muddy
     scene.environmentIntensity = light ? 1.15 : 1
     state.theme = light ? 'light' : 'dark'
@@ -255,8 +256,10 @@ export async function createScene({
   // LCD palette follows the site theme (dark: ink, light: graphite) when the page's default 'ink' is in use and nothing
   // chose one: no ?lcd= / ?palette= in the URL and setPalette() not called. Other palettes passed in stay as given.
   // ?shell=mono: dark LCD ground on the dark theme, light LCD ground on the light theme
+  // ?shell=swap: the opposite way round (light LCD on the dark theme, dark LCD on the light theme)
   const mono = VARIANTS.shell === 'mono'
-  const DARK_LCD = mono ? 'graphite' : 'ink'
+  const swapped = VARIANTS.shell === 'swap'
+  const DARK_LCD = mono ? 'graphite' : swapped ? 'bone' : 'ink'
   const LIGHT_LCD = mono ? 'bone' : 'graphite'
   const urlQ = typeof location === 'undefined' ? new URLSearchParams() : new URLSearchParams(location.search)
   state.paletteExplicit = urlQ.has('lcd') || urlQ.has('palette')
