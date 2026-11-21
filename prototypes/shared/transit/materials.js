@@ -193,7 +193,11 @@ const ONCE = { depthTest: true, depthWrite: true, depthFunc: THREE.LessDepth }
 
 const col = () => ({ value: new THREE.Vector3() })
 
-/** The street network: fine hairlines. */
+/**
+ * The street network. Default: fine hairlines. With `u_glow` = 1 (the `?roads=glow` look) each street is a
+ * thin bright core plus a soft falloff halo in ONE ribbon pass (no extra draw call), amber for through
+ * streets (aData.x = 1) and cyan for the rest, dim until the search reaches them, flaring as its front passes.
+ */
 export function createRoadsMaterial(shared) {
   const uniforms = {
     ...shared,
@@ -201,15 +205,40 @@ export function createRoadsMaterial(shared) {
     u_add: { value: 0 },
     u_ink: col(),
     u_alpha: { value: 0.2 },
-    u_width: { value: 0.9 }
+    u_width: { value: 0.9 },
+    u_glow: { value: 0 },
+    u_colMain: col(),
+    u_colSide: col(),
+    u_hotCol: col(),
+    u_dim: { value: 0.4 },
+    u_boost: { value: 1 }
   }
-  const decl = 'uniform float u_width;'
+  const decl = 'uniform float u_width; uniform float u_glow;'
   return baseMaterial(
     'Roads',
-    lineVertex(decl, 'width = u_width * u_ratio;'),
-    lineFragment('uniform vec3 u_ink; uniform float u_alpha;', `
-      float a = u_alpha * cov() * vFog * mapMask(vWorld);
-      gl_FragColor = finish(u_ink, a);
+    lineVertex(decl, 'width = (u_glow > 0.5 ? mix(7.0, 12.0, data.x) : u_width) * u_ratio;'),
+    lineFragment('uniform vec3 u_ink; uniform float u_alpha; uniform float u_glow; uniform vec3 u_colMain; uniform vec3 u_colSide; uniform vec3 u_hotCol; uniform float u_dim; uniform float u_boost;', `
+      if (u_glow < 0.5) {
+        float a = u_alpha * cov() * vFog * mapMask(vWorld);
+        gl_FragColor = finish(u_ink, a);
+        return;
+      }
+      float d = abs(vAcross) / u_ratio;
+      float prim = vData.x;
+      float core = clamp(mix(0.55, 0.85, prim) + 0.4 - d, 0.0, 1.0);
+      float sig = mix(2.1, 3.4, prim);
+      float halo = exp(-d * d / (sig * sig)) * mix(0.34, 0.5, prim);
+      vec2 f = texture2D(u_field, clamp((vWorld - u_fb.xy) / u_fb.zw, 0.0, 1.0)).rg;
+      float age = u_t - f.x;
+      float near = 1.0 - smoothstep(90.0, 230.0, f.y);
+      float reached = smoothstep(0.0, 0.05, age) * near;
+      float front = exp(-max(age, 0.0) / 0.045) * step(0.0, age) * near;
+      float bright = (mix(u_dim, 1.0, reached) + front * 0.9) * u_boost;
+      vec3 c = mix(u_colSide, u_colMain, prim);
+      c = mix(c, u_hotCol, front * 0.45);
+      c = mix(c, vec3(1.0), core * 0.25);
+      float a = clamp(max(core, halo) * bright, 0.0, 1.0) * vFog * mapMask(vWorld);
+      gl_FragColor = finish(c, a);
     `),
     uniforms
   )
@@ -468,7 +497,8 @@ export function createBuildingsMaterial(shared) {
     u_roof: { value: 0.06 },
     u_wall: { value: 0.12 },
     u_hs: { value: 0.5 },
-    u_hmin: { value: 0.35 }
+    u_hmin: { value: 0.35 },
+    u_glow: { value: 0 }
   }
   return baseMaterial(
     'Buildings',
@@ -505,6 +535,7 @@ uniform vec3 u_accent;
 uniform vec3 u_hot;
 uniform float u_roof;
 uniform float u_wall;
+uniform float u_glow;
 varying vec3 vW;
 varying float vLit;
 varying float vHot;
@@ -512,6 +543,19 @@ varying float vFog;
 void main() {
   vec3 n = normalize(cross(dFdx(vW), dFdy(vW)));
   float roof = step(0.6, abs(n.y));
+  if (u_glow > 0.5) {
+    // dark extruded blocks: a faint cool roof, one wall catching light, the other falling into black
+    float side = smoothstep(-0.45, 0.45, dot(n.xz, vec2(0.7071)));
+    vec3 wc = mix(vec3(0.0), vec3(0.42, 0.52, 0.66), side);
+    float wa = mix(0.62, 0.2, side);
+    vec3 cc = mix(wc, vec3(0.55, 0.6, 0.68), roof);
+    float ca = mix(wa, 0.1 + 0.04 * clamp(vW.y / 60.0, 0.0, 1.0), roof);
+    cc = mix(cc, u_accent, vLit * 0.5);
+    cc = mix(cc, u_hot, vHot * 0.7);
+    ca += vLit * 0.05 + vHot * 0.25 * roof;
+    gl_FragColor = finish(cc, ca * vFog);
+    return;
+  }
   float h = clamp(vW.y / 120.0, 0.0, 1.0);
   float base = mix(u_wall * 2.2 * dither(0.5), u_roof * (0.8 + 0.5 * h), roof);
   vec3 c = mix(u_ink, u_accent, vLit * 0.85);

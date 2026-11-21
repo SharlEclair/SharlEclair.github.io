@@ -40,6 +40,7 @@
     <!--
       F1 currents tuner. Sliders drive the real scene (shared/f1/mount.js); "Copy JSON" gives every value to paste back.
         ?theme=light|dark   starting theme     ?preset=classic|optimised   starting preset
+        ?livery=default|tri|tri-bold   light livery variant
       Settings auto-save in this browser (localStorage), per theme and preset, and can be exported or imported as JSON.
       The scene's own API (also on window.__F1): setCurrents(partial), setPreset(name), setLivery(partial), measure().
     -->
@@ -61,6 +62,11 @@
       for (const t of Object.keys(ov)) for (const p of Object.keys(ov[t])) Object.assign(ov[t][p], saved.ov?.[t]?.[p] ?? {})
       const livery = { ...LIVERY_DEFAULTS, ...(saved.livery ?? {}) }
       let liveryTheme = saved.liveryTheme ?? 'follow page'
+      const SOURCES = { 'original GLB colours': 'original', 'procedural livery': 'procedural' }
+      let liverySource = SOURCES[saved.liverySource] ? saved.liverySource : 'original GLB colours'
+      const STYLES = ['default', 'tri', 'tri-bold']
+      const urlStyle = new URLSearchParams(location.search).get('livery')
+      let liveryStyle = STYLES.includes(urlStyle) ? urlStyle : STYLES.includes(saved.liveryStyle) ? saved.liveryStyle : 'default'
       let followScroll = false
       let progress = saved.progress ?? 0
 
@@ -103,6 +109,8 @@
       ])
       S_('Car livery', [
         sel('liv', 'Livery theme', ['follow page', 'dark', 'light'], () => liveryTheme, (v) => { liveryTheme = v; app.setLiveryTheme(v === 'follow page' ? null : v) }),
+        sel('lst', 'Light livery variant', STYLES, () => liveryStyle, (v) => { liveryStyle = v; app.setLiveryStyle(v) }),
+        sel('src', 'Dark livery source', Object.keys(SOURCES), () => liverySource, (v) => { liverySource = v; app.setLiverySource(SOURCES[v]) }),
         ...LIVERY_FIELDS.map(([key, label, min, max, step]) => num('l_' + key, label, min, max, step, () => app.getLivery()[key], (v) => { livery[key] = v; app.setLivery({ [key]: v }) })),
       ])
 
@@ -175,7 +183,7 @@
         if (out) out.textContent = fmt(Number(v))
       }
       const syncAll = () => { for (const c of all) show(c) }
-      function persist() { try { localStorage.setItem(STORE, JSON.stringify({ theme, preset, ov, livery, liveryTheme, progress })) } catch {} }
+      function persist() { try { localStorage.setItem(STORE, JSON.stringify({ theme, preset, ov, livery, liveryTheme, liverySource, liveryStyle, progress })) } catch {} }
       const toast = (t) => { const el = document.getElementById('toast'); el.textContent = t; el.style.opacity = 1; clearTimeout(toast.t); toast.t = setTimeout(() => (el.style.opacity = 0), 1600) }
 
       function setTheme(name) {
@@ -191,6 +199,8 @@
         syncAll(); persist(); scheduleStats()
       }
       function applyLivery() {
+        app.setLiverySource(SOURCES[liverySource])
+        app.setLiveryStyle(liveryStyle)
         app.setLivery({ ...livery })
         app.setLiveryTheme(liveryTheme === 'follow page' ? null : liveryTheme)
       }
@@ -201,7 +211,7 @@
         for (const t of ['dark', 'light']) out[t] = { ...PRESETS[preset][t], ...ov[t][preset] }
         return out
       }
-      const json = () => JSON.stringify({ theme, preset, currents: bakeable(), livery, liveryTheme, progress }, null, 2)
+      const json = () => JSON.stringify({ theme, preset, currents: bakeable(), livery, liveryTheme, liverySource, liveryStyle, progress }, null, 2)
 
       const outBox = document.getElementById('out')
       panel.addEventListener('click', async (e) => {
@@ -214,6 +224,8 @@
           for (const t of Object.keys(ov)) for (const p of Object.keys(ov[t])) ov[t][p] = {}
           Object.assign(livery, LIVERY_DEFAULTS)
           liveryTheme = 'follow page'
+          liverySource = 'original GLB colours'
+          liveryStyle = 'default'
           app.setPreset(preset)
           applyLivery(); syncAll(); persist(); scheduleStats(); toast('Reset')
         }
@@ -225,6 +237,8 @@
               if (v.currents) for (const t of ['dark', 'light']) if (v.currents[t]) ov[t][preset] = { ...v.currents[t] }
               if (v.livery) Object.assign(livery, v.livery)
               if (v.liveryTheme) liveryTheme = v.liveryTheme
+              if (SOURCES[v.liverySource]) liverySource = v.liverySource
+              if (STYLES.includes(v.liveryStyle)) liveryStyle = v.liveryStyle
               if (v.theme && v.theme !== theme) { setTheme(v.theme) }
               app.setPreset(preset, ov[theme][preset])
               applyLivery(); syncAll(); persist(); scheduleStats()

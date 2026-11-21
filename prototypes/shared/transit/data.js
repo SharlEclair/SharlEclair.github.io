@@ -60,6 +60,54 @@ function routePolyline(apath) {
   return pts
 }
 
+/**
+ * Street class for the glow look: 1 = through street, 0 = the rest. Segments are chained across
+ * junctions wherever they continue within ~25 degrees of straight; a chain that runs long is an artery.
+ * The default look never reads it.
+ */
+function classifyRoads(flat, share = 0.32) {
+  const n = flat.length / 4
+  const parent = Int32Array.from({ length: n }, (_, i) => i)
+  const find = (i) => {
+    while (parent[i] !== i) i = parent[i] = parent[parent[i]]
+    return i
+  }
+  const ends = new Map()
+  const len = new Float32Array(n)
+  for (let i = 0; i < n; i += 1) {
+    const ax = flat[i * 4], az = flat[i * 4 + 1], bx = flat[i * 4 + 2], bz = flat[i * 4 + 3]
+    len[i] = Math.hypot(bx - ax, bz - az)
+    for (const [x, z, ox, oz] of [[ax, az, bx, bz], [bx, bz, ax, az]]) {
+      const key = `${Math.round(x * 2)},${Math.round(z * 2)}`
+      const d = Math.hypot(ox - x, oz - z) || 1
+      if (!ends.has(key)) ends.set(key, [])
+      ends.get(key).push({ i, dx: (ox - x) / d, dz: (oz - z) / d })
+    }
+  }
+  for (const list of ends.values()) {
+    const used = new Set()
+    for (let a = 0; a < list.length; a += 1) {
+      let best = -1
+      let bestDot = -0.906
+      for (let b = 0; b < list.length; b += 1) {
+        if (b === a || used.has(b) || list[a].i === list[b].i) continue
+        const dot = list[a].dx * list[b].dx + list[a].dz * list[b].dz
+        if (dot < bestDot) { bestDot = dot; best = b }
+      }
+      if (best >= 0 && !used.has(a)) {
+        used.add(a)
+        used.add(best)
+        parent[find(list[a].i)] = find(list[best].i)
+      }
+    }
+  }
+  const total = new Float32Array(n)
+  for (let i = 0; i < n; i += 1) total[find(i)] += len[i]
+  const per = Array.from({ length: n }, (_, i) => total[find(i)])
+  const cut = [...per].sort((a, b) => a - b)[Math.floor(n * (1 - share))]
+  return per.map((t) => (t >= cut ? 1 : 0))
+}
+
 /** Segments as [ax, az, bx, bz] + per-segment data [d0, d1]. */
 function packSegments(list) {
   const seg = new Float32Array(list.length * 4)
@@ -265,8 +313,9 @@ export async function loadMapData() {
   const roads = packSegments(
     (() => {
       const flat = roadSegments(get('Roads'))
+      const klass = classifyRoads(flat)
       const list = []
-      for (let i = 0; i < flat.length; i += 4) list.push([flat[i], flat[i + 1], flat[i + 2], flat[i + 3], 0, 0])
+      for (let i = 0; i < flat.length; i += 4) list.push([flat[i], flat[i + 1], flat[i + 2], flat[i + 3], klass[i / 4], 0])
       return list
     })()
   )
@@ -295,6 +344,10 @@ export async function loadMapData() {
     field: buildField(),
     ground: groundGeometry(),
     buildings,
-    keyPoints: key
+    keyPoints: key,
+    // for the HUD of the iso look: nodes reached, in arrival order (0..1 search time), and the route length
+    nodeTimes: Float32Array.from(astarTrace.nodes.arrivalFrame, (f) => f / TIME_SCALE).sort(),
+    routeLengthM: astarTrace.winner.lengthM,
+    nodeTotal: astarTrace.nodeCount
   }
 }

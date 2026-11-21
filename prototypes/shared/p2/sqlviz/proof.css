@@ -1,0 +1,62 @@
+/* ?sql=proof "Proof Mark": a proofreader's red pen corrects a query clause, then the score. Colours come from the
+   stage tokens in shared/p2/page.css, so both themes work without JS. */
+.pf {
+  position: absolute; z-index: 3; margin: 0;
+  top: 17%; left: max(42%, calc(var(--pad) + min(30rem, 42vw) + 2rem)); right: var(--pad);
+  color: var(--on-stage);
+}
+.pf-col { width: min(100%, 34rem); margin-inline: auto; }
+.pf-sheet { position: relative; padding-top: 2.4rem; }
+.pf p { margin: 0; }
+.pf del, .pf ins { text-decoration: none; }
+.pf del { color: var(--on-stage); }
+
+/* the faulty clause */
+.pf-clause { font: 500 clamp(.8rem, 1.4vw, 1rem) / 1.4 var(--mono); font-variant-ligatures: none; letter-spacing: 0; white-space: nowrap; }
+.pf-kw { color: var(--on-stage-muted); }
+.pf-word { position: relative; display: inline-block; }
+
+/* corrections: serif italic in the accent, set above the struck word (placed by proof.js) */
+.pf ins {
+  position: absolute; left: 50%; top: 0; display: block; white-space: nowrap; line-height: 1; font-style: italic;
+  font-family: var(--serif); font-weight: 400; color: var(--stage-accent-text, var(--stage-accent));
+  transform: translate(-50%, var(--dy, -100%));
+}
+.pf-word ins { font-size: 1.9em; }
+
+/* margin note, placed beside the circled word by proof.js */
+.pf-note {
+  position: absolute; left: 0; top: 0; display: grid; white-space: nowrap;
+  font: italic 400 clamp(1.15rem, 1.7vw, 1.45rem) / 1.15 var(--serif); color: var(--stage-err);
+}
+.pf-note span { grid-area: 1 / 1; }
+
+/* the score */
+.pf-score { padding: .7em 0 .16em; font: 400 clamp(4rem, 11vw, 9rem) / .9 var(--serif); letter-spacing: -.02em; }
+.pf-big { position: relative; display: inline-block; }
+.pf-big ins { font-size: .42em; letter-spacing: 0; }
+.pf-of { color: var(--on-stage); }
+.pf-label { display: grid; margin-top: .2rem; font: 500 clamp(.68rem, .9vw, .78rem) / 1.3 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--on-stage-muted); }
+.pf-label del, .pf-label ins { grid-area: 1 / 1; position: static; transform: none; display: block; font: inherit; letter-spacing: inherit; color: inherit; line-height: inherit; }
+
+/* the end state */
+.pf-end { display: flex; flex-wrap: wrap; align-items: baseline; gap: .55rem 1.6rem; margin-top: .9rem; padding-top: .7rem; position: relative; }
+.pf-rule { position: absolute; left: 0; right: 0; top: 0; height: 1px; background: var(--stage-line); transform-origin: 0 50%; }
+.pf-tests b { font: 700 1.3rem / 1 var(--mono); color: var(--stage-accent-text, var(--stage-accent)); margin-right: .6rem; }
+.pf-tests span { font: 500 .62rem / 1.3 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--on-stage-muted); }
+.pf-stack { font: 500 .7rem / 1.3 var(--mono); color: var(--on-stage-muted); }
+.pf-cap { margin: .75rem 0 0; font: 500 .62rem / 1.5 var(--mono); color: var(--on-stage-muted); max-width: 34rem; }
+
+/* the pen marks */
+.pf-marks { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+.pf-marks path { fill: none; stroke: var(--stage-err); stroke-linecap: round; stroke-linejoin: round; }
+
+@media (max-width: 760px) {
+  .pf { top: 3rem; left: var(--pad); right: var(--pad); }
+  .pf-col { width: 100%; }
+  .pf-sheet { padding-top: 2.4rem; }
+  .pf-word ins { font-size: 1.75em; }
+  .pf-score { padding-top: 1em; }
+  .pf-big ins { font-size: .5em; }
+  .pf-stack { font-size: .64rem; }
+}

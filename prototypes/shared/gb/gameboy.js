@@ -15,6 +15,8 @@ import { L } from './layout.js'
 import { makePcbTextures, makeLetterTexture, makeDiffuser, makeDpadMarks, makePrint, makeGlassWear } from './textures.js'
 import { mergeColored, box, cylZ } from './parts.js'
 import { makeGlowTexture } from './textures.js'
+import { makeGelMaterial, GEL_LOOKS } from './gel.js'
+import { VARIANTS } from './variants.js'
 
 const BASE = (import.meta.env?.BASE_URL ?? '/').replace(/\/$/, '')
 
@@ -98,6 +100,22 @@ export async function createGameboy({ THREE, lcd, modelUrl = `${BASE}/models/gam
     screws: plastic(0x2c2e33, 0.5),
   }
 
+  // Gel variants of the pill and the A / B caps (?pill=gel, ?btn=gel): built up front, swapped in with setPill / setBtn.
+  // The node's own flat material stays in `mats`, so the default look is untouched.
+  const gel = {}
+  for (const [name, look] of [['start', GEL_LOOKS.pill], ['btn_a', GEL_LOOKS.cap], ['btn_b', GEL_LOOKS.cap]]) {
+    if (nodes[name]?.geometry) { gel[name] = makeGelMaterial(THREE, nodes[name].geometry, look, envIntensity); track.push(gel[name]) }
+  }
+  const variant = { pill: 'flat', btn: 'flat' }
+  function setPill(mode) {
+    variant.pill = mode === 'gel' && gel.start ? 'gel' : 'flat'
+    if (nodes.start) nodes.start.material = variant.pill === 'gel' ? gel.start : mats.start
+  }
+  function setBtn(mode) {
+    variant.btn = mode === 'gel' && gel.btn_a ? 'gel' : 'flat'
+    for (const n of ['btn_a', 'btn_b']) if (nodes[n]) nodes[n].material = variant.btn === 'gel' ? gel[n] : mats[n]
+  }
+
   // The black glass has no UVs in the glb: give it planar ones so the wear map lands
   if (nodes.bezel?.geometry) {
     const b = L.bezel
@@ -136,6 +154,8 @@ export async function createGameboy({ THREE, lcd, modelUrl = `${BASE}/models/gam
 
   for (const [name, m] of Object.entries(mats)) if (nodes[name]) nodes[name].material = m
   root.traverse((o) => { if (o.isMesh) o.frustumCulled = false })
+  setPill(VARIANTS.pill)
+  setBtn(VARIANTS.btn)
 
   // Draw order inside the frosted shell: back walls, then the milky diffuser, then the front faces, then clear trim.
   if (nodes.body) {
@@ -275,6 +295,8 @@ export async function createGameboy({ THREE, lcd, modelUrl = `${BASE}/models/gam
 
   const api = {
     group, nodes, mats, lcd, texture: screenTex, press, interactive: false, setTheme,
+    /** Look variants (shared/gb/variants.js): 'flat' (default) | 'gel' for the on/off pill and for the A / B caps. `gel` holds the gel materials. */
+    setPill, setBtn, gel, get pillMode() { return variant.pill }, get btnMode() { return variant.btn },
     /** Live handles for anim/gb-tune.html (the tuning page): shared frost uniforms, the diffuser and button halos. */
     tune: { U, frost: [shell, shellBack, clear, collar], difMat, diffuser, halos, printMat, pcbMat, partMat: partMesh.material },
     /** Which control is under the raycaster, or null. D-pad returns its direction. */

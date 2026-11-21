@@ -9,6 +9,7 @@
  */
 import { initThemeToggle, currentTheme } from '/shared/ui/theme.js'
 import { initSeps } from '/shared/p2/seps/index.js'
+import { mountSqlViz, sqlVariant } from '/shared/p2/sqlviz/index.js'
 import { initNameMorph } from '/shared/p2/name-morph.js'
 import { stableVh } from '/shared/ui/viewport.js'
 import { initDisclosure, initScrollSpy } from '/shared/ui/nav.js'
@@ -90,7 +91,10 @@ function mountProjects() {
     track(lazyTransit(tr, { runway: tr.closest('.runway'), theme: currentTheme(), poster: themed('/posters/transit-route.jpg'), posterAlt: 'A search spreading over a city street map, a glowing route in red and violet.' }))
   }
   const sql = $('[data-viz="sql"]')
-  if (sql) {
+  if (sql && sqlVariant() !== 'ribbon') {
+    // The default SQL animation is DOM/SVG/canvas (shared/p2/sqlviz/); ?sql=ribbon brings back the WebGL ribbon
+    track(mountSqlViz(sql, { theme: currentTheme(), reduced: reducedMotion }))
+  } else if (sql) {
     sql.dataset.poster = '/posters/sql.jpg'
     track(lazyScene(sql, () => import('/shared/scenes/sql/scene.js'), {
       runway: sql.closest('.runway'), poster: themed('/posters/sql.jpg'), posterAlt: 'A glowing query ribbon over a contour landscape, splintered by a fault and knit back together.',

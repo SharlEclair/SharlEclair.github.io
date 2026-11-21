@@ -1,0 +1,116 @@
+/* ?sql=ten "Ten Questions". All colours come from the site tokens (page.css), so both themes and setTheme are pure CSS.
+   Default (no JS, reduced motion) = the END state: ten lit tiles, Q07 flipped to its green face, 10 / 10, all 45 dots on.
+   JS only layers the scroll story on top through data-s on tiles, --l / --f on Q07, --dim on the grid, and .off on dots. */
+.tq {
+  --tw: 84px; --th: 64px; --tg: 10px; --ts: 2.43;
+  --ac: var(--stage-accent);
+  --ac-t: var(--stage-accent-text, var(--stage-accent));
+  --er: var(--stage-err);
+  --glow1: 46%; --glow2: 18%;
+  position: absolute; z-index: 3;
+  top: 16vh; left: max(40%, calc(var(--pad) + min(30rem, 42vw) + 1.5rem)); right: var(--pad);
+  display: flex; flex-direction: column; gap: 1.1rem;
+  color: var(--on-stage); font-family: var(--mono);
+  pointer-events: none;
+}
+html[data-theme='light'] .tq { --glow1: 30%; --glow2: 10%; }
+
+.tq-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.tq-kicker { font: 500 .7rem/1 var(--mono); letter-spacing: .16em; color: var(--ac-t); }
+
+.tq-main { display: flex; flex-wrap: wrap; align-items: center; gap: 1.4rem 2.6rem; }
+.tq-gridwrap { position: relative; width: calc(5 * var(--tw) + 4 * var(--tg)); height: calc(2 * var(--th) + var(--tg)); margin-top: .35rem; }
+.tq-grid {
+  list-style: none; margin: 0; padding: 0; display: grid;
+  grid-template-columns: repeat(5, var(--tw)); grid-auto-rows: var(--th); gap: var(--tg);
+  perspective: 600px; perspective-origin: 50% 50%;
+}
+
+/* ---- tile = two faces (front: the question, back: the healed answer, Q07 only) ---- */
+.tq-tile { position: relative; transform-style: preserve-3d; border-radius: 18px; pointer-events: auto; }
+.tq-tile:not([data-q7]) { opacity: var(--dim, 1); }
+.tq[data-done] .tq-tile:hover { outline: 1.5px solid var(--on-stage); outline-offset: 3px; }
+.tq-tile[data-q7] { z-index: 2; transform: translate3d(calc((var(--tw) + var(--tg)) * var(--l, 0)), calc(-0.5 * (var(--th) + var(--tg)) * var(--l, 0)), calc(40px * var(--l, 0))) scale(calc(1 + (var(--ts) - 1) * var(--l, 0))); }
+.tq-in { position: absolute; inset: 0; transform-style: preserve-3d; }
+.tq-tile[data-q7] .tq-in { transform: rotateY(var(--f, 180deg)); }
+
+.tq-f, .tq-b {
+  --tc: var(--ac);
+  position: absolute; inset: 0; box-sizing: border-box; overflow: hidden; border-radius: 18px;
+  backface-visibility: hidden; -webkit-backface-visibility: hidden;
+  display: flex; flex-direction: column; padding: 6px 8px;
+  border: 1px solid transparent; color: var(--stage);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--tc) var(--glow1), transparent), 0 0 34px color-mix(in srgb, var(--tc) var(--glow2), transparent);
+}
+.tq-tile[data-q7] .tq-f { --tc: var(--er); }
+.tq-b { transform: rotateY(180deg); }
+/* the gel: a lit fill (dithered by mask while resolving) with a glossy top and a 4px LED cell grid over it */
+.tq-f::before, .tq-b::before {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--tc) 70%, #fff) 0, var(--tc) 48%, color-mix(in srgb, var(--tc) 80%, #000) 100%);
+}
+.tq-f::after, .tq-b::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .34) 0, rgba(255, 255, 255, .1) 44%, transparent 46%),
+    linear-gradient(rgba(var(--stage-rgb), .5) 1px, transparent 1px) 0 0 / 4px 4px,
+    linear-gradient(90deg, rgba(var(--stage-rgb), .5) 1px, transparent 1px) 0 0 / 4px 4px;
+}
+.tq-q { position: relative; z-index: 1; font: 500 10px/1 var(--mono); letter-spacing: .08em; }
+.tq-g { position: relative; z-index: 1; margin: auto; font: 700 22px/1 var(--mono); }
+.tq-g.w { font-size: 10px; letter-spacing: .06em; }
+
+/* stepped dither states: 0 queued (outline), 1 = 25%, 2 = 50%, 3 solid, 4 solid + glyph. No transitions anywhere. */
+.tq-tile[data-s='0'] .tq-f, .tq-tile[data-s='1'] .tq-f, .tq-tile[data-s='2'] .tq-f {
+  border-color: var(--stage-line); box-shadow: none; color: var(--on-stage-muted);
+  background: color-mix(in srgb, var(--on-stage) 5%, transparent);
+}
+.tq-tile[data-s='0'] .tq-f::before { visibility: hidden; }
+.tq-tile[data-s='0'] .tq-f::after { opacity: .35; }
+.tq-tile[data-s='1'] .tq-f::before, .tq-tile[data-s='2'] .tq-f::before { -webkit-mask-size: 16px 16px; mask-size: 16px 16px; }
+.tq-tile[data-s='1'] .tq-f::before { -webkit-mask-image: var(--tq-m1); mask-image: var(--tq-m1); }
+.tq-tile[data-s='2'] .tq-f::before { -webkit-mask-image: var(--tq-m2); mask-image: var(--tq-m2); }
+.tq-tile[data-s='1'] .tq-f .tq-q, .tq-tile[data-s='2'] .tq-f .tq-q { color: var(--on-stage); }
+.tq-tile[data-s='3'] .tq-f .tq-g, .tq-tile[data-s='2'] .tq-f .tq-g, .tq-tile[data-s='1'] .tq-f .tq-g, .tq-tile[data-s='0'] .tq-f .tq-g { visibility: hidden; }
+.tq-tile[data-lift] .tq-f .tq-g, .tq-tile[data-lift] .tq-q { visibility: hidden; }
+
+/* the healing loop sits over the lifted tile at real size, so the text stays crisp */
+.tq-loop {
+  position: absolute; inset: 0; z-index: 6; display: none; place-content: center; justify-items: start; gap: .3em;
+  pointer-events: none; font: 500 13px/1.3 var(--mono); letter-spacing: .04em; color: var(--stage);
+}
+.tq[data-loop] .tq-loop { display: grid; }
+.tq-step { padding: 3px 10px; border-radius: 9px; opacity: .55; }
+.tq-step[data-on] { opacity: 1; font-weight: 700; background: var(--stage); color: var(--er); }
+.tq-lh { padding: 0 10px 2px; font-weight: 700; letter-spacing: .1em; }
+
+.tq-tip { position: absolute; left: 0; top: calc(100% + 7px); font: 500 10px/1 var(--mono); letter-spacing: .06em; color: var(--ac-t); white-space: nowrap; }
+
+/* counter */
+.tq-count { display: flex; flex-direction: column; gap: .5rem; }
+.tq-n { font: 400 clamp(2.4rem, 5vw, 4rem)/1 var(--serif); letter-spacing: .01em; color: var(--on-stage); }
+.tq-lbl { font: 500 .68rem/1.3 var(--mono); letter-spacing: .08em; color: var(--on-stage-muted); }
+
+/* 45 automated tests: 5 rows x 9, 6px cells */
+.tq-tests { display: flex; align-items: center; gap: 1.2rem; margin-top: .7rem; }
+.tq-dots { display: grid; grid-template-columns: repeat(9, 6px); grid-auto-rows: 6px; gap: 5px; }
+.tq-dots i { border-radius: 2px; background: var(--ac); box-shadow: 0 0 7px color-mix(in srgb, var(--ac) var(--glow1), transparent); }
+.tq-dots i.off { background: transparent; box-shadow: inset 0 0 0 1px var(--stage-line); }
+.tq-tests p { margin: 0; display: flex; align-items: baseline; gap: .7rem; }
+.tq-tests b { font: 400 clamp(1.8rem, 3vw, 2.4rem)/1 var(--serif); color: var(--ac-t); }
+.tq-tests span { font: 500 .68rem/1.3 var(--mono); letter-spacing: .08em; color: var(--on-stage-muted); }
+
+.tq-foot { margin: 0; display: flex; flex-wrap: wrap; gap: .3rem 1.6rem; font: 500 .62rem/1.5 var(--mono); letter-spacing: .06em; color: var(--on-stage-muted); }
+
+@media (max-width: 760px) {
+  .tq { --tw: 60px; --th: 48px; --ts: 2.04; left: var(--pad); top: max(0px, calc(16svh - 3.8rem)); gap: .9rem; }
+  .tq-f, .tq-b { padding: 5px 6px; border-radius: 14px; }
+  .tq-tile { border-radius: 14px; }
+  .tq-q { font-size: 9px; }
+  .tq-g { font-size: 17px; }
+  .tq-g.w { font-size: 9px; }
+  .tq-loop { font-size: 11px; }
+  .tq-main { gap: .9rem; }
+  .tq-count { order: -1; flex-direction: row; align-items: baseline; gap: .9rem; }
+  .tq-tests { gap: .9rem; }
+}

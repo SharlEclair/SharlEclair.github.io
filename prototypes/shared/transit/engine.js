@@ -26,7 +26,7 @@ import {
   createShared
 } from './materials.js'
 import { FIELD } from './data.js'
-import { THEMES, resolveTheme, rgb } from './theme.js'
+import { THEMES, resolveTheme, resolveRoads, lookFor, rgb } from './theme.js'
 import { observeVisibility } from './scroll.js'
 
 export const TIMELINE = { searchEnd: 0.65, routeEnd: 0.9 }
@@ -60,6 +60,7 @@ export async function startEngine({
   maxPixelRatio = 1.5,
   labels = null,
   theme = null,
+  roads: roadsOption = null,
   layout = 'auto',
   onReady = null
 }) {
@@ -136,12 +137,20 @@ export async function startEngine({
 
   // ----------------------------------------------------------------------------------------- theme
   let themeName = resolveTheme(theme)
-  let palette = THEMES[themeName]
+  const roadsVariant = resolveRoads(roadsOption)
+  let look = lookFor(themeName, roadsVariant)
+  let palette = { ...THEMES[themeName], ...look?.palette }
 
   function applyTheme(name) {
     themeName = name
-    palette = THEMES[name]
+    look = lookFor(name, roadsVariant)
+    palette = { ...THEMES[name], ...look?.palette }
     const p = palette
+    const cam = look?.camera
+    rig.tilt0 = cam?.tilt0 ?? 38
+    rig.tilt1 = cam?.tilt1 ?? 34
+    rig.dolly = cam?.dolly ?? 0.93
+    rig.drift = cam?.drift ?? 4
     const set = (mat, values) => {
       for (const [k, v] of Object.entries(values)) {
         const u = mat.uniforms[k]
@@ -150,10 +159,19 @@ export async function startEngine({
         else u.value = v
       }
     }
-    set(roads.material, { u_ink: p.ink, u_alpha: p.road, u_add: p.add * 0.0 })
+    set(roads.material, { u_ink: p.ink, u_alpha: p.road, u_add: look ? 1 : 0 })
+    // the glow look: one additive (max-blended, so overlapping ribbons never stack) pass, hidden behind blocks
+    const rm = roads.material
+    set(rm, { u_glow: look ? 1 : 0, u_hotCol: p.accentHot })
+    if (look) set(rm, { u_colMain: p.roadMain, u_colSide: p.roadSide })
+    rm.blendEquation = look ? THREE.MaxEquation : THREE.AddEquation
+    rm.blendDst = look ? THREE.OneFactor : THREE.OneMinusSrcAlphaFactor
+    rm.depthTest = Boolean(look)
     set(groundMesh.material, { u_ink: p.ink, u_water: p.water, u_park: p.park, u_add: 0 })
     set(buildings.material, {
-      u_ink: p.ink, u_accent: p.accent, u_hot: p.accentHot, u_roof: p.roofInk, u_wall: p.wallInk, u_add: 0
+      u_ink: p.ink, u_accent: p.accent, u_hot: p.accentHot, u_roof: p.roofInk, u_wall: p.wallInk, u_add: 0,
+      u_glow: look ? 1 : 0,
+      u_hs: look ? p.blockHeight : 0.5
     })
     set(field.material, {
       u_accent: p.accent, u_hot: p.accentHot, u_contour: p.contour, u_haze: p.haze, u_add: p.add
@@ -194,6 +212,7 @@ export async function startEngine({
     dolly: 0.93,
     drift: 4
   }
+  const hud = labels?.hud ?? null
   let stageWidth = 1
   let stageHeight = 1
   let phone = false
@@ -229,7 +248,7 @@ export async function startEngine({
     const w = stageWidth
     const h = stageHeight
     phone = layout === 'phone' || (layout === 'auto' && (w < 760 || w / h < 0.85))
-    rig.psi = phone ? 14 : 25
+    rig.psi = phone ? (look?.camera?.psiPhone ?? 14) : (look?.camera?.psi ?? 25)
     camera.aspect = w / h
     camera.updateProjectionMatrix()
 
@@ -273,6 +292,9 @@ export async function startEngine({
     camera.projectionMatrix.elements[8] -= rig.shift.x
     camera.projectionMatrix.elements[9] -= rig.shift.y
     camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert()
+    if (hud) {
+      hud.style.transform = `translate3d(${Math.round(r.x0 + (phone ? 0 : 0.01 * w))}px,${Math.round(r.y1)}px,0) translateY(-100%)`
+    }
   }
 
   // ------------------------------------------------------------------------------------------ size
@@ -304,6 +326,36 @@ export async function startEngine({
     el.style.transform = `translate3d(${px}px,${py}px,0)`
   }
 
+  // The iso look's HUD: counts taken from the recorded search (nodes reached, route length drawn so far).
+  const hudEls = hud
+    ? { nodes: hud.querySelector('[data-k=nodes]'), route: hud.querySelector('[data-k=route]') }
+    : null
+  let hudOn = null
+  let hudKey = ''
+  function updateHud(t, r) {
+    if (!hud) return
+    const on = Boolean(look?.hud)
+    if (on !== hudOn) {
+      hudOn = on
+      hud.style.display = on ? '' : 'none'
+      hudKey = ''
+    }
+    if (!on) return
+    const times = data.nodeTimes
+    let lo = 0
+    let hi = times.length
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1
+      if (times[mid] <= t) lo = mid + 1
+      else hi = mid
+    }
+    const key = `${lo},${Math.round(r * data.routeLengthM / 10)}`
+    if (key === hudKey) return
+    hudKey = key
+    hudEls.nodes.textContent = `${String(lo).padStart(3, '0')} / ${data.nodeTotal}`
+    hudEls.route.textContent = `${((r * data.routeLengthM) / 1000).toFixed(2)} KM`
+  }
+
   let currentU = 0
   let drawnU = Number.NaN
   function renderAt(u) {
@@ -321,6 +373,7 @@ export async function startEngine({
     field.material.uniforms.u_haze.value = palette.haze * lerp(1, 0.2, smooth(0.5, 0.8, u))
 
     for (const m of [routeCasing, routeGlow, routeCore]) m.material.uniforms.u_reveal.value = r
+    roads.material.uniforms.u_boost.value = 1 - 0.3 * smooth(TIMELINE.searchEnd, TIMELINE.routeEnd, u)
 
     const lit = smooth(0.78, 0.93, u)
     circuit.material.uniforms.u_amount.value = lit
@@ -332,6 +385,7 @@ export async function startEngine({
     drawnU = u
     needsDraw = false
 
+    updateHud(t, r)
     if (labels) {
       placeLabel(labels.circuit, data.circuitCentre[0] - 380, data.circuitCentre[1] - 60, smooth(0.84, 0.95, u), 'c')
       placeLabel(labels.rmit, data.routeStart[0], data.routeStart[1], 1 - smooth(0.72, 0.9, u) * 0.4, 'r')
@@ -393,6 +447,7 @@ export async function startEngine({
       const next = resolveTheme(name)
       if (next === themeName) return
       applyTheme(next)
+      fit()
       renderAt(currentU)
     },
     setProgress(value) {

@@ -58,6 +58,56 @@ export const THEMES = {
   }
 }
 
+/**
+ * Look variants for the street network, chosen with `?roads=glow|iso` (dark theme only; the light theme
+ * always uses the default look).
+ *
+ *   glow  streets as thin emissive lines (amber through streets, cyan the rest) with a soft halo, on
+ *         near-black extruded blocks; the search front sweeps light along them
+ *   iso   glow, plus a slightly more isometric camera (still only a few degrees of movement) and a
+ *         small mono HUD built from the scene's own data
+ *
+ * `palette` overrides merge over THEMES.dark; `camera` replaces the rig defaults.
+ */
+export const ROAD_LOOKS = {
+  default: null,
+  glow: {
+    palette: {
+      roadMain: '#ffb23d',
+      roadSide: '#30cdf5',
+      contour: 0.1,
+      haze: 0.3,
+      settled: 0.5,
+      blockHeight: 0.7
+    },
+    camera: null,
+    hud: false
+  },
+  iso: {
+    palette: {
+      roadMain: '#ffb23d',
+      roadSide: '#30cdf5',
+      contour: 0.1,
+      haze: 0.3,
+      settled: 0.5,
+      blockHeight: 0.95
+    },
+    camera: { tilt0: 45, tilt1: 44, psi: 29, psiPhone: 14, dolly: 0.97, drift: 1.5 },
+    hud: true
+  }
+}
+
+export function resolveRoads(value = null) {
+  let v = value
+  if (v === null && typeof location !== 'undefined') v = new URLSearchParams(location.search).get('roads')
+  return v === 'glow' || v === 'iso' ? v : 'default'
+}
+
+/** The look in force for a theme: the requested variant in dark, the default in light. */
+export function lookFor(themeName, roads) {
+  return themeName === 'dark' ? ROAD_LOOKS[roads] ?? null : null
+}
+
 export function resolveTheme(value) {
   if (value === 'light' || value === 'dark') return value
   const attr = typeof document !== 'undefined' ? document.documentElement.dataset.theme : ''

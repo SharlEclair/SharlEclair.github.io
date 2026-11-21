@@ -64,7 +64,14 @@ const ELEV = (56 * Math.PI) / 180
 const SAT_S = 2.0, SAT_Y = 15, SAT_Z = -21
 const SAT_X0 = -66, SAT_X1 = 70
 
-export async function createScene({ THREE, renderer, size, look = 'full', palette, theme } = {}) {
+/** `?harvest=chart` / `?harvest=plates` swap in a data-field variant (shared/scenes/harvest/variants.js). Default and look 'lcd' are untouched. */
+export async function createScene(opts = {}) {
+  const v = opts.look === 'lcd' || typeof location === 'undefined' ? null : new URLSearchParams(location.search).get('harvest')
+  if (v === 'chart' || v === 'plates') return (await import('./variants.js')).createVariantScene({ ...opts, mode: v, beats })
+  return createDefaultScene(opts)
+}
+
+async function createDefaultScene({ THREE, renderer, size, look = 'full', palette, theme } = {}) {
   const lcd = look === 'lcd'
   const disposables = []
   const scene = new THREE.Scene()

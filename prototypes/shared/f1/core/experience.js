@@ -10,7 +10,7 @@ import { scene, updateScene, applySceneTheme } from '../scene/scene.js'
 import { camera, setOrbitTarget, initCamera, updateCamera, rebuildCurves, setLayoutMode, resolveLayout } from '../camera/rig.js'
 import { createAirflow, updateAirflow, applyAirflowTheme } from '../airflow/field.js'
 import { THEMES, normaliseTheme, readPageTheme } from '../theme.js'
-import { setCarStyle, updateCarWheels, tuneLivery, liveryTune } from '../car/livery.js'
+import { setCarStyle, updateCarWheels, tuneLivery, liveryTune, setLiverySource, getLiverySource, setLiveryStyle, getLiveryStyle } from '../car/livery.js'
 import { PRESETS, DEFAULT_PRESET, REBUILD_KEYS, LIVERY_DEFAULTS } from '../tune.js'
 import { loadCar, applyCarTransform, applyCarMaterial, applyFinish, createEnvironment } from '../car/loader.js'
 import { createPanel } from '../ui/panel.js'
@@ -493,6 +493,20 @@ export function createExperience({
       draw()
     },
     getLiveryTheme: () => liveryTheme ?? themeName,
+    // 'original' (the GLB's own colours, default) | 'procedural': where the DARK car's colours come from.
+    setLiverySource(name) {
+      setLiverySource(name)
+      refreshCar()
+      draw()
+    },
+    getLiverySource,
+    // 'default' | 'tri' | 'tri-bold': the LIGHT livery variant (also ?livery=, and setLivery({ style })).
+    setLiveryStyle(name) {
+      setLiveryStyle(name)
+      refreshCar()
+      draw()
+    },
+    getLiveryStyle,
     // Render cost of one frame, read from renderer.info (all passes of the composer, then the scene pass alone).
     measure() {
       const info = renderer.info

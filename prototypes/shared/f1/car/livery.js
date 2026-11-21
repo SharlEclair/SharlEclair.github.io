@@ -44,11 +44,63 @@ const STYLES = {
   },
 }
 
+// Per-variant overrides of STYLES.light (styleName 'light' only). 'variant' feeds the shader (uVariant).
+//   tri       three thin-gapped bands (light blue, deep blue, red) sweeping from the sidepod's front outer corner
+//             back to the engine cover, plus a thin tricolour pinstripe set along a white nose cone; the airbox
+//             patch takes the livery too. Red-banded tyres.
+//   tri-bold  wider bands, a second set sweeping across the nose cone, a black lower body half and the same
+//             bands across the rear wing endplates.
+const VARIANTS = {
+  tri: { variant: 1, a: '#17369a', b: '#58b0ee', mark: '#e4252d', acc2: 'body' },
+  'tri-bold': { variant: 2, a: '#17369a', b: '#58b0ee', mark: '#e4252d', acc2: 'body' },
+}
+const styleFor = () => (styleName === 'light' && VARIANTS[liveryStyle] ? { ...STYLES.light, ...VARIANTS[liveryStyle] } : STYLES[styleName])
+
 let styleName = 'dark'
 export function setCarStyle(name) {
   styleName = name === 'light' ? 'light' : 'dark'
 }
 export const getCarStyle = () => styleName
+
+// LIGHT livery variants (the dark theme ignores them). 'default' is the original swoosh; 'tri' and 'tri-bold'
+// are the tricolour (deep blue, light blue, red) diagonal stripe sets. Chosen with ?livery=tri|tri-bold (read
+// once here, inside shared/f1), or at runtime with setLiveryStyle(name) / setLivery({ style }).
+export const LIVERY_STYLES = ['default', 'tri', 'tri-bold']
+const readStyleParam = () => {
+  try {
+    const v = new URLSearchParams(globalThis.location?.search ?? '').get('livery')
+    return LIVERY_STYLES.includes(v) ? v : 'default'
+  } catch {
+    return 'default'
+  }
+}
+let liveryStyle = readStyleParam()
+export function setLiveryStyle(name) {
+  liveryStyle = LIVERY_STYLES.includes(name) ? name : 'default'
+}
+export const getLiveryStyle = () => liveryStyle
+
+// Where the DARK car's colours come from:
+//   'original'    the GLB's own part colours, untouched (the sibling f1-three-test project's "keep original
+//                 part colours" finish: near-black navy BaseColor, 2ndColor yellow, 3rdColor red, black trim,
+//                 red tyre sidewall marks). Only roughness, clearcoat and reflections are set per part.
+//   'procedural'  the shader livery in STYLES.dark above.
+// The light theme always uses its procedural livery.
+export const LIVERY_SOURCES = ['original', 'procedural']
+let liverySource = 'original'
+export function setLiverySource(name) {
+  liverySource = name === 'procedural' ? 'procedural' : 'original'
+}
+export const getLiverySource = () => liverySource
+
+// Surface finish of the GLB's own materials, by part. Colour is never set here: it is copied from the GLB.
+const ORIGINAL_FINISH = {
+  paint: { rough: 0.28, metal: 0.0, env: 1.5, cc: 1, ccr: 0.05 }, //  BaseColor, 2ndColor, 3rdColor
+  carbon: { rough: 0.36, metal: 0.2, env: 1.2, cc: 0.6, ccr: 0.1, sheen: 0.3 }, // Dark Black on the aero parts
+  tyre: { rough: 0.85, metal: 0, env: 0.5, cc: 0, ccr: 0 },
+  mark: { rough: 0.6, metal: 0, env: 0.4, cc: 0, ccr: 0 }, //          red sidewall marks
+  mirror: { rough: 0.06, metal: 0.9, env: 1.4, cc: 1, ccr: 0.02 }, //  GLB 'Mirror' grey, as a polished mirror
+}
 
 // Live tuning (tune.js LIVERY_DEFAULTS): offsets and multipliers over the per-theme values above.
 export const liveryTune = { ...LIVERY_DEFAULTS }
@@ -68,6 +120,7 @@ const U = {
   uRingMix: { value: 1 },
   uK: { value: 1 },
   uMode: { value: 0 },
+  uVariant: { value: 0 },
   uWeave: { value: 1 },
   uDbg: { value: 0 },
 }
@@ -91,10 +144,18 @@ varying vec3 vLocN;
 uniform vec3 uBodyC; uniform vec3 uBodyH;
 uniform vec3 uBase; uniform vec3 uA; uniform vec3 uB; uniform vec3 uC; uniform vec3 uD;
 uniform vec3 uRing; uniform float uRingW; uniform float uRingMix; uniform float uK;
-uniform float uMode; uniform float uWeave; uniform float uDbg;
+uniform float uMode; uniform float uWeave; uniform float uDbg; uniform float uVariant;
 float h21(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float band(float d, float lo, float hi, float aa){
   return smoothstep(lo - aa, lo + aa, d) - smoothstep(hi - aa, hi + aa, d);
+}
+// Tricolour stripe set (LIGHT variants): u counts band widths from the front edge; light blue, deep blue and
+// red, each one width wide, with a gap (in band widths) of white paint between them.
+vec3 triBands(vec3 col, float u, float gap, float m){
+  float aa = fwidth(u) * 1.1 + 0.004;
+  col = mix(col, uB, band(u, 0.0, 1.0, aa) * m);
+  col = mix(col, uA, band(u, 1.0 + gap, 2.0 + gap, aa) * m);
+  return mix(col, uC, band(u, 2.0 + 2.0 * gap, 3.0 + 2.0 * gap, aa) * m);
 }
 `
 
@@ -128,6 +189,25 @@ const BODY_COLOR = `
     col = mix(col, uA, band(d, -0.38, 0.08, aa));
     col = mix(col, uB, band(d, 0.08, 0.3, aa));
     col = mix(col, uC, band(d, 0.36, 0.39, aa));
+  } else if (uVariant > 0.5) {
+    // Light tricolour variants. e runs diagonally from the sidepod's front outer corner back toward the
+    // centre line at the rear, the way the swoosh does in the default; u counts band widths from its front edge.
+    float bold = step(1.5, uVariant);
+    float e = n.z - 1.15 * ax + 0.3 * n.y;
+    float bw = mix(0.15, 0.24, bold) * (0.85 + 0.35 * (1.0 - clamp(ax, 0.0, 1.0)));
+    float e0 = mix(-0.62, -0.42, bold);
+    float zmask = smoothstep(-1.04, -0.9, n.z) * (1.0 - smoothstep(0.26, 0.4, n.z));
+    float lowBlk = bold * (1.0 - smoothstep(-0.14, 0.0, n.y));
+    col = mix(col, uD, lowBlk);
+    col = triBands(col, (e0 - e) / bw, 0.14, zmask);
+    // Nose cone: thin pinstripes along it (tri), or a second, wider chevron sweeping across it (tri-bold).
+    float pin = (1.0 - bold) * smoothstep(0.08, 0.3, n.z);
+    col = triBands(col, (ax - 0.08) / 0.045, 0.3, pin);
+    float e2 = n.z - 1.8 * ax;
+    col = triBands(col, (0.85 - e2) / 0.17, 0.14, bold * smoothstep(0.1, 0.3, n.z));
+    float halo = smoothstep(0.52, 0.58, n.y);
+    col = mix(col, uD, halo);
+    blk = max(max(lowBlk, halo), 0.0);
   } else {
     // Light: white shell. e is a diagonal that runs from the front outer corner of the sidepod back and
     // in toward the airbox; the swoosh is a dark blue band that lightens on its upper edge, with a red
@@ -150,7 +230,11 @@ const BODY_COLOR = `
     col = mix(col, uD, halo);
     blk = max(nose, halo);
   }
-  if (uDbg > 0.5) col = vec3(n.z * 0.5 + 0.5, ax, n.y * 0.5 + 0.5);
+  if (uDbg > 0.5) {
+    // Body coordinates as colour (r = z, g = |x|, b = y) with a dark line every 0.25 of n.z and n.x.
+    float gz = band(fract(n.z * 4.0), 0.0, 0.06, 0.01) + band(fract(n.x * 4.0), 0.0, 0.06, 0.01);
+    col = vec3(n.z * 0.5 + 0.5, ax, n.y * 0.5 + 0.5) * (1.0 - 0.7 * clamp(gz, 0.0, 1.0));
+  }
   diffuseColor.rgb = col;
 `
 const BODY_ROUGH = `roughnessFactor = mix(roughnessFactor, 0.5, blk);`
@@ -164,6 +248,13 @@ const CARBON_COLOR = `
   float w = sin((vCarP.x + vCarP.z) * 90.0) * sin((vCarP.x - vCarP.z) * 90.0);
   w = mix(w, 0.0, clamp(fwidth(vCarP.x + vCarP.z) * 40.0, 0.0, 1.0));
   diffuseColor.rgb *= 1.0 + 0.5 * w * uWeave;
+  if (uVariant > 1.5) {
+    // tri-bold: the same three bands across the rear wing's endplates (faces that look sideways).
+    float plate = step(0.72, abs(vCarP.x)) * step(0.6, abs(vLocN.x)) * step(vCarP.z, -3.3) * step(-5.2, vCarP.z) * step(1.15, vCarP.y);
+    float q = (vCarP.z + 4.25) * 0.85 + (vCarP.y - 1.9);
+    vec3 tb = triBands(diffuseColor.rgb, (0.42 - q) / 0.2, 0.14, plate);
+    diffuseColor.rgb = mix(tb, tb * 1.4, plate * step(0.01, distance(tb, diffuseColor.rgb)));
+  }
 `
 const CARBON_ROUGH = `roughnessFactor *= 1.0 + 0.25 * w * uWeave;`
 
@@ -202,8 +293,14 @@ function build() {
 // Multi-material GLB nodes arrive as a Group (node name) holding one Mesh per material, so the node name
 // is the parent's; the GLB's own material name (captured once) says which part of the node it is.
 const nodeName = (m, car) => (m.parent && m.parent !== car && m.parent.name ? m.parent.name : m.name)
+// Remember the GLB's own material (and its name) on the mesh the first time it is seen.
+const captureOriginal = (m) => {
+  if (m.userData.origMaterial) return
+  m.userData.origMaterial = m.material
+  m.userData.origMat = m.material.name || ''
+}
 const roleOf = (m, car, s) => {
-  if (!m.userData.origMat) m.userData.origMat = m.material.name || ''
+  captureOriginal(m)
   const node = nodeName(m, car)
   const orig = m.userData.origMat
   if (/_tire$/i.test(node)) return orig === 'Bloody Red' ? 'mark' : 'tyre'
@@ -214,6 +311,68 @@ const roleOf = (m, car, s) => {
   return 'carbon'
 }
 
+// Role of a mesh in the 'original' source, keyed off the GLB's own material names (and the tyre nodes).
+const originalRole = (m, car) => {
+  captureOriginal(m)
+  const orig = m.userData.origMat
+  if (/_tire$/i.test(nodeName(m, car))) return orig === 'Bloody Red' ? 'mark' : 'tyre'
+  if (orig === 'BaseColor' || orig === '2ndColor' || orig === '3rdColor' || orig === 'Bloody Red') return 'paint'
+  if (orig === 'Mirror') return 'mirror'
+  return 'carbon'
+}
+
+// One MeshPhysicalMaterial per (GLB material, role): the colour is copied from the GLB and never touched again.
+const originalMats = new Map()
+function originalMaterialFor(m, role) {
+  const orig = m.userData.origMaterial
+  const key = orig.uuid + '|' + role
+  let mat = originalMats.get(key)
+  if (!mat) {
+    mat = new THREE.MeshPhysicalMaterial({ metalness: 0, sheenColor: new THREE.Color('#6f6590') })
+    mat.name = (orig.name || 'part') + '/' + role
+    mat.color.copy(orig.color)
+    originalMats.set(key, mat)
+  }
+  return mat
+}
+
+// Dress the car in the GLB's own colours (same per-mesh materials as the file), with finish set per part.
+function applyOriginalColours(car, envMap) {
+  const t = liveryTune
+  const clamp01 = (v) => Math.min(1, Math.max(0, v))
+  car.traverse((m) => {
+    if (!m.isMesh) return
+    const role = originalRole(m, car)
+    const f = ORIGINAL_FINISH[role]
+    const mat = originalMaterialFor(m, role)
+    let rough = f.rough
+    let env = f.env
+    let cc = f.cc
+    let ccr = f.ccr
+    if (role === 'paint') {
+      rough += t.paintRough; env *= t.paintEnv; cc *= t.clearcoat; ccr += t.clearcoatRough
+    } else if (role === 'carbon') {
+      rough += t.carbonRough; env *= t.carbonEnv
+    } else if (role === 'tyre') {
+      rough += t.tyreRough; env *= t.tyreEnv
+    } else if (role === 'mirror') {
+      rough += t.glassRough
+    }
+    mat.roughness = clamp01(rough)
+    mat.metalness = f.metal
+    mat.envMapIntensity = env
+    mat.envMap = envMap
+    mat.clearcoat = cc
+    mat.clearcoatRoughness = clamp01(ccr)
+    mat.sheen = role === 'carbon' ? f.sheen * t.carbonSheen : 0
+    mat.sheenRoughness = 0.5
+    mat.needsUpdate = true
+    if (m.material !== mat) m.material = mat
+    const spin = /_tire$/i.test(nodeName(m, car)) ? (m.parent !== car ? m.parent : m) : null
+    if (spin && !spin.userData.baseQ) spin.userData.baseQ = spin.quaternion.clone()
+  })
+}
+
 const _box = new THREE.Box3()
 const _inv = new THREE.Matrix4()
 const _rel = new THREE.Matrix4()
@@ -222,8 +381,12 @@ let _envMap = null
 export function applyCarStyle(car, envMap) {
   if (!car) return
   _envMap = envMap
+  if (styleName === 'dark' && liverySource === 'original') {
+    applyOriginalColours(car, envMap)
+    return
+  }
   mats = mats || build()
-  const s = STYLES[styleName]
+  const s = styleFor()
   const t = liveryTune
 
   car.updateMatrixWorld(true)
@@ -253,6 +416,7 @@ export function applyCarStyle(car, envMap) {
   U.uRingMix.value = s.ringMix
   U.uK.value = s.k
   U.uMode.value = s.mode
+  U.uVariant.value = s.variant ?? 0
   U.uWeave.value = t.carbonSheen
 
   const { body, carbon, tyre, mark, yellow, red, glass } = mats
@@ -294,7 +458,9 @@ export function applyCarStyle(car, envMap) {
 
 // Merge livery tuning (tune.js LIVERY_FIELDS keys) and re-apply to the car.
 export function tuneLivery(car, partial) {
-  Object.assign(liveryTune, partial)
+  const { style, ...tune } = partial
+  if (style !== undefined) setLiveryStyle(style)
+  Object.assign(liveryTune, tune)
   applyCarStyle(car, _envMap)
 }
 

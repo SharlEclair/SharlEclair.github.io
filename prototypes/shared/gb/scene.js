@@ -19,6 +19,8 @@ import { createCartridge } from './cartridge.js'
 import { createLcd } from './lcd.js'
 import { L } from './layout.js'
 import { makeGlowTexture } from './textures.js'
+import { createFloorGlow } from './glowfloor.js'
+import { VARIANTS } from './variants.js'
 import { LCD_PALETTES } from '../dither/pass.js'
 import { person } from '../content.js'
 
@@ -127,6 +129,25 @@ export async function createScene({
   glow.renderOrder = -10
   pivot.add(glow)
   let glowLook = { opacity: 0 }
+  // ?glow= variants (shared/gb/variants.js): 'default' is the sprite above, 'floor' / 'grid' the floor light, 'off' nothing.
+  // The floor light is built on first use, so the default look pays nothing for it.
+  let glowMode = 'default'
+  let floorGlow = null
+  const ensureFloor = () => {
+    if (!floorGlow) {
+      floorGlow = createFloorGlow(THREE)
+      floorGlow.setTheme(state.theme)
+      floorGlow.group.visible = glowMode === 'floor' || glowMode === 'grid'
+      scene.add(floorGlow.group) // world aligned: follows the rig's position and scale, never its tilt or roll
+    }
+    return floorGlow
+  }
+  function setGlow(mode) {
+    glowMode = ['floor', 'grid', 'off'].includes(mode) ? mode : 'default'
+    if (glowMode === 'floor' || glowMode === 'grid') ensureFloor().setMode(glowMode)
+    if (floorGlow) floorGlow.group.visible = glowMode === 'floor' || glowMode === 'grid'
+    if (glowMode !== 'default') glow.visible = false
+  }
   function setTheme(name) {
     const light = name === 'light'
     glowLook = light ? { opacity: 0.1, color: 0x6b5a40 } : { opacity: 0.14, color: 0xd6f0e2 }
@@ -137,10 +158,12 @@ export async function createScene({
     // brighter room on cream so the frosted shell does not go muddy
     scene.environmentIntensity = light ? 1.15 : 1
     state.theme = light ? 'light' : 'dark'
+    floorGlow?.setTheme(state.theme)
   }
 
   const state = { interactive, interactiveHero, engaged: false, eng: 0, calm: 0, moving: false, heroGame: false, playing: false, hover: null, trackRef: track, pose: samplePose(track, 0), w: size.w, h: size.h, onscreen: true, attached: null, theme: 'dark', palette }
   setTheme(theme)
+  setGlow(VARIANTS.glow)
 
   // ---- games: onGame(active) fires when the LCD enters / leaves the dino or the Konami snake
   function modeChanged(m) {
@@ -166,7 +189,7 @@ export async function createScene({
   const api = {
     scene, camera, gb, cart, lcd,
     /** Live handles for anim/gb-tune.html (the tuning page). */
-    tune: { key, rim, front, glow, glowMat, renderer, get glowOpacity() { return glowLook.opacity }, set glowOpacity(v) { glowLook.opacity = v } },
+    tune: { key, rim, front, glow, glowMat, renderer, floor: ensureFloor, get glowOpacity() { return glowLook.opacity }, set glowOpacity(v) { glowLook.opacity = v } },
     /** Contact section live: idle bob off, cursor lean on. Setting it false also clears `engaged`. */
     get interactive() { return state.interactive },
     set interactive(v) { state.interactive = Boolean(v); if (!v) state.engaged = false },
@@ -185,6 +208,9 @@ export async function createScene({
     /** 'dark' (default, page #08080a) or 'light' (cream paper #e8e6db): shell look + the halo behind the console. */
     setTheme,
     get theme() { return state.theme },
+    /** Light behind the console: 'default' (soft sprite) | 'floor' | 'grid' | 'off'. Also ?glow= (shared/gb/variants.js). */
+    setGlow,
+    get glowMode() { return glowMode },
     /**
      * Recolour the screen: a LCD_PALETTES name ('dmg' 'pocket' 'night' 'amber' 'ink' 'ember' 'ice' 'berry') or a
      * dark -> light colour list. The LCD UI recolours live; an attached screen scene is passed the name too if it
@@ -256,9 +282,13 @@ export async function createScene({
       const scale = Math.max(0.01, pose.s * fit) * (1 - fill) * (1 + 0.12 * e) + cover * fill
       const tilt = 1 - fill
       rig.position.set(pose.xf * halfW - fill * S.cx * scale, pose.y + floatY - fill * S.cy * scale, pose.z)
-      glowMat.opacity = glowLook.opacity * (1 - smooth(clamp01(fill * 1.6)))
-      glow.visible = glowMat.opacity > 0.002
+      const glowFade = 1 - smooth(clamp01(fill * 1.6))
+      glowMat.opacity = glowLook.opacity * glowFade
+      glow.visible = glowMode === 'default' && glowMat.opacity > 0.002
+      floorGlow?.setLevel(glowFade)
       rig.scale.setScalar(scale)
+      floorGlow?.group.position.copy(rig.position)
+      floorGlow?.group.scale.copy(rig.scale)
       // cursor lean: smaller angles on the contact pose, and none once engaged
       const lean = tilt * (1 - e) * (1 - 0.3 * smooth(state.calm))
       rig.rotation.set(pose.rx * (1 - e) - ctx.pointer.sy * 0.18 * lean, pose.ry * (1 - e) + ctx.pointer.sx * 0.28 * lean, pose.rz * (1 - e) + swayZ * tilt)
@@ -293,6 +323,7 @@ export async function createScene({
       gb.dispose()
       glowTex.dispose()
       glowMat.dispose()
+      floorGlow?.dispose()
       envRT.dispose()
       pmrem.dispose()
     },

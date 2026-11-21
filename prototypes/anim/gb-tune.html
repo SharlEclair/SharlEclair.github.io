@@ -44,6 +44,7 @@
       import { L } from '/shared/gb/layout.js'
       import { LCD_PALETTES } from '/shared/dither/pass.js'
       import { createGlassVariant } from '/shared/gb/glass.js'
+      import { GLOW_MODES, PILL_MODES, BTN_MODES } from '/shared/gb/variants.js'
 
       const q = new URLSearchParams(location.search)
       const STORE = 'gb-tune-v1'
@@ -181,6 +182,28 @@
         num('glow', 'Backglow', 0, 0.6, 0.005, () => S.glowOpacity, (v) => (S.glowOpacity = v)),
         col('glowc', 'Backglow colour', () => hex(S.glowMat.color), (v) => S.glowMat.color.set(v)),
       ])
+      // Look variants (also selectable with ?glow= ?pill= ?btn= on any page that shows the console). The selects are not
+      // saved with the tuner settings, so the URL parameter always wins on reload.
+      const F = () => sc.tune.floor()
+      const gelU = (name) => gb.gel[name]?.userData.gel
+      const bothGel = (fn) => { fn(gelU('btn_a')); fn(gelU('btn_b')) }
+      S_('Variants', [
+        { ...sel('vglow', 'Glow behind', GLOW_MODES, () => sc.glowMode, (v) => sc.setGlow(v)), noSave: true },
+        num('fwall', 'Backdrop light', 0, 1, 0.01, () => F().look.wall, (v) => { F().look.wall = v; F().refresh() }),
+        num('ffloor', 'Floor pool', 0, 1, 0.01, () => F().look.floor, (v) => { F().look.floor = v; F().refresh() }),
+        num('freach', 'Light climb', 0.3, 3, 0.01, () => F().reach, (v) => F().setReach(v)),
+        num('fcell', 'Grid cell (LCD px)', 1, 8, 1, () => F().cell, (v) => F().setCell(v)),
+        col('fdeep', 'Light outer colour', () => '#' + F().uniforms.uDeep.value.getHexString(), (v) => F().uniforms.uDeep.value.set(v)),
+        col('fhot', 'Light core colour', () => '#' + F().uniforms.uHot.value.getHexString(), (v) => F().uniforms.uHot.value.set(v)),
+        { ...sel('vpill', 'Pill', PILL_MODES, () => gb.pillMode, (v) => gb.setPill(v)), noSave: true },
+        col('gpt', 'Pill gel top', () => '#' + gelU('start').uGelTop.value.getHexString(), (v) => gelU('start').uGelTop.value.set(v)),
+        col('gpb', 'Pill gel bottom', () => '#' + gelU('start').uGelBot.value.getHexString(), (v) => gelU('start').uGelBot.value.set(v)),
+        num('gpg', 'Pill gel glow', 0, 2, 0.01, () => gelU('start').uGelGlow.value, (v) => (gelU('start').uGelGlow.value = v)),
+        num('gps', 'Pill gel highlight', 0, 2, 0.01, () => gelU('start').uGelSheen.value, (v) => (gelU('start').uGelSheen.value = v)),
+        { ...sel('vbtn', 'A / B caps', BTN_MODES, () => gb.btnMode, (v) => gb.setBtn(v)), noSave: true },
+        num('gbg', 'Cap gel glow', 0, 2, 0.01, () => gelU('btn_a').uGelGlow.value, (v) => bothGel((u) => (u.uGelGlow.value = v))),
+        num('gbs', 'Cap gel highlight', 0, 2, 0.01, () => gelU('btn_a').uGelSheen.value, (v) => bothGel((u) => (u.uGelSheen.value = v))),
+      ], true)
       S_('Pose and view', [
         num('rx', 'Tilt up/down', -1.2, 1.2, 0.01, () => pose.rx, (v) => (pose.rx = v)),
         num('ry', 'Turn left/right', -1.2, 1.2, 0.01, () => pose.ry, (v) => (pose.ry = v)),
@@ -256,10 +279,10 @@
       }
       function syncAll() { for (const c of all) { const v = c.get(); show(c, v); if (c.id !== 'bgm') state[c.id] = v } }
       function applyState(s) {
-        for (const c of all) if (c.id !== 'bgm' && s[c.id] !== undefined) { c.set(s[c.id]); show(c, s[c.id]); state[c.id] = s[c.id] }
+        for (const c of all) if (c.id !== 'bgm' && !c.noSave && s[c.id] !== undefined) { c.set(s[c.id]); show(c, s[c.id]); state[c.id] = s[c.id] }
         redraw()
       }
-      function persist() { try { localStorage.setItem(STORE, JSON.stringify({ theme, ...state })) } catch {} }
+      function persist() { try { const keep = { ...state }; for (const c of all) if (c.noSave) delete keep[c.id]; localStorage.setItem(STORE, JSON.stringify({ theme, ...keep })) } catch {} }
       const toast = (t) => { const el = document.getElementById('toast'); el.textContent = t; el.style.opacity = 1; clearTimeout(toast.t); toast.t = setTimeout(() => (el.style.opacity = 0), 1600) }
 
       // Apply saved values on top of the page's theme preset
