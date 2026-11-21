@@ -270,10 +270,10 @@ export function createCartridge({ THREE, track, envIntensity = 1 }) {
     apply()
   }
   /** Shell plastic follows the site theme: near-black in dark, grey in light. */
-  api.setTheme = (name) => {
+  api.setTheme = (name, mono = false) => {
     const light = name === 'light'
-    plastic.color.set(light ? 0x9a9ea6 : 0x1b1c20)
-    trimMat.color.set(light ? 0x8b8f97 : 0x2b2d33)
+    plastic.color.set(light ? (mono ? 0xe2dfd6 : 0x9a9ea6) : 0x1b1c20)
+    trimMat.color.set(light ? (mono ? 0xcfccc3 : 0x8b8f97) : 0x2b2d33)
   }
   api.setCartridge({ color: '#d9b34a' })
   apply()

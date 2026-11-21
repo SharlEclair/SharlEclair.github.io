@@ -33,6 +33,10 @@ const LOOKS = {
   },
   // Light page: a dark smoke tint (still translucent: the board shows through) so the console reads against cream paper
   light: { color: 0x2c3138, face: 0.58, edge: 0.96, back: 0.68, scatter: 0x7d8792, scatterK: 0.22, diffuser: 0.34, diffuserColor: 0x3c434c, rough: 0.3, coat: 1, env: 1.0, pcb: 2.3, parts: 1.0 },
+  // ?shell=mono: the case matches the page. Dark page: the dark smoke case (same as `light` above). Light page: its
+  // opposite, a pale frosted white case.
+  'mono-dark': { color: 0x2c3138, face: 0.58, edge: 0.96, back: 0.68, scatter: 0x7d8792, scatterK: 0.22, diffuser: 0.34, diffuserColor: 0x3c434c, rough: 0.3, coat: 1, env: 1.0, pcb: 2.3, parts: 1.0 },
+  'mono-light': { color: 0xe4e9ee, face: 0.62, edge: 0.98, back: 0.7, scatter: 0xffffff, scatterK: 0.3, diffuser: 0.4, diffuserColor: 0xeef1f4, rough: 0.3, coat: 1, env: 1.1, pcb: 1.3, parts: 0.9 },
 }
 
 export async function createGameboy({ THREE, lcd, modelUrl = `${BASE}/models/gameboy.glb`, envIntensity = 1, theme = 'dark' }) {
@@ -350,7 +354,7 @@ export async function createGameboy({ THREE, lcd, modelUrl = `${BASE}/models/gam
   setDpad(VARIANTS.dpad)
 
   function setTheme(name) {
-    const k = LOOKS[name] ?? LOOKS.dark
+    const k = (VARIANTS.shell === 'mono' ? LOOKS[`mono-${name}`] : null) ?? LOOKS[name] ?? LOOKS.dark
     U.uFace.value = k.face
     U.uEdge.value = k.edge
     U.uBack.value = k.back
