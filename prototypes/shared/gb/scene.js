@@ -114,6 +114,12 @@ export async function createScene({
   ]
   const lcd = createLcd({ items: menu, palette: four(LCD_PALETTES[palette] ?? palette), onOpen: (it) => onOpen(it), boot: bootOnStart, onMode: (m) => modeChanged(m) })
   const gb = await createGameboy({ THREE, lcd })
+  // ?shell=glass: real three.js transmission glass for the case (shared/gb/glass.js), instead of the cheap faked frost
+  let glassV = null
+  if (VARIANTS.shell === 'glass') {
+    glassV = (await import('./glass.js')).createGlassVariant(THREE, gb, renderer)
+    renderer.transmissionResolutionScale = 0.6
+  }
   const cart = createCartridge({ THREE, track: [], envIntensity: 1 })
   // Flat faces looking straight at the camera mirror the bright room light through a clearcoat: keep them matte.
   cart.group.traverse((o) => { if (o.material) { o.material.envMapIntensity = 0.3; if ('clearcoat' in o.material) o.material.clearcoat = 0.12 } })
@@ -243,7 +249,15 @@ export async function createScene({
     // unlike additive it writes valid premultiplied alpha, so it composites the same over the page's transparent canvas.
     glowMat.color.set(glowLook.color)
     gb.setTheme(light ? 'light' : 'dark')
-    const swap = VARIANTS.shell === 'swap' || VARIANTS.shell === 'pale'
+    if (glassV) {
+      // gb.setTheme reset the board and parts: put the glass look back, tinted smoke on the light theme
+      glassV.enable(true)
+      for (const m of glassV.mats) {
+        m.color.set(light ? 0x3a424c : 0xbcc3cb)
+        m.attenuationColor.set(light ? 0x2c3138 : 0xb0b8c1)
+      }
+    }
+    const swap = VARIANTS.shell === 'swap' || VARIANTS.shell === 'pale' || VARIANTS.shell === 'glass'
     cart.setTheme?.(light !== swap ? 'light' : 'dark', VARIANTS.shell === 'mono' || swap)
     // brighter room on cream so the frosted shell does not go muddy
     scene.environmentIntensity = light ? 1.15 : 1
@@ -258,7 +272,7 @@ export async function createScene({
   // ?shell=mono: dark LCD ground on the dark theme, light LCD ground on the light theme
   // ?shell=swap: the opposite way round (light LCD on the dark theme, dark LCD on the light theme)
   const mono = VARIANTS.shell === 'mono'
-  const swapped = VARIANTS.shell === 'swap' || VARIANTS.shell === 'pale'
+  const swapped = VARIANTS.shell === 'swap' || VARIANTS.shell === 'pale' || VARIANTS.shell === 'glass'
   const DARK_LCD = mono ? 'graphite' : swapped ? 'bone' : 'ink'
   const LIGHT_LCD = mono ? 'bone' : 'graphite'
   const urlQ = typeof location === 'undefined' ? new URLSearchParams() : new URLSearchParams(location.search)
