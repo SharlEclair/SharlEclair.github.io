@@ -179,7 +179,21 @@ export function makeDiffuser(THREE) {
 }
 
 /** Engraved arrow notches on the D-pad arms + the rim of the centre dimple. Plane = span x span, centred on the pad. */
-export function makeDpadMarks(THREE, span, arm) {
+/** Rounded-rectangle alpha mask for the internal board (white inside, black outside); `r` is the corner radius in layout units. */
+export function makePcbMask(THREE, w, h, r) {
+  const PX = 200
+  const [c, g] = canvas(Math.round(w * PX), Math.round(h * PX))
+  g.fillStyle = '#000'
+  g.fillRect(0, 0, c.width, c.height)
+  g.fillStyle = '#fff'
+  g.beginPath()
+  g.roundRect(0, 0, c.width, c.height, r * PX)
+  g.fill()
+  return tex(THREE, c, { srgb: false, aniso: 1 })
+}
+
+/** style 'glow': the same four arrows as bright engraved teal lines, for the glass D-pad (drawn additive). */
+export function makeDpadMarks(THREE, span, arm, style = 'flat') {
   const S = 512
   const [c, g] = canvas(S, S)
   const k = S / span
@@ -194,6 +208,15 @@ export function makeDpadMarks(THREE, span, arm) {
     const tip = -S / 2 + 0.11 * S
     const baseY = tip + a * 0.75
     const hw = a * 0.42
+    if (style === 'glow') {
+      g.shadowColor = 'rgba(70,220,255,0.9)'
+      g.shadowBlur = 14
+      g.strokeStyle = 'rgba(120,235,255,0.85)'
+      g.lineWidth = 5
+      g.beginPath(); g.moveTo(-hw, baseY); g.lineTo(0, tip); g.lineTo(hw, baseY); g.stroke()
+      g.restore()
+      continue
+    }
     g.strokeStyle = 'rgba(150,152,158,0.26)'
     g.lineWidth = 6
     g.beginPath(); g.moveTo(-hw, baseY); g.lineTo(0, tip); g.lineTo(hw, baseY); g.stroke()

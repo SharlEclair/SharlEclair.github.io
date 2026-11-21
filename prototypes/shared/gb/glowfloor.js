@@ -35,7 +35,7 @@ const VERT = /* glsl */ `
 `
 
 const FRAG = /* glsl */ `
-  uniform float uFloor, uGrid, uCell, uOpacity, uLevel, uReach, uBase;
+  uniform float uFloor, uGrid, uCell, uOpacity, uLevel, uReach, uBase, uBreath;
   uniform vec2 uOrigin;
   uniform vec3 uDeep, uHot, uSpark;
   varying vec2 vP;
@@ -50,7 +50,7 @@ const FRAG = /* glsl */ `
     }
     float y = p.y - uBase;                                  // 0 at the console's bottom edge
     float up = max(y + 0.05, 0.0);
-    float v = exp(-pow(up / uReach, 1.35));                 // fades upward behind the console
+    float v = exp(-pow(up / (uReach * (1.0 + 0.12 * uBreath)), 1.35));                 // fades upward behind the console
     v *= smoothstep(-1.5, -0.35, y);                        // and below the pool
     float halfW = mix(2.1, 1.45, smoothstep(0.0, 1.8, y));  // wide pool, narrowing as it climbs
     float h = exp(-pow(abs(p.x) / halfW, 2.6));
@@ -83,7 +83,7 @@ const FRAG = /* glsl */ `
       col = mix(col, cg, k);
       a = mix(fs * uOpacity * 0.8, ag, k);
     }
-    a *= uLevel;
+    a *= uLevel * (1.0 + 0.2 * uBreath);
     a += (hash(gl_FragCoord.xy) - 0.5) / 255.0;            // dither: low-alpha gradients on near-black band otherwise
     gl_FragColor = vec4(col, clamp(a, 0.0, 1.0));
     #include <colorspace_fragment>
@@ -94,7 +94,7 @@ export function createFloorGlow(THREE) {
   const group = new THREE.Group()
   group.name = 'floor_glow'
   const U = {
-    uGrid: { value: 0 }, uCell: { value: LCD_PITCH * 3 }, uOpacity: { value: 1 }, uLevel: { value: 1 }, uReach: { value: 1.5 }, uBase: { value: BASE_Y },
+    uGrid: { value: 0 }, uCell: { value: LCD_PITCH * 3 }, uOpacity: { value: 1 }, uLevel: { value: 1 }, uReach: { value: 1.5 }, uBreath: { value: 0 }, uBase: { value: BASE_Y },
     uDeep: { value: new THREE.Color() }, uHot: { value: new THREE.Color() }, uSpark: { value: new THREE.Color() },
   }
   const make = (floor, origin, geo, opacityKey) => {
@@ -144,6 +144,8 @@ export function createFloorGlow(THREE) {
     refresh: apply,
     setMode(mode) { state.mode = mode; U.uGrid.value = mode === 'grid' ? 1 : 0; for (const m of [wall, floor]) m.material.uniforms.uGrid.value = U.uGrid.value },
     setTheme(name) { state.theme = name === 'light' ? 'light' : 'dark'; Object.assign(state.k, LOOKS[state.theme]); apply() },
+    /** -1..1 slow breathing offset (pulse variant): widens the climb and lifts the light a touch. */
+    setBreath(v) { U.uBreath.value = v },
     setLevel(v) { if (v !== state.level) { state.level = v; apply() } },
     /** Grid cell size in LCD pixels (a whole number) and how far up the backdrop the light climbs (local units). */
     setCell(n) { const c = LCD_PITCH * Math.max(1, Math.round(n)); for (const m of [wall, floor]) m.material.uniforms.uCell.value = c },

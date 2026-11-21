@@ -132,21 +132,82 @@ export async function createScene({
   // ?glow= variants (shared/gb/variants.js): 'default' is the sprite above, 'floor' / 'grid' the floor light, 'off' nothing.
   // The floor light is built on first use, so the default look pays nothing for it.
   let glowMode = 'default'
+  let glowKind = null // 'floor' | 'grid' when the floor light is on
+  let glowAnim = '' // '' | 'pulse' | 'drain'
   let floorGlow = null
   const ensureFloor = () => {
     if (!floorGlow) {
       floorGlow = createFloorGlow(THREE)
       floorGlow.setTheme(state.theme)
-      floorGlow.group.visible = glowMode === 'floor' || glowMode === 'grid'
-      scene.add(floorGlow.group) // world aligned: follows the rig's position and scale, never its tilt or roll
+      floorGlow.group.visible = Boolean(glowKind)
+      scene.add(floorGlow.group) // world fixed: parked at a rest pose of the console (see updateFloorGlow), not following it
     }
     return floorGlow
   }
   function setGlow(mode) {
-    glowMode = ['floor', 'grid', 'off'].includes(mode) ? mode : 'default'
-    if (glowMode === 'floor' || glowMode === 'grid') ensureFloor().setMode(glowMode)
-    if (floorGlow) floorGlow.group.visible = glowMode === 'floor' || glowMode === 'grid'
+    const [kind, anim = ''] = String(mode).split('-')
+    glowKind = kind === 'floor' || kind === 'grid' ? kind : null
+    glowAnim = glowKind && (anim === 'pulse' || anim === 'drain') ? anim : ''
+    glowMode = glowKind ? glowKind + (glowAnim ? '-' + glowAnim : '') : mode === 'off' ? 'off' : 'default'
+    if (glowKind) ensureFloor().setMode(glowKind)
+    if (floorGlow) { floorGlow.group.visible = Boolean(glowKind); floorGlow.setBreath(0) }
     if (glowMode !== 'default') glow.visible = false
+  }
+  // ---- the floor light stays where the console rests. Rest poses are found in the track: the first key, and any key
+  // that holds the same place as a neighbour (the console parks there). The light sits at the nearest rest pose; as the
+  // console moves away its presence falls from 1 to 0 (and comes back on return). Between two rests it re-parks only
+  // once it has fully faded, so it never slides across the page.
+  let anchors = []
+  let anchorIdx = 0
+  let glowAlive = false
+  const near = (a, b) => Math.abs(a.xf - b.xf) < 1e-3 && Math.abs(a.y - b.y) < 1e-3 && Math.abs(a.s - b.s) < 1e-3
+  function findAnchors(tr) {
+    const out = []
+    tr.forEach((k, i) => {
+      if (Math.abs(k.xf ?? 0) > 1.2 || (k.fill ?? 0) > 0.05) return
+      if (i === 0 || near(k, tr[i - 1]) || (tr[i + 1] && near(k, tr[i + 1]))) out.push({ xf: k.xf ?? 0, y: k.y ?? 0, z: k.z ?? 0, s: k.s ?? 1 })
+    })
+    if (!out.length && tr[0]) out.push({ xf: tr[0].xf ?? 0, y: tr[0].y ?? 0, z: tr[0].z ?? 0, s: tr[0].s ?? 1 })
+    return out
+  }
+  anchors = findAnchors(track)
+  function updateFloorGlow(pose, scale, fit, halfW, fade, time, reduced) {
+    if (!floorGlow || !glowKind || !anchors.length) { glowAlive = false; return }
+    const presence = (a) => {
+      const as = a.s * fit
+      const d = Math.hypot((pose.xf - a.xf) * halfW, pose.y - a.y) / (L.H * as) + Math.abs(scale / as - 1)
+      return 1 - smooth(clamp01((d - 0.12) / 1.0))
+    }
+    let pr = presence(anchors[Math.min(anchorIdx, anchors.length - 1)])
+    if (pr < 0.02) {
+      let best = anchorIdx
+      let bp = pr
+      anchors.forEach((a, i) => { const v = presence(a); if (v > bp) { bp = v; best = i } })
+      anchorIdx = best
+      pr = bp
+    }
+    const a = anchors[Math.min(anchorIdx, anchors.length - 1)]
+    const sc = a.s * fit
+    let level = pr
+    let sx = 1
+    let sy = 1
+    let breath = 0
+    if (glowAnim === 'pulse') {
+      breath = reduced ? 0 : Math.sin(time * 1.7) * pr
+      level = pr * (0.85 + 0.15 * Math.sin(time * 1.7 + 0.6)) * smooth(clamp01(pr * 3))
+    } else if (glowAnim === 'drain') {
+      // contract into a thin line along the floor, then fade out; the reverse on return
+      const q = smooth(clamp01(pr / 0.75))
+      sy = 0.025 + 0.975 * q
+      sx = 0.6 + 0.4 * q
+      level = smooth(clamp01(pr / 0.3))
+    }
+    floorGlow.setBreath(breath)
+    floorGlow.setLevel(level * fade)
+    floorGlow.group.scale.set(sc * sx, sc * sy, sc)
+    // keep the floor line where it was while the height collapses
+    floorGlow.group.position.set(a.xf * halfW, a.y + sc * (-L.H / 2) * (1 - sy), a.z)
+    glowAlive = level * fade > 0.003
   }
   function setTheme(name) {
     const light = name === 'light'
@@ -159,9 +220,24 @@ export async function createScene({
     scene.environmentIntensity = light ? 1.15 : 1
     state.theme = light ? 'light' : 'dark'
     floorGlow?.setTheme(state.theme)
+    if (!state.paletteExplicit && themedPalette) applyPalette(light ? LIGHT_LCD : DARK_LCD)
   }
 
   const state = { interactive, interactiveHero, engaged: false, eng: 0, calm: 0, moving: false, heroGame: false, playing: false, hover: null, trackRef: track, pose: samplePose(track, 0), w: size.w, h: size.h, onscreen: true, attached: null, theme: 'dark', palette }
+  // LCD palette follows the site theme (dark: ink, light: graphite) when the page's default 'ink' is in use and nothing
+  // chose one: no ?lcd= / ?palette= in the URL and setPalette() not called. Other palettes passed in stay as given.
+  const DARK_LCD = 'ink'
+  const LIGHT_LCD = 'graphite'
+  const urlQ = typeof location === 'undefined' ? new URLSearchParams() : new URLSearchParams(location.search)
+  state.paletteExplicit = urlQ.has('lcd') || urlQ.has('palette')
+  const themedPalette = palette === 'ink'
+  function applyPalette(name) {
+    const list = Array.isArray(name) ? name : LCD_PALETTES[name]
+    if (!list) return
+    lcd.setPalette(four(list))
+    state.attached?.inner.setPalette?.(name)
+    state.palette = name
+  }
   setTheme(theme)
   setGlow(VARIANTS.glow)
 
@@ -217,15 +293,12 @@ export async function createScene({
      * has its own setPalette(name).
      */
     setPalette(name) {
-      const list = Array.isArray(name) ? name : LCD_PALETTES[name]
-      if (!list) return
-      lcd.setPalette(four(list))
-      state.attached?.inner.setPalette?.(name)
-      state.palette = name
+      state.paletteExplicit = true
+      applyPalette(name)
     },
     get palette() { return state.palette },
     /** idle motion only costs frames while the handheld is actually in view */
-    get animated() { return state.onscreen && (idle || state.moving) },
+    get animated() { return (state.onscreen || glowAlive) && (idle || state.moving) },
     get hover() { return state.hover },
     get pose() { return state.pose },
     /**
@@ -253,7 +326,7 @@ export async function createScene({
       { at: 0.6, id: '03', title: 'Seat', text: 'Cartridge seated, the screen boots.' },
       { at: 1.0, id: '04', title: 'Play', text: 'Straight on. Up/down select, A opens, START plays.' },
     ],
-    setTrack(next) { state.trackRef = next },
+    setTrack(next) { state.trackRef = next; anchors = findAnchors(next); anchorIdx = 0 },
     update(ctx) {
       const dt = ctx.dt
       const p = ctx.reduced ? reducedAt : ctx.p
@@ -285,10 +358,8 @@ export async function createScene({
       const glowFade = 1 - smooth(clamp01(fill * 1.6))
       glowMat.opacity = glowLook.opacity * glowFade
       glow.visible = glowMode === 'default' && glowMat.opacity > 0.002
-      floorGlow?.setLevel(glowFade)
       rig.scale.setScalar(scale)
-      floorGlow?.group.position.copy(rig.position)
-      floorGlow?.group.scale.copy(rig.scale)
+      updateFloorGlow(pose, scale, fit, halfW, glowFade, t, ctx.reduced)
       // cursor lean: smaller angles on the contact pose, and none once engaged
       const lean = tilt * (1 - e) * (1 - 0.3 * smooth(state.calm))
       rig.rotation.set(pose.rx * (1 - e) - ctx.pointer.sy * 0.18 * lean, pose.ry * (1 - e) + ctx.pointer.sx * 0.28 * lean, pose.rz * (1 - e) + swayZ * tilt)

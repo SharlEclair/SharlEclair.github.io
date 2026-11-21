@@ -1,0 +1,8 @@
+/* ?sep=led  LED Bloom. A dark LED panel (it stays dark in both themes, like hardware) inside the slot. */
+.sep.sep-led { padding: clamp(1.4rem, 4svh, 2.4rem) var(--pad); contain: paint; }
+.sep-led .led-panel {
+  position: relative; display: block; width: 100%; box-sizing: border-box; overflow: hidden;
+  border-radius: 6px; background: #07070c; border: 1px solid color-mix(in srgb, var(--fg) 18%, transparent);
+  box-shadow: 0 0 40px color-mix(in srgb, #3d6bff 16%, transparent);
+}
+.sep-led .led-canvas { display: block; width: 100%; height: 100%; }

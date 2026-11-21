@@ -15,6 +15,7 @@ import { stableVh } from '/shared/ui/viewport.js'
 import { initDisclosure, initScrollSpy } from '/shared/ui/nav.js'
 import { lazyF1, lazyTransit, canRunWebGL, pixelRatioCap } from '/shared/lazy.js'
 import { lazyScene } from '/shared/gl/lazy-scene.js'
+import { exitKeys, exitFade, EXIT_NAMES } from '/shared/p2/exit-variants.js'
 
 const $ = (s, r = document) => r.querySelector(s)
 const $$ = (s, r = document) => [...r.querySelectorAll(s)]
@@ -125,6 +126,9 @@ async function initHandheld(profile) {
   const harvest = $('[data-viz="harvest"]')?.closest('.runway')
   const contact = $('#contact')
   const narrow = () => innerWidth < 760
+  // ?exit=drop|spin|dock|peek|float|flip: alternative ways for the console to leave the hero (shared/p2/exit-variants.js)
+  const exitParam = new URLSearchParams(location.search).get('exit')
+  const exitName = profile === 'hero' && EXIT_NAMES.includes(exitParam) ? exitParam : null
   // ?sep=swap: the Cartridge Swap separator drives extra pose keys, the cartridge label, the LCD card and the canvas fade
   const swap = document.documentElement.dataset.sep === 'swap' ? await import('/shared/p2/seps/swap.js') : null
 
@@ -185,6 +189,10 @@ async function initHandheld(profile) {
       track.push(
         k(hTop, { ...front, z: 0, rx: -0.05, ry: -0.32, rz: 0.05, cart: 1, fill: 0 }),
         k(hTop + (hEnd - hTop) * 0.55, { ...front, z: 0.3, rx: -0.12, ry: -0.5, rz: 0.12, cart: 1, fill: 0 }),
+      )
+      const exit = exitName ? exitKeys(exitName, { k, vh, hEnd, front, narrow: narrow() }) : []
+      if (exit.length) track.push(...exit)
+      else track.push(
         k(hEnd, { xf: front.xf + 0.15, y: front.y + 0.5, z: -0.5, rx: -0.2, ry: -0.9, rz: 0.4, s: front.s * 0.7, cart: 1, fill: 0 }),
         k(hEnd + vh * 0.5, hide),
       )
@@ -265,6 +273,7 @@ async function initHandheld(profile) {
         const full = $('[data-viz="harvest"]')
         if (full) full.style.opacity = String(profile === 'cartridge' ? smooth(0.27, 0.33, p) : 1)
       }
+      if (exitName) op *= exitFade(exitName, { hEnd: docY(hero) + hero.offsetHeight - stableVh(), vh: stableVh() }, scrollY)
       if (swap) op *= swap.swapTick(gbs, scrollY, stableVh())
       stage.style.opacity = String(op)
       document.body.classList.toggle('gb-hover', Boolean(gbs.hover))

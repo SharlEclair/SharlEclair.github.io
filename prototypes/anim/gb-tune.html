@@ -44,7 +44,7 @@
       import { L } from '/shared/gb/layout.js'
       import { LCD_PALETTES } from '/shared/dither/pass.js'
       import { createGlassVariant } from '/shared/gb/glass.js'
-      import { GLOW_MODES, PILL_MODES, BTN_MODES } from '/shared/gb/variants.js'
+      import { GLOW_MODES, PILL_MODES, BTN_MODES, DPAD_MODES, LCDFX_MODES } from '/shared/gb/variants.js'
 
       const q = new URLSearchParams(location.search)
       const STORE = 'gb-tune-v1'
@@ -201,6 +201,12 @@
         num('gpg', 'Pill gel glow', 0, 2, 0.01, () => gelU('start').uGelGlow.value, (v) => (gelU('start').uGelGlow.value = v)),
         num('gps', 'Pill gel highlight', 0, 2, 0.01, () => gelU('start').uGelSheen.value, (v) => (gelU('start').uGelSheen.value = v)),
         { ...sel('vbtn', 'A / B caps', BTN_MODES, () => gb.btnMode, (v) => gb.setBtn(v)), noSave: true },
+        { ...sel('vdpad', 'D-pad', DPAD_MODES, () => gb.dpadMode, (v) => gb.setDpad(v)), noSave: true },
+        { ...sel('vlcd', 'LCD effects', LCDFX_MODES, () => gb.lcdfxMode, (v) => { gb.setLcdFx(v); for (const id of ['ldim', 'lvig', 'lgrid', 'lrefl']) show(byId[id], byId[id].get()) }), noSave: true },
+        num('ldim', 'LCD dim', 0, 0.6, 0.01, () => gb.lcdU.uDim.value, (v) => (gb.lcdU.uDim.value = v)),
+        num('lvig', 'LCD vignette / inner shadow', 0, 1, 0.01, () => gb.lcdU.uVig.value, (v) => (gb.lcdU.uVig.value = v)),
+        num('lgrid', 'LCD pixel grid', 0, 0.6, 0.01, () => gb.lcdU.uGridFx.value, (v) => (gb.lcdU.uGridFx.value = v)),
+        num('lrefl', 'LCD glass reflection', 0, 2, 0.01, () => gb.lcdU.uRefl.value, (v) => (gb.lcdU.uRefl.value = v)),
         num('gbg', 'Cap gel glow', 0, 2, 0.01, () => gelU('btn_a').uGelGlow.value, (v) => bothGel((u) => (u.uGelGlow.value = v))),
         num('gbs', 'Cap gel highlight', 0, 2, 0.01, () => gelU('btn_a').uGelSheen.value, (v) => bothGel((u) => (u.uGelSheen.value = v))),
       ], true)

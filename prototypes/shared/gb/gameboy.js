@@ -12,7 +12,7 @@
  */
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { L } from './layout.js'
-import { makePcbTextures, makeLetterTexture, makeDiffuser, makeDpadMarks, makePrint, makeGlassWear } from './textures.js'
+import { makePcbTextures, makePcbMask, makeLetterTexture, makeDiffuser, makeDpadMarks, makePrint, makeGlassWear } from './textures.js'
 import { mergeColored, box, cylZ } from './parts.js'
 import { makeGlowTexture } from './textures.js'
 import { makeGelMaterial, GEL_LOOKS } from './gel.js'
@@ -31,7 +31,8 @@ const LOOKS = {
     color: 0x415964, face: 0.26, edge: 0.42, back: 0.6, scatter: 0xe9f2fa, scatterK: 0.8, diffuser: 0.21, diffuserColor: 0x5d6796,
     rough: 0.28, coat: 1, env: 1.1, pcb: 1.95, parts: 0.69,
   },
-  light: { color: 0x8f969e, face: 0.5, edge: 0.95, back: 0.6, scatter: 0x3a3f46, scatterK: -0.18, diffuser: 0.8, diffuserColor: 0xb8bec6 },
+  // Light page: a dark smoke tint (still translucent: the board shows through) so the console reads against cream paper
+  light: { color: 0x2c3138, face: 0.58, edge: 0.96, back: 0.68, scatter: 0x7d8792, scatterK: 0.22, diffuser: 0.34, diffuserColor: 0x3c434c, rough: 0.3, coat: 1, env: 1.0, pcb: 2.3, parts: 1.0 },
 }
 
 export async function createGameboy({ THREE, lcd, modelUrl = `${BASE}/models/gameboy.glb`, envIntensity = 1, theme = 'dark' }) {
@@ -151,6 +152,47 @@ export async function createGameboy({ THREE, lcd, modelUrl = `${BASE}/models/gam
   const screenMat = new THREE.MeshBasicMaterial({ map: screenTex, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 })
   track.push(screenTex, screenMat)
   mats.screen = screenMat
+  // LCD realism: the picture sits INSIDE the glass. Dimmer, a soft reflection gradient from the black glass over it, a
+  // vignette with an inner shadow toward the bezel, a faint pixel grid and a little cool ambient bounce. All uniforms,
+  // so ?lcdfx= and the tuner change values without a recompile. Screen UVs span the LCD mesh (0..1).
+  const LU = { uDim: { value: 0 }, uVig: { value: 0 }, uGridFx: { value: 0 }, uRefl: { value: 0 } }
+  const LCDFX = { off: [0, 0, 0, 0], soft: [0.12, 0.3, 0.1, 0.5], strong: [0.22, 0.55, 0.2, 1] }
+  screenMat.onBeforeCompile = (sh) => {
+    Object.assign(sh.uniforms, LU)
+    sh.vertexShader = sh.vertexShader
+      .replace('void main() {', 'varying vec2 vScr;\nvoid main() {\nvScr = uv;')
+    sh.fragmentShader = sh.fragmentShader
+      .replace('void main() {', 'varying vec2 vScr;\nuniform float uDim, uVig, uGridFx, uRefl;\nvoid main() {')
+      .replace(
+        '#include <opaque_fragment>',
+        `{
+           vec2 q = vScr * 2.0 - 1.0;
+           float edge = min(min(vScr.x, 1.0 - vScr.x) * 1.11, min(vScr.y, 1.0 - vScr.y));
+           float inner = 1.0 - smoothstep(0.0, 0.09, edge);                  // shadow the bezel casts on the picture
+           float vig = dot(q, q) * 0.5;
+           outgoingLight *= 1.0 - uDim - uVig * (0.35 * inner + 0.45 * vig);
+           // pixel grid: dark gutters between LCD pixels, fading out when a pixel is under ~3 screen pixels
+           vec2 pp = vScr * vec2(160.0, 144.0);
+           vec2 cell = abs(fract(pp) - 0.5) * 2.0;
+           float gutter = smoothstep(0.62, 0.95, max(cell.x, cell.y));
+           float gridK = smoothstep(0.55, 0.25, fwidth(pp.x));
+           outgoingLight *= 1.0 - uGridFx * gutter * gridK;
+           // glass over it: a diagonal soft sheen from the upper left, a brighter lip along the top, cool bounce low down
+           float diag = vScr.x * 0.55 + (1.0 - vScr.y) * 0.75;
+           float sheen = smoothstep(0.0, 0.6, 0.9 - diag) * 0.07 + smoothstep(0.1, 0.0, 1.0 - vScr.y) * 0.05;
+           outgoingLight += vec3(0.62, 0.72, 0.85) * uRefl * (sheen + 0.025 * (1.0 - vScr.y) * (1.0 - vScr.y));
+         }
+         #include <opaque_fragment>`,
+      )
+  }
+  screenMat.customProgramCacheKey = () => 'gb-lcdfx'
+  function setLcdFx(mode) {
+    const v = LCDFX[mode] ?? LCDFX.soft
+    LU.uDim.value = v[0]; LU.uVig.value = v[1]; LU.uGridFx.value = v[2]; LU.uRefl.value = v[3]
+    lcdfxMode = LCDFX[mode] ? mode : 'soft'
+  }
+  let lcdfxMode = 'soft'
+  setLcdFx(VARIANTS.lcdfx)
 
   for (const [name, m] of Object.entries(mats)) if (nodes[name]) nodes[name].material = m
   root.traverse((o) => { if (o.isMesh) o.frustumCulled = false })
@@ -177,7 +219,9 @@ export async function createGameboy({ THREE, lcd, modelUrl = `${BASE}/models/gam
   const pcbTex = makePcbTextures(THREE, chips, L.holes)
   const pcbGeo = new THREE.PlaneGeometry(L.pcb.w, L.pcb.h)
   // Unlit: seen through frosted plastic the board is a soft shadow, its brightness set by the texture alone
-  const pcbMat = new THREE.MeshBasicMaterial({ map: pcbTex.map })
+  // rounded corners: an alpha mask (cut-out, antialiased by alpha-to-coverage under MSAA)
+  const pcbMask = makePcbMask(THREE, L.pcb.w, L.pcb.h, 0.16)
+  const pcbMat = new THREE.MeshBasicMaterial({ map: pcbTex.map, alphaMap: pcbMask, alphaTest: 0.5, alphaToCoverage: true })
   const pcb = new THREE.Mesh(pcbGeo, pcbMat)
   pcb.position.set(0, L.pcb.y, L.pcb.z)
   group.add(pcb)
@@ -187,13 +231,13 @@ export async function createGameboy({ THREE, lcd, modelUrl = `${BASE}/models/gam
     box(THREE, chips[1].w, chips[1].h, 0.11, chips[1].x, chips[1].y, zc + 0.055, '#0b0c0d'),
     box(THREE, 0.3, 0.05, 0.03, chips[1].x, chips[1].y + chips[1].h / 2 + 0.04, zc + 0.015, '#0e0f11'),
     // round standoffs under the screw pits
-    ...L.holes.map((h) => cylZ(THREE, 0.05, 0.2, h.x, h.y, zc + 0.1, '#25272b', 16)),
+    ...L.holes.map((h) => cylZ(THREE, 0.05, 0.2, h.x, h.y, zc + 0.1, '#2c2f34', 32)),
     // a few SMD caps
     ...[[-0.3, -1.18], [0.2, -0.62], [-0.22, -0.5], [0.66, -0.98], [-0.42, -1.48]].map(([x, y]) => box(THREE, 0.08, 0.05, 0.04, x, y, zc + 0.02, '#4a4740')),
   ]
   const partMesh = new THREE.Mesh(mergeColored(parts), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.55, metalness: 0.25, envMapIntensity: 0.5 * envIntensity }))
   group.add(partMesh)
-  track.push(pcbGeo, pcbMat, pcbTex.map, partMesh.geometry, partMesh.material)
+  track.push(pcbGeo, pcbMat, pcbMask, pcbTex.map, partMesh.geometry, partMesh.material)
 
   // Milky diffuser just under the front face: makes the plastic read thick and frosted, internals faint behind it
   const difTex = makeDiffuser(THREE)
@@ -220,6 +264,8 @@ export async function createGameboy({ THREE, lcd, modelUrl = `${BASE}/models/gam
     track.push(tex, geo, mat)
   }
   // Arrow notches on the D-pad arms
+  let markMesh = null
+  let glowMarks = null
   if (nodes.dpad) {
     const tex = makeDpadMarks(THREE, L.dpad.span, L.dpad.arm)
     const geo = new THREE.PlaneGeometry(L.dpad.span, L.dpad.span)
@@ -229,6 +275,16 @@ export async function createGameboy({ THREE, lcd, modelUrl = `${BASE}/models/gam
     m.renderOrder = 5
     nodes.dpad.add(m)
     track.push(tex, geo, mat)
+    markMesh = m
+    // glass D-pad: the arrows engraved and lit teal (additive, only shown in ?dpad=glass)
+    const gtex = makeDpadMarks(THREE, L.dpad.span, L.dpad.arm, 'glow')
+    const gmat = new THREE.MeshBasicMaterial({ map: gtex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false })
+    glowMarks = new THREE.Mesh(geo, gmat)
+    glowMarks.position.set(0, 0, 0.0872)
+    glowMarks.renderOrder = 6
+    glowMarks.visible = false
+    nodes.dpad.add(glowMarks)
+    track.push(gtex, gmat)
   }
   // A faint coloured halo under each button (normal blending, so it composites over a transparent canvas)
   const haloTex = makeGlowTexture(THREE)
@@ -259,6 +315,39 @@ export async function createGameboy({ THREE, lcd, modelUrl = `${BASE}/models/gam
   print.renderOrder = 5
   group.add(print)
   track.push(printTex, printGeo, printMat)
+
+  // D-pad variants (?dpad=): built up front, swapped with setDpad. 'flat' is the default material in `mats`.
+  const dpadLook = {
+    gel: { base: { color: 0x15181c, roughness: 0.36, clearcoat: 0.9, clearcoatRoughness: 0.2, sheen: 0.7, sheenRoughness: 0.45, sheenColor: new THREE.Color(0x2c5360) }, rim: [0.1, 0.8, 0.9], rimK: 0.5, top: 0.1 },
+    glass: { base: { color: 0x07090c, roughness: 0.05, clearcoat: 1, clearcoatRoughness: 0.02, envMapIntensity: 1.7 * envIntensity }, rim: [0.1, 0.75, 1.0], rimK: 0.35, top: 0.05 },
+    rubber: { base: { color: 0x222428, roughness: 0.9, clearcoat: 0, sheen: 0.8, sheenRoughness: 0.55, sheenColor: new THREE.Color(0x8c96a2) }, rim: null, rimK: 0, top: 0 },
+  }
+  const dpadMats = { flat: mats.dpad }
+  for (const [kind, d] of Object.entries(dpadLook)) {
+    const m = new THREE.MeshPhysicalMaterial({ metalness: 0, envMapIntensity: envIntensity, ...d.base })
+    if (d.rimK > 0) {
+      m.onBeforeCompile = (sh) => {
+        sh.fragmentShader = sh.fragmentShader.replace(
+          '#include <emissivemap_fragment>',
+          `#include <emissivemap_fragment>
+           float dNdv = clamp(dot(normalize(vViewPosition), normal), 0.0, 1.0);
+           totalEmissiveRadiance += vec3(${d.rim.map((v) => v.toFixed(2)).join(',')}) * ${d.rimK.toFixed(2)} * pow(1.0 - dNdv, 2.4);
+           totalEmissiveRadiance += vec3(0.7, 0.85, 1.0) * ${d.top.toFixed(2)} * smoothstep(0.55, 1.0, normal.y);`,
+        )
+      }
+    }
+    m.customProgramCacheKey = () => `gb-dpad-${kind}`
+    dpadMats[kind] = m
+    track.push(m)
+  }
+  let dpadMode = 'flat'
+  function setDpad(mode) {
+    dpadMode = dpadMats[mode] ? mode : 'flat'
+    if (nodes.dpad) nodes.dpad.material = dpadMats[dpadMode]
+    if (glowMarks) glowMarks.visible = dpadMode === 'glass'
+    if (markMesh) markMesh.visible = dpadMode !== 'glass' && dpadMode !== 'rubber'
+  }
+  setDpad(VARIANTS.dpad)
 
   function setTheme(name) {
     const k = LOOKS[name] ?? LOOKS.dark
@@ -296,7 +385,7 @@ export async function createGameboy({ THREE, lcd, modelUrl = `${BASE}/models/gam
   const api = {
     group, nodes, mats, lcd, texture: screenTex, press, interactive: false, setTheme,
     /** Look variants (shared/gb/variants.js): 'flat' (default) | 'gel' for the on/off pill and for the A / B caps. `gel` holds the gel materials. */
-    setPill, setBtn, gel, get pillMode() { return variant.pill }, get btnMode() { return variant.btn },
+    setPill, setBtn, setDpad, setLcdFx, dpadMats, get dpadMode() { return dpadMode }, get lcdfxMode() { return lcdfxMode }, lcdU: LU, gel, get pillMode() { return variant.pill }, get btnMode() { return variant.btn },
     /** Live handles for anim/gb-tune.html (the tuning page): shared frost uniforms, the diffuser and button halos. */
     tune: { U, frost: [shell, shellBack, clear, collar], difMat, diffuser, halos, printMat, pcbMat, partMat: partMesh.material },
     /** Which control is under the raycaster, or null. D-pad returns its direction. */

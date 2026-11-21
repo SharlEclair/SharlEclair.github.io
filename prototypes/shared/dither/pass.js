@@ -24,9 +24,19 @@ export const LCD_PALETTES = {
   ember: ['#140a06', '#4a2312', '#b4571c', '#ffbd62'], // dark brown to warm amber
   ice: ['#071423', '#1c4260', '#4f8bad', '#98c6da'], // deep navy to pale ice blue
   berry: ['#1a0716', '#5a1a4c', '#c04a8e', '#ffc2e2'], // plum to pink
+  // Monochrome LCDs. Dark ground (light subject): graphite, slate, noir, sepia, cyanotype. Light ground, dark ink
+  // (INK_PALETTES): paper, bone, fog.
+  graphite: ['#0d0d0e', '#3a3b3d', '#85888c', '#cfd2d6'],
+  slate: ['#0a0e14', '#2a3340', '#6b7a8c', '#bcc8d6'],
+  noir: ['#000000', '#2a2a2a', '#9a9a9a', '#ffffff'],
+  sepia: ['#140e08', '#463521', '#9a7a52', '#e8d3a8'],
+  cyanotype: ['#04101f', '#0f3358', '#2f7bb8', '#b8e0ff'],
+  paper: ['#1b1a17', '#55524a', '#9c978a', '#d8d4c6'],
+  bone: ['#201d19', '#5d564c', '#a79d8c', '#e3dac8'],
+  fog: ['#16181a', '#4b5156', '#98a0a6', '#d9dee1'],
 }
 /** Palettes whose ground is the LIGHT end: scenes (bright subject on black) get the colour order reversed. */
-export const INK_PALETTES = new Set(['ink', 'pocket'])
+export const INK_PALETTES = new Set(['ink', 'pocket', 'paper', 'bone', 'fog'])
 export function paletteColors(name) {
   const list = Array.isArray(name) ? name : LCD_PALETTES[name] ?? LCD_PALETTES.dmg
   return !Array.isArray(name) && INK_PALETTES.has(name) ? [...list].reverse() : list

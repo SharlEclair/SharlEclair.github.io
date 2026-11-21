@@ -8,6 +8,11 @@
  *   ?sep=swap    the console swaps its cartridge (slot 1) and dives into the project list
  *   ?sep=zoom    the next heading resolves through 1-bit dithered "zoom levels"
  *   ?sep=tear    the old torn newspaper
+ *   ?sep=ribbon  blue, teal and violet ribbons braid into one thin line through a glass pill
+ *   ?sep=led     an LED panel: a wave sweeps across and settles into a dot-matrix caption
+ *   ?sep=plates  isometric translucent plates slide apart and re-stack
+ *   ?sep=lap     an F1 timing-tower row: mini-sectors fill, the PB chip lights
+ *   ?sep=cursor  the console's pixel dino walks the divider and opens the next section like a door
  *
  * A variant module (shared/p2/seps/<name>.js) exports:
  *   mount(el, { slot, reduced }) -> void | () => void   build inside `el` (the slot); may return a cleanup
@@ -22,6 +27,11 @@ const LOADERS = {
   swap: () => import('./swap.js'),
   zoom: () => import('./zoom.js'),
   tear: () => import('./tear-sep.js'),
+  ribbon: () => import('./ribbon.js'),
+  led: () => import('./led.js'),
+  plates: () => import('./plates.js'),
+  lap: () => import('./lap.js'),
+  cursor: () => import('./cursor.js'),
 }
 export const DEFAULT_SEP = 'query'
 export const sepNames = Object.keys(LOADERS)

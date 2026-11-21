@@ -34,6 +34,7 @@ const PLATES = [
 
 // Beat times of the pinned runway (p, 0..1). Legs of the packet: [p0, p1] per leg.
 const LEG_T = [[0.05, 0.12], [0.12, 0.205], [0.205, 0.3], [0.36, 0.45], [0.45, 0.55], [0.55, 0.62], [0.62, 0.7], [0.72, 0.86]]
+const END_TH = Math.PI / 4
 const PTS_PER_LEG = 30 // 8 legs x 30 = 240 sampled points
 
 const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v))
@@ -91,7 +92,15 @@ function layoutTall() {
 }
 
 // ---------------------------------------------------------------------------------------------- geometry helpers
-const isoPt = (L, i, u, v) => [L.cx + (u - v) * L.a, L.cys[i] - L.b + (u + v) * L.b]
+// Plates are authored in PLANE coordinates (a square around the origin) and mapped to the screen by a per-frame matrix
+// (yaw theta, tilt k): at theta = 45 degrees this is the isometric diamond. Depth comes from the plates separating.
+const planeS = (L) => L.a * Math.SQRT1_2
+const isoPt = (L, i, u, v) => [(u - 0.5) * 2 * planeS(L), (v - 0.5) * 2 * planeS(L)]
+const mat = (L, th, k, cy, dy = 0) => {
+  const c = Math.cos(th), s = Math.sin(th)
+  return `matrix(${c.toFixed(4)} ${(k * s).toFixed(4)} ${(-s).toFixed(4)} ${(k * c).toFixed(4)} ${f1(L.cx)} ${f1(cy + dy)})`
+}
+const sq = (x, y, h) => `M${f1(x - h)},${f1(y - h)}h${f1(2 * h)}v${f1(2 * h)}h${f1(-2 * h)}Z`
 
 function roundPoly(pts, ts) {
   const n = pts.length
@@ -105,9 +114,8 @@ function roundPoly(pts, ts) {
   return `${d}Z`
 }
 function platePath(L, i, dy = 0, grow = 0) {
-  const cy = L.cys[i] + dy
-  const a = L.a + grow, b = L.b + grow * 0.5
-  return roundPoly([[L.cx, cy - b], [L.cx + a, cy], [L.cx, cy + b], [L.cx - a, cy]], [0.12, 0.17, 0.12, 0.17])
+  const s = planeS(L) + grow
+  return roundPoly([[-s, -s], [s, -s], [s, s], [-s, s]], [0.13, 0.13, 0.13, 0.13])
 }
 function rng(seed) {
   let s = seed
@@ -134,7 +142,7 @@ function detailGrid(L) {
     lines += `M${fp(isoPt(L, 1, t, 0))}L${fp(isoPt(L, 1, t, 1))}M${fp(isoPt(L, 1, 0, t))}L${fp(isoPt(L, 1, 1, t))}`
     for (let j = 1; j < n; j += 1) {
       const [x, y] = isoPt(L, 1, t, j / n)
-      const d = diamond(x, y, 3.4 * L.dot, 1.8 * L.dot)
+      const d = sq(x, y, 2.3 * L.dot)
       if ((k + j) % 3 === 0) filled += d
       else outline += d
     }
@@ -153,23 +161,18 @@ function detailMesh(L) {
       node[i].push(isoPt(L, 2, u, v))
     }
   }
-  let edges = '', nodes = '', spikes = '', tips = ''
+  let edges = '', nodes = ''
   for (let i = 0; i <= m; i += 1) {
     for (let j = 0; j <= m; j += 1) {
       const p = node[i][j]
       if (i < m) edges += `M${fp(p)}L${fp(node[i + 1][j])}`
       if (j < m) edges += `M${fp(p)}L${fp(node[i][j + 1])}`
       if (i < m && j < m && (i + j) % 3 === 0) edges += `M${fp(p)}L${fp(node[i + 1][j + 1])}`
-      nodes += diamond(p[0], p[1], 1.9 * L.dot, 1.1 * L.dot)
+      nodes += sq(p[0], p[1], 1.3 * L.dot)
     }
   }
-  for (const [i, j, h] of [[2, 3, 22], [4, 4, 28], [5, 2, 18]]) {
-    const p = node[i][j]
-    const top = [p[0], p[1] - h * L.dot]
-    spikes += `M${fp(p)}L${fp(top)}`
-    tips += diamond(top[0], top[1], 2.6 * L.dot, 1.5 * L.dot)
-  }
-  return `<path class="d-edge" d="${edges}"/><path class="d-node" d="${nodes}"/><path class="d-spike" d="${spikes}"/><path class="d-tip" d="${tips}"/>`
+  L.spikes = [[2, 3, 22], [4, 4, 28], [5, 2, 18]].map(([i, j, h]) => ({ pu: node[i][j][0], pv: node[i][j][1], h: h * L.dot }))
+  return `<path class="d-edge" d="${edges}"/><path class="d-node" d="${nodes}"/>`
 }
 
 // ---------------------------------------------------------------------------------------------- markup
@@ -236,11 +239,18 @@ ${R.legs.map((d, i) => `<path id="${id}leg${i}" d="${d}"/>`).join('')}
         i === 3
           ? `<text class="rows" data-rows x="${cx}" y="${cys[3] + 1}" font-size="${fs.big}" text-anchor="middle" dominant-baseline="central" style="fill:#fff;stroke:rgba(0,0,0,.35);stroke-width:3;paint-order:stroke">${ROWS} rows</text>`
           : ''
+      const kk = L.b / L.a
+      const spikes =
+        i === 2
+          ? L.spikes.map((sp, j) => `<g data-spike="${j}" transform="translate(${f1(cx + (sp.pu - sp.pv) * Math.SQRT1_2)} ${f1(cys[2] + kk * (sp.pu + sp.pv) * Math.SQRT1_2)})"><path class="d-spike" d="M0,0L0,${-sp.h}"/><path class="d-tip" d="${diamond(0, -sp.h, 2.6 * L.dot, 1.5 * L.dot)}"/></g>`).join('')
+          : ''
       return `<g class="lp-hit" data-plate="${i}" data-tip="${PLATES[i].tip}">
-<path class="lp-slab" d="${platePath(L, i, th)}"/>
+<path class="lp-slab" data-slab="${i}" transform="${mat(L, END_TH, kk, cys[i], th)}" d="${d}"/>
+<g data-pl="${i}" transform="${mat(L, END_TH, kk, cys[i])}">
 <path class="lp-plate" d="${d}" fill="url(#${id}g${i + 1})"/>
 ${dets[i]}${extra}
 <g data-halo="${i}" opacity="0"><path class="lp-halo lp-halo-soft" d="${d}"/><path class="lp-halo" d="${d}"/></g>
+</g>${spikes}
 ${rowsTxt}
 </g>`
     })
@@ -280,7 +290,7 @@ ${rowsTxt}
     `<path class="r-guide dashed" data-g4 d="M${cx},${cys[2]}L${cx},${cys[3]}"/>`,
   ].join('')
 
-  const routes = `${guide}
+  const routes = `<g data-guides>${guide}</g>
 <path class="r-loop" data-loopbase d="${R.loop}" opacity=".9"/>
 <path class="r-trail" data-trail d="${R.first}${R.loop.replace('M', 'M')} M${cx},${cys[1]}L${cx},${cys[3]}" opacity=".8"/>
 <path class="r-lit first" data-lit="A" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="0" d="${R.first}"/>
@@ -293,7 +303,7 @@ ${rowsTxt}
   return `<svg class="lp-svg" viewBox="0 0 ${L.W} ${L.H}" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="${id}t ${id}d" focusable="false">
 <title id="${id}t">${title}</title><desc id="${id}d">${desc}</desc>
 ${defs}${plates}${routes}${labels}${ghost}${tag}${score}
-${pill(L, 'diag', 'DIAGNOSE', L.yd, 'diagnoses the error')}${pill(L, 'fix', 'FIX', L.yf, 'fixes it itself')}
+<g data-pills>${pill(L, 'diag', 'DIAGNOSE', L.yd, 'diagnoses the error')}${pill(L, 'fix', 'FIX', L.yf, 'fixes it itself')}</g>
 ${packet}
 </svg>`
 }
@@ -363,6 +373,9 @@ export function mount(el, { theme, reduced = false, progress } = {}) {
       litA: q('[data-lit="A"]'), litB: q('[data-lit="B"]'), litC: q('[data-lit="C"]'), litD: q('[data-lit="D"]'),
       halo: [0, 1, 2, 3].map((i) => q(`[data-halo="${i}"]`)),
       st: [1, 2].map((i) => q(`[data-st="${i}"]`)),
+      pl: [0, 1, 2, 3].map((i) => q(`[data-pl="${i}"]`)), slab: [0, 1, 2, 3].map((i) => q(`[data-slab="${i}"]`)),
+      spikes: qa('[data-spike]'), labels: [0, 1, 2, 3].map((i) => q(`[data-label="${i}"]`)),
+      guides: q('[data-guides]'), pills: q('[data-pills]'),
       pillDiag: q('[data-pill="diag"]'), pillFix: q('[data-pill="fix"]'),
       pk0Key: '',
     }
@@ -434,7 +447,46 @@ export function mount(el, { theme, reduced = false, progress } = {}) {
     put(R.pkHalo, 'rx', f1(w / 2 + 12)); put(R.pkHalo, 'ry', f1(h / 2 + 9))
   }
 
-  function render(p) {
+  // The loop story keeps its original 0..1 timing; the runway timing maps onto it (error ~0.55, loop 0.62 to 0.8, answer 0.85 to 0.95).
+  const KNOTS = [[0.45, 0.05], [0.55, 0.3], [0.62, 0.36], [0.8, 0.62], [0.85, 0.7], [0.95, 0.86], [1, 1]]
+  function remap(P) {
+    if (P <= KNOTS[0][0]) return 0
+    for (let i = 1; i < KNOTS.length; i += 1) {
+      if (P <= KNOTS[i][0]) { const [a0, b0] = KNOTS[i - 1], [a1, b1] = KNOTS[i]; return mix(b0, b1, (P - a0) / (a1 - a0)) }
+    }
+    return 1
+  }
+  const ptr = { x: 0, y: 0, tx: 0, ty: 0 }
+  const DEG = Math.PI / 180
+
+  /** Place the four plates: one tight slab, turning, then exploding apart with a little per-layer yaw (parallax). */
+  function placePlates(P) {
+    const e = smooth(0.12, 0.3, P)
+    const turn = smooth(0, 0.3, P)
+    const th0 = mix(14, 45, turn) * DEG + ptr.x * 5 * DEG
+    const k = (L.b / L.a) * mix(1.5, 1, turn) + ptr.y * 0.03
+    const mid = (L.cys[0] + L.cys[3]) / 2
+    const gap0 = L.th + 2
+    for (let i = 0; i < 4; i += 1) {
+      const cy = mix(mid + (i - 1.5) * gap0, L.cys[i], e)
+      const th = th0 + (i - 1.5) * 6 * DEG * Math.sin(Math.PI * e)
+      put(R.pl[i], 'transform', mat(L, th, k, cy))
+      put(R.slab[i], 'transform', mat(L, th, k, cy, L.th))
+      if (i === 2) {
+        const c = Math.cos(th), s = Math.sin(th)
+        R.spikes.forEach((g, j) => { const sp = L.spikes[j]; put(g, 'transform', `translate(${f1(L.cx + sp.pu * c - sp.pv * s)} ${f1(cy + k * (sp.pu * s + sp.pv * c))})`) })
+      }
+    }
+  }
+
+  function render(P) {
+    placePlates(P)
+    const late = smooth(0.38, 0.45, P)
+    for (let i = 0; i < 4; i += 1) op(R.labels[i], smooth(0.3 + 0.012 * i, 0.34 + 0.012 * i, P))
+    op(R.guides, late); op(R.pills, late)
+    const chipO = String(Math.round(late * 100) / 100)
+    if (chip._o !== chipO) { chip._o = chipO; chip.style.opacity = chipO; beat.style.opacity = chipO }
+    const p = remap(P)
     const U = legs.map((l) => smooth(l.p0, l.p1, p))
     let li = 0
     for (let i = 0; i < legs.length; i += 1) if (p >= legs[i].p0) li = i
@@ -442,15 +494,15 @@ export function mount(el, { theme, reduced = false, progress } = {}) {
     const gone = smooth(0.84, 0.88, p)
     const shake = p > 0.3 && p < 0.345 && !reduced ? Math.sin((p - 0.3) * 900) * 3 * (1 - smooth(0.32, 0.345, p)) : 0
     put(R.pk, 'transform', `translate(${f1(x0 + shake)} ${f1(y0)}) scale(${f1(1 - 0.4 * gone)})`)
-    op(R.pk, 1 - gone)
+    op(R.pk, (1 - gone) * late)
 
     const key = p < 0.115 ? 'q' : p < 0.43 ? 'sql' : p < 0.53 ? 'tools' : p < 0.62 ? 'stack' : 'sql'
     setPacketLabel(key)
     put(R.pk, 'data-err', p >= 0.3 && p < 0.37 ? '1' : '0')
-    op(R.ghost, smooth(0.06, 0.12, p) * 0.9)
+    op(R.ghost, smooth(0.06, 0.12, p) * 0.9 * late)
 
     // plate proximity halos
-    const visible = 1 - gone
+    const visible = (1 - gone) * late
     const side = 1 - smooth(L.a * 0.8, L.a * 1.15, Math.abs(x0 - L.cx))
     for (let i = 0; i < 4; i += 1) {
       const near = (1 - smooth(0, L.b + 22, Math.abs(y0 - L.cys[i]))) * side * visible
@@ -486,7 +538,7 @@ export function mount(el, { theme, reduced = false, progress } = {}) {
     put(R.litC, 'stroke-dashoffset', f1((1 - U[6]) * 1000) / 1000)
     put(R.litD, 'stroke-dashoffset', f1((1 - U[7]) * 1000) / 1000)
     op(R.litB, uB > 0 ? 1 : 0); op(R.litC, U[6] > 0 ? 1 : 0); op(R.litD, U[7] > 0 ? 1 : 0)
-    op(R.loopBase, mix(0.3, 0.85, smooth(0.33, 0.4, p)))
+    op(R.loopBase, mix(0.3, 0.85, smooth(0.33, 0.4, p)) * late)
     put(R.g4, 'class', p >= 0.3 ? 'r-guide dashed' : 'r-guide')
     op(R.trail, smooth(0.86, 1, p) * 0.8)
 
@@ -522,7 +574,12 @@ export function mount(el, { theme, reduced = false, progress } = {}) {
     raf = 0
     if (!on) return
     const p = progress ? progress() : 1
-    if (Math.abs(p - lastP) > 1e-4) { lastP = p; render(p) }
+    let moved = false
+    for (const k of ['x', 'y']) {
+      const d = ptr['t' + k] - ptr[k]
+      if (Math.abs(d) > 0.002) { ptr[k] += d * 0.12; moved = true } else if (d) ptr[k] = ptr['t' + k]
+    }
+    if (moved || Math.abs(p - lastP) > 1e-4) { lastP = p; render(p) }
     raf = requestAnimationFrame(tick)
   }
   function setOn(v) {
@@ -539,6 +596,15 @@ export function mount(el, { theme, reduced = false, progress } = {}) {
   if (!reduced) {
     io = new IntersectionObserver((entries) => { for (const e of entries) setOn(e.isIntersecting) }, { rootMargin: '10% 0px' })
     io.observe(root)
+  }
+  if (!reduced) {
+    root.addEventListener('pointermove', (e) => {
+      if (e.pointerType !== 'mouse') return
+      const r = root.getBoundingClientRect()
+      ptr.tx = clamp(((e.clientX - r.left) / r.width) * 2 - 1, -1, 1)
+      ptr.ty = clamp(((e.clientY - r.top) / r.height) * 2 - 1, -1, 1)
+    })
+    root.addEventListener('pointerleave', () => { ptr.tx = 0; ptr.ty = 0 })
   }
   ro = new ResizeObserver(() => {
     const before = L?.mode

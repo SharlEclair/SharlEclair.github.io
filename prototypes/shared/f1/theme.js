@@ -52,7 +52,7 @@ export const THEMES = {
     track: { color: '#a79cc4', opacity: 0.3 },
     lights: {
       hemi: [0x8a6a9a, 0x0c080e, 0.4],
-      key: [0xffdcaa, 2.1],
+      key: [0xe4eaff, 2.4],
       fill: [0x8e68d8, 1.1],
     },
     grid: { center: 0x4a3a2a, line: 0x231a27, base: 0.03, reveal: 0.2, normal: false },

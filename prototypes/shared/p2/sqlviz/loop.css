@@ -48,6 +48,10 @@ html[data-theme='light'] .lp {
 .lp-svg .lp-okfill { fill: color-mix(in srgb, var(--stage-accent) 26%, transparent); stroke: var(--stage-accent); stroke-width: 1.8; stroke-linejoin: round; }
 .lp-svg .lp-glow { fill: none; stroke: var(--lp-g3); stroke-linejoin: round; }
 
+/* plates live in plane coordinates under a per-frame matrix: keep strokes a constant screen width */
+.lp-svg .lp-slab, .lp-svg .lp-plate, .lp-svg .lp-halo, .lp-svg .lp-errfill, .lp-svg .lp-okfill, .lp-svg .lp-glow,
+.lp-svg .d-grid, .lp-svg .d-mk, .lp-svg .d-edge { vector-effect: non-scaling-stroke; }
+
 /* plate decoration */
 .lp-svg .d-dot-w { fill: var(--lp-warm); }
 .lp-svg .d-dot-s { fill: var(--on-stage); }

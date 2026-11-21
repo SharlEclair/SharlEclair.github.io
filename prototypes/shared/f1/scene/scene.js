@@ -15,7 +15,7 @@ export const hemi = new THREE.HemisphereLight(0x8a6a9a, 0x0c080e, 0.4)
 scene.add(hemi)
 
 // Warm window-light from above and to one side: the single key of a chiaroscuro set-up.
-export const key = new THREE.DirectionalLight(0xffdcaa, 2.1)
+export const key = new THREE.DirectionalLight(0xe4eaff, 2.4)
 key.position.set(5, 12, 3)
 scene.add(key)
 

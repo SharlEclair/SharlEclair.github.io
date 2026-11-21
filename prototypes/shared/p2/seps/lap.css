@@ -1,0 +1,27 @@
+/* ?sep=lap  Timing Tower. A broadcast-style row of mini-sector blocks. Purple / green / yellow are the timing-screen colours. */
+.sep.sep-lap { height: clamp(7.5rem, 15svh, 9.5rem); contain: paint; --purple: #b150ff; --green: #2ee06a; --yellow: #f4c430; }
+html[data-theme='light'] .sep.sep-lap { --purple: #8a2be2; --green: #0f9d47; --yellow: #c98f00; }
+.sep-lap .lp-row {
+  position: absolute; left: var(--pad); right: var(--pad); top: 50%; transform: translateY(-50%);
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 1rem;
+  font: 500 .72rem/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
+}
+.sep-lap .lp-tag { color: var(--fg); padding: .35rem .5rem; border: 1px solid var(--line); }
+.sep-lap .lp-secs { display: grid; grid-template-columns: repeat(3, 1fr); gap: .9rem; min-width: 0; }
+.sep-lap .lp-sec b { display: block; font-weight: 500; margin-bottom: .45rem; }
+.sep-lap .lp-bar { display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; }
+.sep-lap .lp-bar i { height: .7rem; background: color-mix(in srgb, var(--fg) 12%, transparent); }
+.sep-lap .lp-bar i.on { background: var(--yellow); }
+.sep-lap .lp-sec.done .lp-bar i.on { background: var(--c); }
+.sep-lap .lp-sec.done b { color: var(--c); }
+.sep-lap .lp-end { display: flex; align-items: center; gap: .6rem; white-space: nowrap; }
+.sep-lap .lp-pb { padding: .45rem .6rem; background: color-mix(in srgb, var(--fg) 10%, transparent); color: var(--muted); }
+.sep-lap.is-pb .lp-pb { background: var(--green); color: #05140b; font-weight: 600; }
+.sep-lap .lp-next b { color: var(--fg); font-weight: 500; }
+@media (max-width: 640px) {
+  .sep.sep-lap { height: 8.5rem; }
+  .sep-lap .lp-row { grid-template-columns: 1fr; gap: .8rem; font-size: .64rem; }
+  .sep-lap .lp-tag { display: none; }
+  .sep-lap .lp-end { justify-content: space-between; }
+  .sep-lap .lp-bar { gap: 2px; }
+}
