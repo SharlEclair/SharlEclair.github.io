@@ -1,0 +1,15 @@
+/* ?sep=termbar  Progress. Block-character bar that fills, then collapses into a rule. */
+.sep.sep-termbar { height: clamp(5.5rem, 13svh, 7rem); overflow: hidden; contain: paint; display: grid; align-items: center; }
+.sep-termbar .tb-pre {
+  margin: 0; box-sizing: border-box; width: 100%; overflow: hidden; white-space: pre; text-align: left;
+  font: 400 clamp(.7rem, 1.6vw, .88rem)/1.9 var(--mono);
+  font-variant-ligatures: none; font-feature-settings: 'liga' 0, 'calt' 0;
+  color: var(--muted);
+}
+.sep-termbar .tb-pre i { font-style: normal; color: var(--muted); }
+.sep-termbar .tb-pre b { font-weight: 400; color: color-mix(in srgb, var(--accent) 72%, var(--bg)); background: color-mix(in srgb, var(--accent) 72%, var(--bg)); }
+.sep-termbar .tb-pre u, .sep-termbar .tb-pre em { letter-spacing: var(--ls-u, 0); }
+.sep-termbar .tb-pre em { letter-spacing: var(--ls-em, 0); }
+.sep-termbar .tb-pre em { font-style: normal; color: color-mix(in srgb, var(--fg) 30%, transparent); }
+.sep-termbar .tb-pre u { text-decoration: none; color: color-mix(in srgb, var(--fg) 45%, transparent); }
+.sep-termbar .tb-pre s { text-decoration: none; color: var(--fg); }

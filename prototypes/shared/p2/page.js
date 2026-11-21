@@ -15,6 +15,7 @@ import { stableVh } from '/shared/ui/viewport.js'
 import { initDisclosure, initScrollSpy } from '/shared/ui/nav.js'
 import { lazyF1, lazyTransit, canRunWebGL, pixelRatioCap } from '/shared/lazy.js'
 import { lazyScene } from '/shared/gl/lazy-scene.js'
+import { initSettle } from '/shared/p2/settle.js'
 import { exitKeys, exitFade, EXIT_NAMES } from '/shared/p2/exit-variants.js'
 
 const $ = (s, r = document) => r.querySelector(s)
@@ -54,6 +55,7 @@ function onTheme(theme) {
 
 export function initPage({ profile }) {
   initSeps()
+  initSettle()
   initNameMorph({ h1: $('.hero--console .hero-copy h1'), brand: $('.top .brand'), reduced: reducedMotion })
   swapConsolePosters(currentTheme())
   document.addEventListener('themechange', (e) => onTheme(e.detail))
@@ -126,7 +128,7 @@ async function initHandheld(profile) {
   const harvest = $('[data-viz="harvest"]')?.closest('.runway')
   const contact = $('#contact')
   const narrow = () => innerWidth < 760
-  // ?exit=drop|spin|dock|peek|float|flip: alternative ways for the console to leave the hero (shared/p2/exit-variants.js)
+  // ?exit=settle|arc|shrink|turn|face: variants of the default way the console leaves the hero (shared/p2/exit-variants.js)
   const exitParam = new URLSearchParams(location.search).get('exit')
   const exitName = profile === 'hero' && EXIT_NAMES.includes(exitParam) ? exitParam : null
   // ?sep=swap: the Cartridge Swap separator drives extra pose keys, the cartridge label, the LCD card and the canvas fade

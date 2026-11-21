@@ -1,0 +1,28 @@
+/* ?sep=strands  Cable. Three tagged strands braid, then pull taut. Colours are tokens so both themes read. */
+.sep.sep-strands {
+  --s1: #4a76ff; --s2: #2fe0c8; --s3: #a56bff;
+  height: clamp(9.5rem, 22svh, 12.5rem); overflow: hidden; contain: paint;
+}
+:root[data-theme='light'] .sep.sep-strands { --s1: #2646e0; --s2: #0b9a8a; --s3: #7a38e0; }
+.sep-strands .sd-svg { position: absolute; inset: 0; display: block; overflow: visible; }
+.sep-strands .sd-s { fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.sep-strands .sd-s1 { stroke: var(--s1); }
+.sep-strands .sd-s2 { stroke: var(--s2); }
+.sep-strands .sd-s3 { stroke: var(--s3); }
+.sep-strands .sd-tag, .sep-strands .sd-next {
+  position: absolute; left: 0; top: 0; white-space: nowrap; will-change: transform;
+  font: 500 .64rem/14px var(--mono); letter-spacing: .08em; color: var(--muted);
+}
+.sep-strands .sd-tag::before {
+  content: ''; display: inline-block; width: .42rem; height: .42rem; border-radius: 50%; margin-right: .5rem;
+  vertical-align: 0; background: currentColor;
+}
+.sep-strands .sd-t1::before { color: var(--s1); background: var(--s1); }
+.sep-strands .sd-t2::before { color: var(--s2); background: var(--s2); }
+.sep-strands .sd-t3::before { color: var(--s3); background: var(--s3); }
+.sep-strands .sd-next { color: var(--fg); text-transform: uppercase; }
+.sep-strands .sd-next::before { content: 'next '; color: var(--muted); }
+@media (max-width: 640px) {
+  .sep-strands .sd-tag { font-size: .58rem; letter-spacing: .04em; }
+  .sep-strands .sd-next { display: none; }
+}

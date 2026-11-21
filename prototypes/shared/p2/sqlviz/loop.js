@@ -19,10 +19,10 @@ const ERROR_TAG = 'column "tools" not found'
 const CAPTION = 'Illustration: a query on this page’s own content. Scores are from the project’s test set.'
 
 const BEATS = [
-  { at: 0, id: 'running', title: 'RUNNING', mark: '●', text: 'an AI writes the query, safety checks review it' },
-  { at: 0.3, id: 'error', title: 'ERROR', mark: '✕', text: ERROR_TAG },
-  { at: 0.36, id: 'heal', title: 'SELF-HEALING', mark: '↻', text: 'diagnoses the error and fixes it itself' },
-  { at: 0.72, id: 'ok', title: 'CORRECT', mark: '✓', text: `fixed itself and returned ${ROWS} rows` },
+  { at: 0, id: 'running', title: 'RUNNING', text: 'an AI writes the query, safety checks review it' },
+  { at: 0.3, id: 'error', title: 'ERROR', text: ERROR_TAG },
+  { at: 0.36, id: 'heal', title: 'SELF-HEALING', text: 'diagnoses the error and fixes it itself' },
+  { at: 0.72, id: 'ok', title: 'CORRECT', text: `fixed itself and returned ${ROWS} rows` },
 ]
 
 const PLATES = [
@@ -65,28 +65,28 @@ function ensureStyles(onReady) {
 function layoutWide() {
   const cx = 326, a = 172, b = 44
   const cys = [112, 210, 308, 406]
-  const fs = { title: 14, sub: 12.5, st: 12.5, tag: 12.5, pill: 12, pk: 12.5, rows: 24, score: 13, big: 28 }
+  const fs = { title: 12, sub: 11.5, st: 10.5, tag: 11.5, pill: 11, pk: 11.5, rows: 24, score: 11, big: 28 }
   const tagW = cw(ERROR_TAG, fs.tag) + 22
   return {
     mode: 'wide', W: 860, H: 470, cx, a, b, cys, yTop: 32, fs, th: 7,
-    labelX: cx - a - 16, pillW: 100, pillH: 28, px: 668, yd: cys[2] - 22, yf: cys[1] + 22,
+    labelX: 0, mk: 7, px: 668, yd: cys[2] - 22, yf: cys[1] + 22,
     tag: { x: cx + a + 14, y: cys[2] + 16, w: tagW, h: 24 },
     score: { x: cx + a + 26, k: cys[3] - 4, v: cys[3] + 26, anchor: 'start' },
-    gap: [14, 28, 42], // label baselines relative to cy: title, sub, status
+    gap: [-8, 14, 28], // label baselines relative to cy: title (above the leader), sub, status
     dot: 1,
   }
 }
 function layoutTall() {
   const cx = 176, a = 80, b = 30
   const cys = [86, 172, 258, 344]
-  const fs = { title: 9.5, sub: 9, st: 9, tag: 9, pill: 9, pk: 9.5, rows: 16, score: 9.5, big: 14 }
+  const fs = { title: 9.5, sub: 9, st: 8.5, tag: 9, pill: 8.5, pk: 9, rows: 16, score: 9, big: 14 }
   const tagW = cw(ERROR_TAG, fs.tag) + 14
   return {
     mode: 'tall', W: 358, H: 406, cx, a, b, cys, yTop: 36, fs, th: 5,
-    labelX: cx - a - 8, pillW: 76, pillH: 22, px: 312, yd: cys[2] - 20, yf: cys[1] + 20,
+    labelX: 0, mk: 6, px: 296, yd: cys[2] - 20, yf: cys[1] + 20,
     tag: { x: 358 - tagW - 1, y: cys[2] + 24, w: tagW, h: 18 },
     score: { x: 179, k: cys[3] + b + 24, v: cys[3] + b + 24, anchor: 'middle' },
-    gap: [-4, 8, 20],
+    gap: [-6, 12, 23],
     dot: 0.6,
   }
 }
@@ -195,15 +195,17 @@ function routeD(L) {
 }
 
 function pill(L, which, label, y, tip) {
-  const { px, pillW: w, pillH: h, fs } = L
-  const x = px - w / 2, yy = y - h / 2
+  const { px, mk: m, fs } = L
+  const tx = px + m / 2 + 9
+  const w = m + 9 + cw(label, fs.pill) + 10
+  const box = (cls, extra = '') => `<rect class="${cls}" ${extra}x="${f1(px - m / 2)}" y="${f1(y - m / 2)}" width="${m}" height="${m}"/>`
   return `<g class="lp-hit" data-tip="${tip}" data-pill="${which}">
-<rect class="lp-pill-under" x="${f1(x)}" y="${f1(yy)}" width="${w}" height="${h}" rx="${h / 2}"/>
-<rect class="lp-pill-base" x="${f1(x)}" y="${f1(yy)}" width="${w}" height="${h}" rx="${h / 2}"/>
-<rect class="lp-pill-gloss" x="${f1(x + h * 0.4)}" y="${f1(yy + 2)}" width="${f1(w - h * 0.8)}" height="${f1(Math.max(1.6, h * 0.1))}" rx="1"/>
-<g data-lit opacity=".5"><rect class="lp-pill-glow" x="${f1(x)}" y="${f1(yy)}" width="${w}" height="${h}" rx="${h / 2}"/><rect class="lp-pill-lit" x="${f1(x)}" y="${f1(yy)}" width="${w}" height="${h}" rx="${h / 2}"/></g>
-<text class="lp-pill-txt" x="${px}" y="${f1(y)}" font-size="${fs.pill}" text-anchor="middle" dominant-baseline="central">${label}</text>
-<text class="lp-pill-txt lit" data-lit-txt x="${px}" y="${f1(y)}" font-size="${fs.pill}" text-anchor="middle" dominant-baseline="central" opacity=".5">${label}</text>
+<rect class="lp-hit-area" x="${f1(px - m)}" y="${f1(y - 12)}" width="${f1(w + m)}" height="24"/>
+<path class="lp-tick" d="M${f1(px + m / 2)},${f1(y)}h5"/>
+${box('lp-node')}
+<g data-lit opacity=".5">${box('lp-node-lit')}</g>
+<text class="lp-node-txt" x="${f1(tx)}" y="${f1(y)}" font-size="${fs.pill}" dominant-baseline="central">${label}</text>
+<text class="lp-node-txt lit" data-lit-txt x="${f1(tx)}" y="${f1(y)}" font-size="${fs.pill}" dominant-baseline="central" opacity=".5">${label}</text>
 </g>`
 }
 
@@ -212,13 +214,6 @@ function buildSvg(L, id) {
   const R = routeD(L)
   const stop = (o, c, op) => `<stop offset="${o}" style="stop-color:${c};stop-opacity:${op}"/>`
   const defs = `<defs>
-<linearGradient id="${id}g1" x1="0" y1="0" x2="1" y2="1">${stop(0, 'var(--lp-a)', 0.26)}${stop(1, 'var(--lp-b)', 0.08)}</linearGradient>
-<linearGradient id="${id}g2" x1="0" y1="0" x2="1" y2="1">${stop(0, 'var(--lp-hot)', 0.24)}${stop(1, 'var(--lp-a)', 0.08)}</linearGradient>
-<linearGradient id="${id}g3" x1="0" y1="0" x2="1" y2="1">${stop(0, 'var(--lp-c)', 0.14)}${stop(1, 'var(--lp-a)', 0.1)}</linearGradient>
-<linearGradient id="${id}g4" x1="0" y1="0" x2="1" y2="1">${stop(0, 'var(--lp-b)', 0.16)}${stop(1, 'var(--lp-a)', 0.07)}</linearGradient>
-<linearGradient id="${id}rb" x1="0" y1="0" x2="1" y2="0.3">${stop(0, 'var(--lp-g1)', 1)}${stop(0.38, 'var(--lp-g2)', 1)}${stop(0.7, 'var(--lp-g3)', 1)}${stop(1, 'var(--lp-g4)', 1)}</linearGradient>
-<linearGradient id="lp-pill-fill" x1="0" y1="0" x2="0" y2="1">${stop(0, 'var(--on-stage)', 0.16)}${stop(1, 'var(--on-stage)', 0.04)}</linearGradient>
-<linearGradient id="lp-pk-fill" x1="0" y1="0" x2="1" y2="1">${stop(0, 'var(--lp-pk1)', 1)}${stop(1, 'var(--lp-pk2)', 1)}</linearGradient>
 <pattern id="${id}dp" width="4" height="4" patternUnits="userSpaceOnUse"><rect class="dp-r" width="2" height="2"/><rect class="dp-r" x="2" y="2" width="2" height="2"/></pattern>
 <radialGradient id="${id}rg">${stop(0, '#fff', 1)}${stop(0.55, '#fff', 0.55)}${stop(1, '#000', 1)}</radialGradient>
 <mask id="${id}mk" maskUnits="objectBoundingBox" maskContentUnits="objectBoundingBox" x="0" y="0" width="1" height="1"><rect width="1" height="1" fill="url(#${id}rg)"/></mask>
@@ -233,11 +228,11 @@ ${R.legs.map((d, i) => `<path id="${id}leg${i}" d="${d}"/>`).join('')}
         i === 2
           ? `<path class="lp-errfill" data-err d="${d}" opacity="0"/><path class="lp-okfill" data-ok d="${d}"/>`
           : i === 3
-            ? `<path data-fill4 d="${platePath(L, 3)}" fill="url(#${id}rb)" opacity="1"/><g data-glow opacity="1"><path class="lp-glow" d="${platePath(L, 3, 0, 5)}" stroke-width="9" opacity=".12"/><path class="lp-glow" d="${platePath(L, 3, 0, 2)}" stroke-width="4" opacity=".28"/></g>`
+            ? `<path class="lp-ans" data-fill4 d="${platePath(L, 3)}" opacity="1"/>`
             : ''
       const rowsTxt =
         i === 3
-          ? `<text class="rows" data-rows x="${cx}" y="${cys[3] + 1}" font-size="${fs.big}" text-anchor="middle" dominant-baseline="central" style="fill:#fff;stroke:rgba(0,0,0,.35);stroke-width:3;paint-order:stroke">${ROWS} rows</text>`
+          ? `<text class="rows" data-rows x="${cx}" y="${cys[3] + 1}" font-size="${fs.big}" text-anchor="middle" dominant-baseline="central">${ROWS} rows</text>`
           : ''
       const kk = L.b / L.a
       const spikes =
@@ -247,7 +242,7 @@ ${R.legs.map((d, i) => `<path id="${id}leg${i}" d="${d}"/>`).join('')}
       return `<g class="lp-hit" data-plate="${i}" data-tip="${PLATES[i].tip}">
 <path class="lp-slab" data-slab="${i}" transform="${mat(L, END_TH, kk, cys[i], th)}" d="${d}"/>
 <g data-pl="${i}" transform="${mat(L, END_TH, kk, cys[i])}">
-<path class="lp-plate" d="${d}" fill="url(#${id}g${i + 1})"/>
+<path class="lp-plate" d="${d}"/>
 ${dets[i]}${extra}
 <g data-halo="${i}" opacity="0"><path class="lp-halo lp-halo-soft" d="${d}"/><path class="lp-halo" d="${d}"/></g>
 </g>${spikes}
@@ -257,29 +252,29 @@ ${rowsTxt}
     .join('')
 
   const labels = PLATES.map((P, i) => {
-    const y = cys[i]
-    const sub = P.sub ? `<text class="lp-s" x="${L.labelX}" y="${y + L.gap[1]}" font-size="${fs.sub}" text-anchor="end">${P.sub}</text>` : ''
-    const st = i === 1 ? '✓ PASSED' : i === 2 ? '✓ OK' : ''
-    return `<g data-label="${i}"><text class="lp-t" x="${L.labelX}" y="${y + L.gap[0]}" font-size="${fs.title}" text-anchor="end">${P.name}</text>${sub}<text class="lp-st${i === 2 ? ' ok' : ''}" data-st="${i}" x="${L.labelX}" y="${y + L.gap[2]}" font-size="${fs.st}" text-anchor="end">${st}</text></g>`
+    const y = cys[i], x = L.labelX, ex = cx - a - 10, live = i === 1 || i === 2
+    const sub = P.sub ? `<text class="lp-s" x="${x}" y="${y + L.gap[1]}" font-size="${fs.sub}">${P.sub}</text>` : ''
+    const st = i === 1 ? 'PASSED' : i === 2 ? 'OK' : ''
+    const mk = (cls, extra = '') => `<rect class="${cls}" ${extra}x="${ex - 2.5}" y="${y - 2.5}" width="5" height="5"/>`
+    return `<g data-label="${i}"><path class="lp-lead" d="M${x},${y}H${ex - 6}"/>${mk('lp-mk')}<text class="lp-t" x="${x}" y="${y + L.gap[0]}" font-size="${fs.title}">${P.name}</text>${sub}<text class="lp-st${live ? ' ok' : ''}" data-st="${i}" x="${x}" y="${y + L.gap[2]}" font-size="${fs.st}">${st}</text>${live ? mk('lp-mk-lit', `data-mkl="${i}" `) : ''}</g>`
   }).join('')
 
-  const qW = cw(QUESTION, fs.pk) + 26, qH = L.mode === 'wide' ? 26 : 22
-  const ghost = `<g data-ghost opacity=".9"><rect class="q-ghost-rect" x="${f1(cx - qW / 2)}" y="${f1(L.yTop - qH / 2)}" width="${qW}" height="${qH}" rx="${qH / 2}"/><text class="q-ghost-txt" x="${cx}" y="${L.yTop}" font-size="${fs.pk}" text-anchor="middle" dominant-baseline="central">${QUESTION}</text></g>`
+  const qW = cw(QUESTION, fs.pk) + 6
+  const ghost = `<g data-ghost opacity=".9"><text class="q-ghost-txt" x="${cx}" y="${L.yTop - 3}" font-size="${fs.pk}" text-anchor="middle" dominant-baseline="central">${QUESTION}</text><path class="q-ghost-rule" d="M${f1(cx - qW / 2)},${L.yTop + 8}h${qW}"/></g>`
 
   const t = L.tag
-  const tag = `<g data-tag><rect class="tag-rect" x="${f1(t.x)}" y="${f1(t.y)}" width="${t.w}" height="${t.h}" rx="${t.h / 2}"/><text class="tag-txt" x="${f1(t.x + t.w / 2)}" y="${f1(t.y + t.h / 2)}" font-size="${fs.tag}" text-anchor="middle" dominant-baseline="central">${ERROR_TAG}</text></g>`
+  const tag = `<g data-tag><rect class="tag-rect" x="${f1(t.x)}" y="${f1(t.y)}" width="2" height="${t.h}"/><text class="tag-txt" x="${f1(t.x + 9)}" y="${f1(t.y + t.h / 2)}" font-size="${fs.tag}" dominant-baseline="central">${ERROR_TAG}</text></g>`
 
   const sc = L.score
   const score =
     L.mode === 'wide'
       ? `<g data-score><text class="score-k" x="${sc.x}" y="${sc.k}" font-size="${fs.score}">${SCORE[0]}</text><text class="score-v" x="${sc.x}" y="${sc.v}" font-size="${fs.big}">${SCORE[1]}</text></g>`
-      : `<g data-score><text x="${sc.x}" y="${sc.k}" font-size="${fs.score}" text-anchor="middle"><tspan class="score-k">${SCORE[0]}  </tspan><tspan class="score-v" font-size="${fs.score + 3}">${SCORE[1]}</tspan></text></g>`
+      : `<g data-score><text x="${sc.x}" y="${sc.k}" font-size="${fs.score}" text-anchor="middle"><tspan class="score-k">${SCORE[0]}  </tspan><tspan class="score-v" font-size="${fs.score + 4}">${SCORE[1]}</tspan></text></g>`
 
-  const pkH = L.mode === 'wide' ? 26 : 22
+  const pkH = L.mode === 'wide' ? 22 : 19
   const packet = `<g class="lp-pk" data-pk data-err="0">
 <ellipse data-pk-halo cx="0" cy="0" rx="40" ry="22" fill="url(#${id}dp)" mask="url(#${id}mk)"/>
-<rect class="pk-body" data-pk-body x="-28" y="${-pkH / 2}" width="56" height="${pkH}" rx="${pkH / 2}"/>
-<rect class="pk-gloss" data-pk-gloss x="-20" y="${-pkH / 2 + 2}" width="40" height="${f1(pkH * 0.26)}" rx="${f1(pkH * 0.13)}"/>
+<rect class="pk-body" data-pk-body x="-28" y="${-pkH / 2}" width="56" height="${pkH}" rx="2"/>
 <text class="pk-text" data-pk-text x="0" y="0.5" font-size="${fs.pk}" text-anchor="middle" dominant-baseline="central">SQL</text>
 </g>`
 
@@ -317,7 +312,7 @@ export function mount(el, { theme, reduced = false, progress } = {}) {
   root.setAttribute('aria-label', `Self-healing loop: a question becomes a query that passes a safety check, fails at run, diagnoses and fixes itself, then answers with ${ROWS} rows. ${SCORE[0]}: ${SCORE[1]}.`)
   root.dataset.lpTheme = theme || ''
   root.style.visibility = 'hidden'
-  root.innerHTML = `<div class="lp-chip" data-chip data-s="ok"><span>✓</span><span>CORRECT</span></div><p class="lp-beat" data-beat></p><p class="lp-cap">${CAPTION}</p><div class="lp-tip" data-tipbox role="presentation"></div>`
+  root.innerHTML = `<div class="lp-chip" data-chip data-s="ok">CORRECT</div><p class="lp-beat" data-beat></p><p class="lp-cap">${CAPTION}</p><div class="lp-tip" data-tipbox role="presentation"></div>`
   el.replaceChildren(root)
   const chip = root.querySelector('[data-chip]')
   const beat = root.querySelector('[data-beat]')
@@ -366,13 +361,13 @@ export function mount(el, { theme, reduced = false, progress } = {}) {
     root.insertBefore(svg, root.querySelector('.lp-cap'))
     root.dataset.mode = L.mode
     R = {
-      pk: q('[data-pk]'), pkBody: q('[data-pk-body]'), pkGloss: q('[data-pk-gloss]'), pkText: q('[data-pk-text]'), pkHalo: q('[data-pk-halo]'),
+      pk: q('[data-pk]'), pkBody: q('[data-pk-body]'), pkText: q('[data-pk-text]'), pkHalo: q('[data-pk-halo]'),
       ghost: q('[data-ghost]'), tag: q('[data-tag]'), score: q('[data-score]'), rows: q('[data-rows]'), g4: q('.r-guide[data-g4]'),
-      loopBase: q('[data-loopbase]'), trail: q('[data-trail]'), glow: q('[data-glow]'), plate4: q('[data-fill4]'),
+      loopBase: q('[data-loopbase]'), trail: q('[data-trail]'), plate4: q('[data-fill4]'),
       err: q('path[data-err]'), ok: q('[data-ok]'),
       litA: q('[data-lit="A"]'), litB: q('[data-lit="B"]'), litC: q('[data-lit="C"]'), litD: q('[data-lit="D"]'),
       halo: [0, 1, 2, 3].map((i) => q(`[data-halo="${i}"]`)),
-      st: [1, 2].map((i) => q(`[data-st="${i}"]`)),
+      st: [1, 2].map((i) => q(`[data-st="${i}"]`)), mkl: [1, 2].map((i) => q(`[data-mkl="${i}"]`)),
       pl: [0, 1, 2, 3].map((i) => q(`[data-pl="${i}"]`)), slab: [0, 1, 2, 3].map((i) => q(`[data-slab="${i}"]`)),
       spikes: qa('[data-spike]'), labels: [0, 1, 2, 3].map((i) => q(`[data-label="${i}"]`)),
       guides: q('[data-guides]'), pills: q('[data-pills]'),
@@ -439,11 +434,10 @@ export function mount(el, { theme, reduced = false, progress } = {}) {
     R.pk0Key = key
     const text = key === 'q' ? QUESTION : key === 'tools' ? 'tools?' : key === 'stack' ? 'stack' : 'SQL'
     const fs = L.fs.pk
-    const h = L.mode === 'wide' ? 26 : 22
-    const w = Math.max(54 * (fs / 12.5), cw(text, fs) + 26)
+    const w = Math.max(46, cw(text, fs) + 18)
     put(R.pkText, 'text', text)
     put(R.pkBody, 'x', f1(-w / 2)); put(R.pkBody, 'width', f1(w))
-    put(R.pkGloss, 'x', f1(-w / 2 + h * 0.4)); put(R.pkGloss, 'width', f1(w - h * 0.8))
+    const h = L.mode === 'wide' ? 22 : 19
     put(R.pkHalo, 'rx', f1(w / 2 + 12)); put(R.pkHalo, 'ry', f1(h / 2 + 9))
   }
 
@@ -522,11 +516,12 @@ export function mount(el, { theme, reduced = false, progress } = {}) {
     const runKey = ok > 0.5 ? 'ok' : err > 0.02 ? 'err' : 'none'
     if (R.st[1]._k !== runKey) {
       R.st[1]._k = runKey
-      put(R.st[1], 'text', runKey === 'ok' ? '✓ OK' : runKey === 'err' ? '✕ ERROR' : '')
+      put(R.st[1], 'text', runKey === 'ok' ? 'OK' : runKey === 'err' ? 'ERROR' : '')
       R.st[1].setAttribute('class', `lp-st ${runKey === 'err' ? 'err' : runKey === 'ok' ? 'ok' : ''}`)
       R.st[1]._c.opacity = null
     }
-    op(R.st[1], runKey === 'ok' ? ok : runKey === 'err' ? err : 0)
+    const runO = runKey === 'ok' ? ok : runKey === 'err' ? err : 0
+    op(R.st[1], runO); op(R.mkl[1], runO); op(R.mkl[0], passed)
 
     // routes
     const lenA = legs[0].len + legs[1].len + legs[2].len
@@ -552,7 +547,6 @@ export function mount(el, { theme, reduced = false, progress } = {}) {
     // answer
     const lit4 = smooth(0.72, 0.86, p)
     op(R.plate4, 0.16 + 0.84 * lit4)
-    op(R.glow, lit4)
     op(R.rows, smooth(0.76, 0.82, p))
     op(R.score, smooth(0.82, 0.88, p))
     op(R.tag, smooth(0.3, 0.33, p) * (1 - 0.25 * smooth(0.64, 0.7, p)))
@@ -564,7 +558,7 @@ export function mount(el, { theme, reduced = false, progress } = {}) {
       beatIdx = bi
       const B = BEATS[bi]
       chip.dataset.s = B.id
-      chip.replaceChildren(Object.assign(document.createElement('span'), { textContent: B.mark }), Object.assign(document.createElement('span'), { textContent: B.title }))
+      chip.textContent = B.title
       beat.textContent = B.text
     }
   }

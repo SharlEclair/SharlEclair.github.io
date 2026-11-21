@@ -66,7 +66,9 @@ const SAT_X0 = -66, SAT_X1 = 70
 
 /** `?harvest=chart|plates|ridge|bars2d` swap in a data-field variant (shared/scenes/harvest/variants.js). Default and look 'lcd' are untouched. */
 export async function createScene(opts = {}) {
-  const v = opts.look === 'lcd' || typeof location === 'undefined' ? null : new URLSearchParams(location.search).get('harvest')
+  // chart is the default; ?harvest=classic gives the original scene
+  const asked = typeof location === 'undefined' ? null : new URLSearchParams(location.search).get('harvest')
+  const v = opts.look === 'lcd' || typeof location === 'undefined' || asked === 'classic' ? null : asked ?? 'chart'
   if (v === 'chart' || v === 'plates' || v === 'ridge' || v === 'bars2d') return (await import('./variants.js')).createVariantScene({ ...opts, mode: v, beats })
   return createDefaultScene(opts)
 }

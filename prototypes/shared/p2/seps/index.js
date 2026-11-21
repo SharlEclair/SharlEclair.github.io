@@ -13,6 +13,10 @@
  *   ?sep=plates  isometric translucent plates slide apart and re-stack
  *   ?sep=lap     an F1 timing-tower row: mini-sectors fill, the PB chip lights
  *   ?sep=cursor  the console's pixel dino walks the divider and opens the next section like a door
+ *   ?sep=ascii   a character-cell wave (real monospace text) flattens into one rule that names the next section
+ *   ?sep=strands three labelled strands (blue, teal, violet) braid, then pull taut into one thin line
+ *   ?sep=twist   a CSS 3D rope/DNA twist of 64 slices untwists into a thin line
+ *   ?sep=termbar a terminal line: a block-character bar fills with the scroll, then collapses to a rule
  *
  * A variant module (shared/p2/seps/<name>.js) exports:
  *   mount(el, { slot, reduced }) -> void | () => void   build inside `el` (the slot); may return a cleanup
@@ -32,6 +36,10 @@ const LOADERS = {
   plates: () => import('./plates.js'),
   lap: () => import('./lap.js'),
   cursor: () => import('./cursor.js'),
+  ascii: () => import('./ascii.js'),
+  strands: () => import('./strands.js'),
+  twist: () => import('./twist.js'),
+  termbar: () => import('./termbar.js'),
 }
 export const DEFAULT_SEP = 'query'
 export const sepNames = Object.keys(LOADERS)

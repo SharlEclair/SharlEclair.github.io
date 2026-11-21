@@ -1,0 +1,12 @@
+/* ?sep=ascii  Flow field. Real monospace rows, driven by scroll from ascii.js. */
+.sep.sep-ascii { height: clamp(8.5rem, 20svh, 11rem); overflow: hidden; contain: paint; display: grid; align-items: center; }
+.sep-ascii .as-pre {
+  margin: 0; box-sizing: border-box; width: 100%; overflow: hidden; white-space: pre; text-align: left;
+  font: 400 clamp(.68rem, 1.5vw, .82rem)/1.2 var(--mono);
+  font-variant-ligatures: none; font-feature-settings: 'liga' 0, 'calt' 0;
+  color: var(--muted);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent);
+}
+.sep-ascii .as-pre i { font-style: normal; color: var(--fg); }
+.sep-ascii .as-pre b { font-weight: 500; color: var(--accent); opacity: var(--lp, 1); letter-spacing: .04em; }

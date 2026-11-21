@@ -9,10 +9,11 @@
  *   ?pill=gel                    the blue on/off pill as a glossy gel gradient (default: flat)
  *   ?btn=gel                     the A / B caps as red-orange gel (opt-in only; default: flat)
  *   ?dpad=gel | glass | rubber   the D-pad: dark gel with a teal rim light | smoked glass with glowing arrows | matte soft-touch
- *   ?lcdfx=off | soft | strong   the LCD sitting inside the glass: dimmer, glass sheen, vignette, pixel grid (default soft)
+ *   ?lcdfx=off | soft | strong   the LCD sitting inside the glass: dimmer, glass sheen, vignette, pixel grid (default strong)
+ *   Defaults: glow=floor-pulse, dpad=glass, lcdfx=strong (use glow=default, dpad=flat, lcdfx=soft for the old ones).
  */
 const q = typeof location === 'undefined' ? new URLSearchParams() : new URLSearchParams(location.search)
-const pick = (key, allowed) => (allowed.includes(q.get(key)) ? q.get(key) : allowed[0])
+const pick = (key, allowed, dflt = allowed[0]) => (allowed.includes(q.get(key)) ? q.get(key) : dflt)
 
 export const GLOW_MODES = ['default', 'floor', 'floor-pulse', 'floor-drain', 'grid', 'grid-pulse', 'grid-drain', 'off']
 export const PILL_MODES = ['flat', 'gel']
@@ -21,9 +22,9 @@ export const DPAD_MODES = ['flat', 'gel', 'glass', 'rubber']
 export const LCDFX_MODES = ['soft', 'off', 'strong']
 
 export const VARIANTS = {
-  glow: pick('glow', GLOW_MODES),
+  glow: pick('glow', GLOW_MODES, 'floor-pulse'), // ?glow=default restores the old following sprite
   pill: pick('pill', PILL_MODES),
   btn: pick('btn', BTN_MODES),
-  dpad: pick('dpad', DPAD_MODES),
-  lcdfx: pick('lcdfx', LCDFX_MODES),
+  dpad: pick('dpad', DPAD_MODES, 'glass'), // ?dpad=flat restores the original
+  lcdfx: pick('lcdfx', LCDFX_MODES, 'strong'),
 }

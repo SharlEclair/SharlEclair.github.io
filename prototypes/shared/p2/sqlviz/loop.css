@@ -1,115 +1,115 @@
-/* ?sql=loop  "The Loop": layered isometric plates. Functional colours come from the page tokens
-   (--on-stage, --on-stage-muted, --stage-accent, --stage-err, --stage-line); the --lp-* tokens below are decoration only. */
+/* ?sql=loop  "The Loop": layered isometric plates, annotated like a technical plate: a margin column of small mono labels,
+   hairline leaders ending in a square marker. All colours are the page tokens (--on-stage, --on-stage-muted, --stage-accent,
+   --stage-err, --stage-line) so light and dark both read; --lp-* are tints of those. */
 .lp {
-  --lp-a: #5fd4ff; --lp-b: #7a6bff; --lp-c: #34e2b4; --lp-hot: #ff6a5c; --lp-warm: #ffd08a;
-  --lp-g1: #4a5cff; --lp-g2: #c85cff; --lp-g3: #ff7a45; --lp-g4: #ffe9b0;
-  --lp-pk1: #62d9ff; --lp-pk2: #5b6cff; --lp-pk-text: #04101a;
+  --lp-hair: color-mix(in srgb, var(--on-stage) 30%, transparent);
   --lp-acc-text: var(--stage-accent-text, var(--stage-accent));
   position: absolute; z-index: 1; display: flex; flex-direction: column;
   left: max(38%, calc(var(--pad) + min(30rem, 42vw) + .75rem)); right: 1.5%; top: 9%; bottom: 42%;
-  color: var(--on-stage); font-family: var(--mono);
-}
-html[data-theme='light'] .lp {
-  --lp-a: #1d7aa6; --lp-b: #5143c9; --lp-c: #0b8a68; --lp-hot: #c4382c; --lp-warm: #b3631a;
-  --lp-g1: #3346d8; --lp-g2: #a23bd6; --lp-g3: #e0561f; --lp-g4: #f0b247;
-  --lp-pk1: #2a8fbf; --lp-pk2: #4033b8; --lp-pk-text: #f4f2ea;
+  color: var(--on-stage); font-family: var(--mono); font-variant-numeric: tabular-nums;
 }
 .lp-svg { flex: 1 1 auto; min-height: 0; width: 100%; display: block; overflow: visible; }
-.lp-cap { margin: .45rem 0 0; font: 500 .66rem/1.5 var(--mono); letter-spacing: .02em; color: var(--on-stage-muted); max-width: 40rem; }
+.lp-cap { margin: .6rem 0 0; padding-top: .5rem; border-top: 1px solid var(--lp-hair); font: 500 .64rem/1.5 var(--mono); letter-spacing: .04em; color: var(--on-stage-muted); max-width: 40rem; }
 
-/* status chip (gel pill) + beat line */
+/* state readout (top right): square marker, uppercase label, hairline, one muted line beneath */
 .lp-chip {
-  position: absolute; top: 0; right: 0; z-index: 2; display: inline-flex; align-items: center; gap: .5em;
-  padding: .45rem .9rem .45rem .8rem; border-radius: 99px; font: 600 .72rem/1 var(--mono); letter-spacing: .1em; white-space: nowrap;
-  color: var(--on-stage-muted); border: 1px solid var(--stage-line);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--on-stage) 17%, transparent), color-mix(in srgb, var(--on-stage) 4%, transparent));
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--on-stage) 26%, transparent), 0 0 18px color-mix(in srgb, var(--lp-a) 10%, transparent);
+  position: absolute; top: 0; right: 0; z-index: 2; display: flex; align-items: center; gap: .6em; min-width: 11rem;
+  padding: 0 0 .5rem; border-bottom: 1px solid var(--lp-hair); font: 600 .66rem/1 var(--mono); letter-spacing: .14em; white-space: nowrap;
+  color: var(--on-stage);
 }
-.lp-chip[data-s='running'] { color: var(--on-stage); }
-.lp-chip[data-s='error'] { color: var(--stage-err); border-color: var(--stage-err); background: color-mix(in srgb, var(--stage-err) 14%, transparent); }
-.lp-chip[data-s='heal'], .lp-chip[data-s='ok'] { color: var(--lp-acc-text); border-color: var(--stage-accent); background: color-mix(in srgb, var(--stage-accent) 13%, transparent); }
-.lp[data-mode='tall'] .lp-beat { display: none; }
-.lp-beat { position: absolute; top: 2.55rem; right: 0; z-index: 2; max-width: 17rem; text-align: right; font: 500 .68rem/1.45 var(--mono); color: var(--on-stage-muted); }
+.lp-chip::before { content: ""; width: .45rem; height: .45rem; background: var(--on-stage-muted); flex: none; }
+.lp-chip[data-s="error"] { color: var(--stage-err); }
+.lp-chip[data-s="error"]::before { background: var(--stage-err); }
+.lp-chip[data-s="heal"], .lp-chip[data-s="ok"] { color: var(--lp-acc-text); }
+.lp-chip[data-s="heal"]::before, .lp-chip[data-s="ok"]::before { background: var(--stage-accent); }
+.lp-beat { position: absolute; top: 1.9rem; right: 0; z-index: 2; max-width: 17rem; text-align: right; font: 500 .66rem/1.5 var(--mono); letter-spacing: .02em; color: var(--on-stage-muted); }
+.lp[data-mode="tall"] .lp-beat { display: none; }
 
-/* svg parts */
+/* labels */
 .lp-svg text { font-family: var(--mono); fill: var(--on-stage); }
-.lp-t { font-weight: 700; letter-spacing: .08em; }
-.lp-s { fill: var(--on-stage-muted); }
-.lp-st { font-weight: 600; letter-spacing: .06em; fill: var(--on-stage-muted); }
+.lp-t { font-weight: 600; letter-spacing: .12em; }
+.lp-s { fill: var(--on-stage-muted); letter-spacing: .02em; }
+.lp-st { font-weight: 500; letter-spacing: .12em; fill: var(--on-stage-muted); }
 .lp-st.ok { fill: var(--lp-acc-text); }
 .lp-st.err { fill: var(--stage-err); }
-.lp-svg .lp-slab { fill: color-mix(in srgb, var(--on-stage) 7%, transparent); stroke: color-mix(in srgb, var(--on-stage) 20%, transparent); stroke-width: 1; }
-.lp-svg .lp-plate { stroke: color-mix(in srgb, var(--on-stage) 44%, transparent); stroke-width: 1; stroke-linejoin: round; }
+.lp-svg .lp-lead { fill: none; stroke: var(--lp-hair); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.lp-svg .lp-mk { fill: var(--stage); stroke: var(--on-stage-muted); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.lp-svg .lp-mk-lit { fill: var(--on-stage-muted); }
+.lp-svg .lp-st.ok ~ .lp-mk-lit { fill: var(--stage-accent); }
+.lp-svg .lp-st.err ~ .lp-mk-lit { fill: var(--stage-err); }
+
+/* plates: flat tints, hairline edges */
+.lp-svg .lp-slab { fill: color-mix(in srgb, var(--on-stage) 5%, transparent); stroke: color-mix(in srgb, var(--on-stage) 16%, transparent); stroke-width: 1; }
+.lp-svg .lp-plate { fill: color-mix(in srgb, var(--on-stage) 6%, transparent); stroke: color-mix(in srgb, var(--on-stage) 42%, transparent); stroke-width: 1; stroke-linejoin: round; }
+.lp-svg .lp-ans { fill: color-mix(in srgb, var(--stage-accent) 34%, transparent); }
 .lp-hit { cursor: default; }
-.lp-hit:hover .lp-plate, .lp-hit:hover .lp-pill-base { stroke: var(--on-stage); }
-.lp-svg .lp-halo { fill: none; stroke: var(--stage-accent); stroke-width: 1.4; stroke-linejoin: round; }
-.lp-svg .lp-halo-soft { stroke-width: 7; opacity: .22; }
-.lp-svg .lp-errfill { fill: color-mix(in srgb, var(--stage-err) 34%, transparent); stroke: var(--stage-err); stroke-width: 1.8; stroke-linejoin: round; }
-.lp-svg .lp-okfill { fill: color-mix(in srgb, var(--stage-accent) 26%, transparent); stroke: var(--stage-accent); stroke-width: 1.8; stroke-linejoin: round; }
-.lp-svg .lp-glow { fill: none; stroke: var(--lp-g3); stroke-linejoin: round; }
+.lp-hit:hover .lp-plate, .lp-hit:hover .lp-node { stroke: var(--on-stage); }
+.lp-svg .lp-halo { fill: none; stroke: var(--stage-accent); stroke-width: 1.2; stroke-linejoin: round; }
+.lp-svg .lp-halo-soft { display: none; }
+.lp-svg .lp-errfill { fill: color-mix(in srgb, var(--stage-err) 20%, transparent); stroke: var(--stage-err); stroke-width: 1.4; stroke-linejoin: round; }
+.lp-svg .lp-okfill { fill: color-mix(in srgb, var(--stage-accent) 16%, transparent); stroke: var(--stage-accent); stroke-width: 1.4; stroke-linejoin: round; }
 
 /* plates live in plane coordinates under a per-frame matrix: keep strokes a constant screen width */
-.lp-svg .lp-slab, .lp-svg .lp-plate, .lp-svg .lp-halo, .lp-svg .lp-errfill, .lp-svg .lp-okfill, .lp-svg .lp-glow,
+.lp-svg .lp-slab, .lp-svg .lp-plate, .lp-svg .lp-halo, .lp-svg .lp-errfill, .lp-svg .lp-okfill,
 .lp-svg .d-grid, .lp-svg .d-mk, .lp-svg .d-edge { vector-effect: non-scaling-stroke; }
 
-/* plate decoration */
-.lp-svg .d-dot-w { fill: var(--lp-warm); }
+/* plate decoration: monochrome, the accent is kept for the one live element (spikes) */
+.lp-svg .d-dot-w { fill: var(--on-stage-muted); }
 .lp-svg .d-dot-s { fill: var(--on-stage); }
-.lp-svg .d-grid { fill: none; stroke: color-mix(in srgb, var(--lp-a) 55%, transparent); stroke-width: .7; }
-.lp-svg .d-mk { fill: none; stroke: color-mix(in srgb, var(--lp-a) 85%, var(--on-stage)); stroke-width: .8; }
-.lp-svg .d-mk-f { fill: var(--lp-a); stroke: none; }
-.lp-svg .d-edge { fill: none; stroke: color-mix(in srgb, var(--lp-a) 60%, transparent); stroke-width: .8; }
-.lp-svg .d-node { fill: color-mix(in srgb, var(--lp-a) 70%, var(--on-stage)); }
-.lp-svg .d-spike { fill: none; stroke: var(--lp-c); stroke-width: 1.1; }
-.lp-svg .d-tip { fill: var(--lp-c); }
+.lp-svg .d-grid { fill: none; stroke: color-mix(in srgb, var(--on-stage) 22%, transparent); stroke-width: .7; }
+.lp-svg .d-mk { fill: none; stroke: color-mix(in srgb, var(--on-stage) 50%, transparent); stroke-width: .8; }
+.lp-svg .d-mk-f { fill: color-mix(in srgb, var(--on-stage) 50%, transparent); stroke: none; }
+.lp-svg .d-edge { fill: none; stroke: color-mix(in srgb, var(--on-stage) 28%, transparent); stroke-width: .8; }
+.lp-svg .d-node { fill: color-mix(in srgb, var(--on-stage) 55%, transparent); }
+.lp-svg .d-spike { fill: none; stroke: var(--stage-accent); stroke-width: 1.1; }
+.lp-svg .d-tip { fill: var(--stage-accent); }
 
 /* routes */
-.lp-svg .r-guide { fill: none; stroke: color-mix(in srgb, var(--on-stage) 26%, transparent); stroke-width: 1.2; }
-.lp-svg .r-guide.dashed { stroke: var(--on-stage-muted); stroke-dasharray: 3 5; opacity: .75; }
-.lp-svg .r-loop { fill: none; stroke: var(--on-stage-muted); stroke-width: 1.6; stroke-linecap: round; stroke-dasharray: .1 6; }
-.lp-svg .r-lit { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.lp-svg .r-lit.first { stroke: color-mix(in srgb, var(--on-stage) 70%, transparent); stroke-width: 1.5; }
+.lp-svg .r-guide { fill: none; stroke: var(--lp-hair); stroke-width: 1; }
+.lp-svg .r-guide.dashed { stroke: var(--on-stage-muted); stroke-dasharray: 2 4; opacity: .7; }
+.lp-svg .r-loop { fill: none; stroke: var(--on-stage-muted); stroke-width: 1.4; stroke-linecap: round; stroke-dasharray: .1 6; }
+.lp-svg .r-lit { fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.lp-svg .r-lit.first { stroke: color-mix(in srgb, var(--on-stage) 70%, transparent); stroke-width: 1.4; }
 .lp-svg .r-lit.fix { stroke: var(--stage-accent); }
-.lp-svg .r-trail { fill: none; stroke: var(--lp-a); stroke-width: 2.6; stroke-linecap: square; stroke-dasharray: .1 5.4; }
+.lp-svg .r-trail { fill: none; stroke: var(--on-stage-muted); stroke-width: 2.2; stroke-linecap: square; stroke-dasharray: .1 5.4; }
 
-/* pills */
-.lp-svg .r-guide, .lp-svg .r-loop, .lp-svg .r-lit, .lp-svg .r-trail, .lp-svg .lp-pk, .lp-svg .rows, .lp-svg [data-ghost], .lp-svg [data-tag], .lp-svg [data-score], .lp-svg [data-label], .lp-svg [data-glow] { pointer-events: none; }
-.lp-svg .lp-pill-under { fill: var(--stage); }
-.lp-svg .lp-pill-base { stroke: var(--stage-line); stroke-width: 1; fill: url(#lp-pill-fill); }
-.lp-svg .lp-pill-gloss { fill: color-mix(in srgb, var(--on-stage) 30%, transparent); }
-.lp-svg .lp-pill-lit { fill: color-mix(in srgb, var(--stage-accent) 22%, transparent); stroke: var(--stage-accent); stroke-width: 1.4; }
-.lp-svg .lp-pill-glow { fill: none; stroke: var(--stage-accent); stroke-width: 7; opacity: .16; }
-.lp-svg .lp-pill-txt { font-weight: 700; letter-spacing: .08em; fill: var(--on-stage-muted); }
-.lp-svg .lp-pill-txt.lit { fill: var(--lp-acc-text); }
+.lp-svg .r-guide, .lp-svg .r-loop, .lp-svg .r-lit, .lp-svg .r-trail, .lp-svg .lp-pk, .lp-svg .rows, .lp-svg [data-ghost], .lp-svg [data-tag], .lp-svg [data-score], .lp-svg [data-label] { pointer-events: none; }
 
-/* packet */
-.lp-svg .pk-body { fill: url(#lp-pk-fill); stroke: color-mix(in srgb, var(--on-stage) 55%, transparent); stroke-width: 1; }
-.lp-svg .pk-gloss { fill: color-mix(in srgb, #fff 38%, transparent); }
-.lp-svg .pk-text { font-weight: 700; letter-spacing: .04em; fill: var(--lp-pk-text); }
-.lp-svg .dp-r { fill: var(--lp-a); }
-.lp-pk[data-err='1'] .pk-body { fill: var(--stage-err); stroke: var(--stage-err); }
-.lp-pk[data-err='1'] .pk-text { fill: #fff; }
-.lp-svg .q-ghost-rect { fill: var(--stage); stroke: var(--stage-line); stroke-width: 1; stroke-dasharray: 3 3; }
-.lp-svg .q-ghost-txt { fill: var(--on-stage-muted); font-weight: 600; }
+/* step nodes (DIAGNOSE, FIX): a square on the route, a short tick, a mono label */
+.lp-svg .lp-hit-area { fill: transparent; }
+.lp-svg .lp-node { fill: var(--stage); stroke: var(--on-stage-muted); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.lp-svg .lp-node-lit { fill: var(--stage-accent); }
+.lp-svg .lp-tick { stroke: var(--lp-hair); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.lp-svg .lp-node-txt { font-weight: 600; letter-spacing: .12em; fill: var(--on-stage-muted); }
+.lp-svg .lp-node-txt.lit { fill: var(--lp-acc-text); }
 
-/* result and error tag */
-.lp-svg .tag-rect { fill: color-mix(in srgb, var(--stage-err) 12%, transparent); stroke: var(--stage-err); stroke-width: 1; }
-.lp-svg .tag-txt { fill: var(--stage-err); font-weight: 600; }
-.lp-svg .rows { font-weight: 700; fill: var(--on-stage); letter-spacing: .02em; }
-.lp-svg .score-k { fill: var(--on-stage-muted); font-weight: 500; }
-.lp-svg .score-v { fill: var(--lp-acc-text); font-weight: 700; }
+/* packet: a flat tag, inverted against the stage */
+.lp-svg .pk-body { fill: var(--on-stage); }
+.lp-svg .pk-text { font-weight: 700; letter-spacing: .06em; fill: var(--stage); }
+.lp-svg .dp-r { fill: var(--on-stage-muted); }
+.lp-pk[data-err="1"] .pk-body { fill: var(--stage-err); }
+.lp-pk[data-err="1"] .pk-text { fill: var(--stage); }
+.lp-svg .q-ghost-txt { fill: var(--on-stage-muted); font-weight: 500; letter-spacing: .04em; }
+.lp-svg .q-ghost-rule { stroke: var(--lp-hair); stroke-width: 1; stroke-dasharray: 2 3; fill: none; vector-effect: non-scaling-stroke; }
+
+/* result and error note */
+.lp-svg .tag-rect { fill: var(--stage-err); stroke: none; }
+.lp-svg .tag-txt { fill: var(--stage-err); font-weight: 500; letter-spacing: .02em; }
+.lp-svg .rows { font-weight: 600; fill: var(--on-stage); letter-spacing: .02em; }
+.lp-svg .score-k { fill: var(--on-stage-muted); font-weight: 500; text-transform: uppercase; letter-spacing: .12em; }
+.lp-svg .score-v { fill: var(--lp-acc-text); font-weight: 600; letter-spacing: 0; }
 
 /* tooltip */
 .lp-tip {
   position: absolute; z-index: 3; pointer-events: none; opacity: 0; transition: opacity .15s; white-space: nowrap;
-  padding: .4rem .75rem; border-radius: 99px; font: 500 .68rem/1 var(--mono); letter-spacing: .02em;
-  color: var(--on-stage); background: color-mix(in srgb, var(--stage) 90%, transparent); border: 1px solid var(--stage-line);
+  padding: .4rem .6rem; border-radius: 2px; font: 500 .66rem/1 var(--mono); letter-spacing: .03em;
+  color: var(--on-stage); background: var(--stage); border: 1px solid var(--lp-hair);
 }
 .lp-tip.on { opacity: 1; }
 
 @media (max-width: 760px) {
   .lp { left: var(--pad); right: var(--pad); top: .2rem; bottom: auto; height: max(17rem, min(26rem, calc(100% - 21rem))); }
   .lp-beat { display: none; }
-  .lp-chip { padding: .35rem .7rem .35rem .65rem; font-size: .62rem; }
+  .lp-chip { min-width: 8.5rem; font-size: .6rem; padding-bottom: .4rem; }
   .lp-cap { font-size: .58rem; margin-top: .3rem; }
 }
