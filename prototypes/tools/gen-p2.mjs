@@ -116,7 +116,7 @@ function page(id, profile) {
 </section>`
 
   const projs = projects.map((p, i) => project(p, i, profile)).join('\n')
-  return `${head(`${person.name} | ${person.role}`, id)}
+  return `${head(`${person.name} | ${person.role.replace(/\b\w/g, (c) => c.toUpperCase())}`, id)}
 <body data-profile="${profile}">
 ${topbar(id)}
 <main id="main">
