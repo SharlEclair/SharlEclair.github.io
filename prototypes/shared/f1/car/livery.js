@@ -57,7 +57,7 @@ export const getCarStyle = () => styleName
 //   'procedural'  the shader livery in STYLES.dark above.
 // The light theme always uses its procedural livery.
 export const LIVERY_SOURCES = ['blue', 'glb', 'procedural']
-export const BODY_BLUE = '#1c2f7a'
+export const BODY_BLUE = '#122047'
 const normSource = (v) => (v === 'original' ? 'glb' : LIVERY_SOURCES.includes(v) ? v : 'blue')
 let liverySource = (() => {
   try { return normSource(new URLSearchParams(globalThis.location?.search ?? '').get('livery')) } catch { return 'blue' }

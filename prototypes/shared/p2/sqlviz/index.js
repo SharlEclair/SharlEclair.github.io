@@ -18,7 +18,7 @@
 import { stableVh } from '/shared/ui/viewport.js'
 
 export const SQL_VARIANTS = ['squiggle', 'ten', 'loop', 'barrel', 'proof', 'ribbon']
-export const DEFAULT_SQL = 'squiggle'
+export const DEFAULT_SQL = 'loop'
 
 export function sqlVariant() {
   const asked = new URLSearchParams(location.search).get('sql')

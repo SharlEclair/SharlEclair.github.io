@@ -41,7 +41,7 @@ const LOADERS = {
   twist: () => import('./twist.js'),
   termbar: () => import('./termbar.js'),
 }
-export const DEFAULT_SEP = 'query'
+export const DEFAULT_SEP = 'ascii'
 export const sepNames = Object.keys(LOADERS)
 
 export async function initSeps() {

@@ -286,6 +286,10 @@ void main(){
   c += cD * 0.22 * pow(clamp(yf, 0.0, 1.0), 3.0) * (vN.y > 0.5 ? 1.0 : 0.5);       // a quiet inner glow toward the tip
   if (vKind < 0.5) c = mix(cBg, c, uGndMix);
   else c = mix(cLow, c, smoothstep(0.02, 0.16, vTop));                                // low columns stay pale, never black
+  if (vKind > 1.5) {                                                                  // growing crops read as green
+    vec3 g = mix(vec3(0.015, 0.16, 0.05), vec3(0.22, 0.8, 0.2), clamp(yf, 0.0, 1.0)) * sh;
+    c = mix(c, g, 0.9 * smoothstep(0.06, 0.24, vTop));
+  }
   c = mix(c, cD * 0.75, vWet * 0.3);
   c = mix(c, cBg, vFar * 0.92);
   gl_FragColor = vec4(c, 1.0);

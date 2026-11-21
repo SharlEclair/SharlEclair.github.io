@@ -22,8 +22,8 @@ export const DPAD_MODES = ['flat', 'gel', 'glass', 'rubber']
 export const LCDFX_MODES = ['soft', 'off', 'strong']
 
 export const VARIANTS = {
-  glow: pick('glow', GLOW_MODES, 'floor-pulse'), // ?glow=default restores the old following sprite
-  pill: pick('pill', PILL_MODES),
+  glow: pick('glow', GLOW_MODES, 'floor'), // ?glow=default restores the old following sprite
+  pill: pick('pill', PILL_MODES, 'gel'), // ?pill=flat restores the flat pill
   btn: pick('btn', BTN_MODES),
   dpad: pick('dpad', DPAD_MODES, 'glass'), // ?dpad=flat restores the original
   lcdfx: pick('lcdfx', LCDFX_MODES, 'strong'),
