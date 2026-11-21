@@ -243,7 +243,7 @@ export async function createScene({
     // unlike additive it writes valid premultiplied alpha, so it composites the same over the page's transparent canvas.
     glowMat.color.set(glowLook.color)
     gb.setTheme(light ? 'light' : 'dark')
-    const swap = VARIANTS.shell === 'swap'
+    const swap = VARIANTS.shell === 'swap' || VARIANTS.shell === 'pale'
     cart.setTheme?.(light !== swap ? 'light' : 'dark', VARIANTS.shell === 'mono' || swap)
     // brighter room on cream so the frosted shell does not go muddy
     scene.environmentIntensity = light ? 1.15 : 1
@@ -258,7 +258,7 @@ export async function createScene({
   // ?shell=mono: dark LCD ground on the dark theme, light LCD ground on the light theme
   // ?shell=swap: the opposite way round (light LCD on the dark theme, dark LCD on the light theme)
   const mono = VARIANTS.shell === 'mono'
-  const swapped = VARIANTS.shell === 'swap'
+  const swapped = VARIANTS.shell === 'swap' || VARIANTS.shell === 'pale'
   const DARK_LCD = mono ? 'graphite' : swapped ? 'bone' : 'ink'
   const LIGHT_LCD = mono ? 'bone' : 'graphite'
   const urlQ = typeof location === 'undefined' ? new URLSearchParams() : new URLSearchParams(location.search)
