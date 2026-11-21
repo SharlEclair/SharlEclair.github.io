@@ -1,0 +1,25 @@
+.egg-toast {
+  position: fixed; left: var(--pad); bottom: 1.2rem; z-index: 9990; max-width: min(34rem, calc(100vw - 2 * var(--pad)));
+  padding: .55rem .8rem; font: 500 .78rem/1.4 var(--mono); letter-spacing: .02em;
+  color: var(--fg); background: var(--bar); border: 1px solid var(--line); border-left: 2px solid var(--accent);
+  backdrop-filter: blur(8px); pointer-events: none; opacity: 0; transform: translateY(6px);
+  transition: opacity .25s, transform .25s;
+}
+.egg-toast.on { opacity: 1; transform: none }
+.egg-radio::before { content: 'RADIO  '; color: var(--accent); font-size: .65rem; letter-spacing: .12em }
+.egg-purple { border-left-color: #a64dff; color: #c58bff }
+.egg-vault { border-left-color: #39ff88; color: #39ff88; background: rgba(4, 23, 12, .85) }
+.egg-currents { border-left-color: #ff8a3d }
+.egg-cipher { letter-spacing: .08em }
+.egg-arcane { border-image: linear-gradient(90deg, #3aa0ff, #ff4fb0) 1; border-width: 1px; background-image: linear-gradient(100deg, transparent 30%, rgba(90, 170, 255, .25), rgba(255, 80, 180, .25), transparent 70%); background-size: 250% 100%; animation: egg-shim 2.4s linear infinite }
+.egg-fx { position: fixed; inset: 0; z-index: 9980; pointer-events: none }
+.egg-wash { background: linear-gradient(120deg, #7b3fe4, #ff7a2f); mix-blend-mode: soft-light; animation: egg-wash 4s ease-in-out forwards }
+.egg-cross { inset: 50% auto auto 50%; width: 44px; height: 44px; margin: -22px 0 0 -22px; animation: egg-cross .7s ease-out forwards;
+  background: linear-gradient(#ff4655, #ff4655) 50% 0 / 2px 14px no-repeat, linear-gradient(#ff4655, #ff4655) 50% 100% / 2px 14px no-repeat,
+    linear-gradient(#ff4655, #ff4655) 0 50% / 14px 2px no-repeat, linear-gradient(#ff4655, #ff4655) 100% 50% / 14px 2px no-repeat }
+.egg-glitch { background: repeating-linear-gradient(0deg, rgba(255, 0, 60, .18) 0 3px, rgba(0, 220, 255, .18) 3px 6px); mix-blend-mode: screen; animation: egg-glitch 1s steps(8) forwards }
+@keyframes egg-wash { 0% { opacity: 0 } 25%, 70% { opacity: .85 } 100% { opacity: 0 } }
+@keyframes egg-cross { 0% { opacity: 1; transform: scale(2) } 100% { opacity: 0; transform: scale(.8) } }
+@keyframes egg-glitch { 0% { opacity: 0; transform: translateX(-6px) } 20% { opacity: 1; transform: translateX(8px) skewX(2deg) } 45% { transform: translateX(-4px) } 70% { opacity: .8; transform: translateX(5px) } 100% { opacity: 0; transform: none } }
+@keyframes egg-shim { to { background-position: -250% 0 } }
+@media (prefers-reduced-motion: reduce) { .egg-toast { transition: none; transform: none } .egg-arcane { animation: none } }

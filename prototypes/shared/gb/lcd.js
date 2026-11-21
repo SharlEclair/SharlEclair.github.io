@@ -9,6 +9,11 @@
  *   lcd.tapAt(px, py, { confirm })  // a tap at LCD pixel coords: menu row select (confirm: needs a second tap to open)
  *   lcd.startGame()                 // jump straight into the dino game (the hero START button)
  *   lcd.mode  // 'boot' | 'menu' | 'game' | 'konami'
+ *   lcd.inputAt  // performance.now() of the last press / tap (the scene's "facing" timer reads it)
+ *
+ * Window events: dispatches `gb:game` {detail:{state:'start'|'end'}} when the dino game starts / ends; listens for
+ * `gb:say` {detail:{lines:[string,...], ms}}: an uppercase centred message (max 4 lines x 16 chars) over whatever the LCD
+ * shows for ms milliseconds (a running dino game is paused meanwhile). The scene handles `gb:palette` (see scene.js).
  *   lcd.update(dt)  // -> true when the picture changed (re-upload the texture)
  */
 import { drawText, measureText } from './pixfont.js'
@@ -32,11 +37,14 @@ const BODY = [
   '...###########....',
   '....#########.....',
 ]
+// Running frames swap which leg is planted (the other is lifted, so the two read clearly even at 16 px); the third stands
+// (also the jump frame). The run cycle is stepped by a fixed tick counter (game.run), not by distance, so the cadence is steady.
 const LEGS = [
-  ['....###...##.....', '....##.....###...'],
-  ['....##....###....', '....###....##.....'],
+  ['....###...###....', '....###...........'],
+  ['....###...###....', '..........###.....'],
   ['....###...###....', '....##.....##.....'],
 ]
+const RUN_TICKS = 4 // game ticks (30 per second) per leg frame: 7.5 steps per second
 const DINO_X = 14
 const DINO_H = 16
 const SEQ = ['up', 'up', 'down', 'down', 'left', 'right', 'b', 'a']
@@ -67,8 +75,12 @@ export function createLcd({ items = [], palette = ['#0f380f', '#306230', '#8bac0
   }
 
   const s = { mode: boot ? 'boot' : 'menu', index: 0, t: 0, dirty: true, flash: 0, armed: -1, seq: [] }
-  const game = { state: 'ready', y: 0, vy: 0, dist: 0, score: 0, best: 0, cacti: [], acc: 0 }
-  const setMode = (m) => { s.mode = m; s.t = 0; s.dirty = true; onMode?.(m) }
+  const game = { state: 'ready', y: 0, vy: 0, dist: 0, run: 0, score: 0, best: 0, cacti: [], acc: 0 }
+  const setMode = (m) => {
+    const was = s.mode
+    s.mode = m; s.t = 0; s.dirty = true; onMode?.(m)
+    if (typeof window !== 'undefined' && (m === 'game') !== (was === 'game')) window.dispatchEvent(new CustomEvent('gb:game', { detail: { state: m === 'game' ? 'start' : 'end' } }))
+  }
 
   const snake = { state: 'splash', body: [], dir: 'right', queue: [], food: [0, 0], score: 0, acc: 0, seed: 1 }
   const rnd = () => { snake.seed = (snake.seed * 16807) % 2147483647; return snake.seed / 2147483647 }
@@ -95,12 +107,13 @@ export function createLcd({ items = [], palette = ['#0f380f', '#306230', '#8bac0
     if (eat) { snake.score += 1; placeFood() } else snake.body.pop()
   }
 
-  const resetGame = () => { Object.assign(game, { y: 0, vy: 0, dist: 0, score: 0, cacti: [{ x: W + 40, w: 9, h: 14 }] }) }
+  const resetGame = () => { Object.assign(game, { y: 0, vy: 0, dist: 0, run: 0, score: 0, cacti: [{ x: W + 40, w: 9, h: 14 }] }) }
   resetGame()
 
   function stepGame() {
     const speed = Math.min(4.2, 2.2 + game.score / 500)
     game.dist += speed
+    game.run += 1
     game.score = (game.dist / 8) | 0
     game.vy += 0.42
     game.y = Math.min(0, game.y + game.vy)
@@ -172,7 +185,7 @@ export function createLcd({ items = [], palette = ['#0f380f', '#306230', '#8bac0
     const dy = GY - DINO_H + Math.round(game.y)
     sprite(DINO_X, dy, BODY, 0)
     rect(DINO_X + 12, dy + 2, 1, 1, 3)
-    const frame = game.y < 0 ? 2 : game.state !== 'run' ? 0 : (game.dist >> 3) & 1
+    const frame = game.y < 0 ? 2 : game.state !== 'run' ? 0 : Math.floor(game.run / RUN_TICKS) & 1
     sprite(DINO_X, dy + 14, LEGS[frame], 0)
     text(String(game.score).padStart(5, '0'), W - 34, 6, 0, 1)
     if (game.state === 'ready') {
@@ -262,25 +275,45 @@ export function createLcd({ items = [], palette = ['#0f380f', '#306230', '#8bac0
     }
   }
 
+  function drawSay(lines) {
+    const rows = lines.slice(0, 4)
+    const hh = rows.length * 10 + 10
+    const y0 = Math.round((H - hh) / 2)
+    rect(10, y0 - 1, W - 20, hh + 2, 3)
+    rect(12, y0 + 1, W - 24, hh - 2, 0)
+    rows.forEach((ln, i) => text(ln, W / 2 - measureText(ln) / 2, y0 + 6 + i * 10, 3, 1))
+  }
   function draw() {
     if (s.card) drawCard(s.card)
     else if (s.mode === 'boot') drawBoot()
     else if (s.mode === 'game') drawGame()
     else if (s.mode === 'konami') drawSnake()
     else drawMenu()
+    if (s.say) drawSay(s.say.lines)
     s.dirty = false
   }
   draw()
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('gb:say', (e) => {
+      const lines = (e.detail?.lines ?? []).slice(0, 4).map((l) => String(l).toUpperCase().slice(0, 16))
+      if (!lines.length) return
+      s.say = { lines, left: Math.max(0, Number(e.detail.ms) || 2500) / 1000 }
+      s.dirty = true
+    })
+  }
 
   const api = {
     canvas,
     get mode() { return s.mode },
     get index() { return s.index },
     get items() { return items },
+    inputAt: 0,
     setPalette(p) { pal = p.slice(); s.dirty = true },
     setItems(next) { items = next; s.dirty = true },
     press(btn) {
       s.armed = -1
+      api.inputAt = performance.now()
       if (s.mode === 'boot') { setMode('menu'); return }
       if (s.mode === 'menu') {
         s.seq.push(btn)
@@ -322,6 +355,7 @@ export function createLcd({ items = [], palette = ['#0f380f', '#306230', '#8bac0
      * jump. Boot: skip. The START label at the bottom right launches the dino game.
      */
     tapAt(px, py, { confirm = false } = {}) {
+      api.inputAt = performance.now()
       if (s.mode === 'boot') { setMode('menu'); return }
       if (s.mode === 'menu') {
         s.seq = []
@@ -348,12 +382,13 @@ export function createLcd({ items = [], palette = ['#0f380f', '#306230', '#8bac0
     },
     update(dt, reduced = false) {
       s.t += dt
+      if (s.say && (s.say.left -= dt) <= 0) { s.say = null; s.dirty = true }
       if (s.card) { if (!s.dirty) return false; draw(); return true }
       if (s.mode === 'boot' && s.t > 2.4) setMode('menu')
       let changed = s.dirty
       if (s.mode === 'game') {
         game.acc += dt
-        while (game.acc >= 1 / 30) { game.acc -= 1 / 30; if (game.state === 'run') stepGame() }
+        while (game.acc >= 1 / 30) { game.acc -= 1 / 30; if (game.state === 'run' && !s.say) stepGame() }
         changed = true
       } else if (s.mode === 'konami') {
         if (snake.state === 'splash' && s.t > 1.2) { resetSnake('run'); s.dirty = true }

@@ -16,6 +16,7 @@ import { initDisclosure, initScrollSpy } from '/shared/ui/nav.js'
 import { lazyF1, lazyTransit, canRunWebGL, pixelRatioCap } from '/shared/lazy.js'
 import { lazyScene } from '/shared/gl/lazy-scene.js'
 import { initSettle } from '/shared/p2/settle.js'
+import { initEggs } from '/shared/p2/eggs.js'
 import { exitKeys, exitFade, EXIT_NAMES } from '/shared/p2/exit-variants.js'
 
 const $ = (s, r = document) => r.querySelector(s)
@@ -60,6 +61,7 @@ export function initPage({ profile }) {
     document.addEventListener('visibilitychange', () => { document.title = document.hidden ? 'Query still running...' : title })
   }
   initSettle()
+  initEggs()
   initNameMorph({ h1: $('.hero--console .hero-copy h1'), brand: $('.top .brand'), reduced: reducedMotion })
   swapConsolePosters(currentTheme())
   document.addEventListener('themechange', (e) => onTheme(e.detail))

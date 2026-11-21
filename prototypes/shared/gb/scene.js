@@ -11,6 +11,11 @@
  * input (buttons, LCD taps, keyboard). `interactive = false` disengages. Touch: a tap on a menu row selects it, a
  * second tap on the selected row (or A) opens it; taps never open links in one go.
  *
+
+ * Events (window): `gb:game` {state:'start'|'end'} comes from lcd.js; `gb:palette` {name, ms = 6000} (here) swaps the LCD
+ * palette temporarily; `gb:say` {lines, ms} is handled by lcd.js. While the hero game is played the console faces the
+ * screen (straight, no sway or cursor lean) and eases back 2.5 s after the last console input.
+ *
  * Hero: `api.interactiveHero = true` while an attached screen shows; START (3D pill or the S key) switches the screen
  * to the LCD dino game, B / Escape returns to the attached scene. `onGame(active)` fires when a game starts / ends.
  */
@@ -48,6 +53,7 @@ const EXT = L.extent
 /** The LCD UI draws with 4 shades: stretch 2-colour palettes (e.g. 'mono') to dark, dark, light, light. */
 const four = (p) => (Array.isArray(p) && p.length < 4 ? [p[0], p[0], p[p.length - 1], p[p.length - 1]] : p)
 const smooth = (t) => t * t * (3 - 2 * t)
+const FACE_HOLD = 2.5 // seconds without console input before the hero game pose eases back to the idle motion
 const clamp01 = (v) => Math.min(1, Math.max(0, v))
 
 export const DEMO_TRACK = [
@@ -134,6 +140,7 @@ export async function createScene({
   let glowMode = 'default'
   let glowKind = null // 'floor' | 'grid' when the floor light is on
   let glowAnim = '' // '' | 'pulse' | 'drain'
+  let glowPinned = false // ?glow=scroll: static floor light anchored to the page (scrolls up with the content)
   let floorGlow = null
   const ensureFloor = () => {
     if (!floorGlow) {
@@ -145,10 +152,11 @@ export async function createScene({
     return floorGlow
   }
   function setGlow(mode) {
-    const [kind, anim = ''] = String(mode).split('-')
+    glowPinned = mode === 'scroll'
+    const [kind, anim = ''] = String(glowPinned ? 'floor' : mode).split('-')
     glowKind = kind === 'floor' || kind === 'grid' ? kind : null
     glowAnim = glowKind && (anim === 'pulse' || anim === 'drain') ? anim : ''
-    glowMode = glowKind ? glowKind + (glowAnim ? '-' + glowAnim : '') : mode === 'off' ? 'off' : 'default'
+    glowMode = glowPinned ? 'scroll' : glowKind ? glowKind + (glowAnim ? '-' + glowAnim : '') : mode === 'off' ? 'off' : 'default'
     if (glowKind) ensureFloor().setMode(glowKind)
     if (floorGlow) { floorGlow.group.visible = Boolean(glowKind); floorGlow.setBreath(0) }
     if (glowMode !== 'default') glow.visible = false
@@ -165,14 +173,33 @@ export async function createScene({
     const out = []
     tr.forEach((k, i) => {
       if (Math.abs(k.xf ?? 0) > 1.2 || (k.fill ?? 0) > 0.05) return
-      if (i === 0 || near(k, tr[i - 1]) || (tr[i + 1] && near(k, tr[i + 1]))) out.push({ xf: k.xf ?? 0, y: k.y ?? 0, z: k.z ?? 0, s: k.s ?? 1 })
+      if (i === 0 || near(k, tr[i - 1]) || (tr[i + 1] && near(k, tr[i + 1]))) out.push({ at: k.at ?? 0, xf: k.xf ?? 0, y: k.y ?? 0, z: k.z ?? 0, s: k.s ?? 1 })
     })
-    if (!out.length && tr[0]) out.push({ xf: tr[0].xf ?? 0, y: tr[0].y ?? 0, z: tr[0].z ?? 0, s: tr[0].s ?? 1 })
+    if (!out.length && tr[0]) out.push({ at: tr[0].at ?? 0, xf: tr[0].xf ?? 0, y: tr[0].y ?? 0, z: tr[0].z ?? 0, s: tr[0].s ?? 1 })
     return out
   }
   anchors = findAnchors(track)
-  function updateFloorGlow(pose, scale, fit, halfW, fade, time, reduced) {
+  function updateFloorGlow(pose, scale, fit, halfW, fade, time, reduced, p) {
     if (!floorGlow || !glowKind || !anchors.length) { glowAlive = false; return }
+    if (glowPinned) {
+      // ?glow=scroll: parked at the rest pose nearest in scroll, static, and slid up the screen by exactly the distance
+      // scrolled since that rest (a rigid NDC shift, so it moves like page content, no perspective change)
+      let best = 0
+      anchors.forEach((a, i) => { if (Math.abs(p - a.at) < Math.abs(p - anchors[best].at)) best = i })
+      anchorIdx = best
+      const a = anchors[best]
+      const sc = a.s * fit
+      const maxScroll = Math.max(1, document.documentElement.scrollHeight - innerHeight)
+      const dy = (p - a.at) * maxScroll
+      const level = (1 - smooth(clamp01((Math.abs(dy) / state.h - 1) / 0.6))) * fade
+      floorGlow.setBreath(0)
+      floorGlow.setShift(dy / (state.h / 2))
+      floorGlow.setLevel(level)
+      floorGlow.group.scale.setScalar(sc)
+      floorGlow.group.position.set(a.xf * halfW, a.y, a.z)
+      glowAlive = level > 0.003
+      return
+    }
     const presence = (a) => {
       const as = a.s * fit
       const d = Math.hypot((pose.xf - a.xf) * halfW, pose.y - a.y) / (L.H * as) + Math.abs(scale / as - 1)
@@ -223,7 +250,7 @@ export async function createScene({
     if (!state.paletteExplicit && themedPalette) applyPalette(light ? LIGHT_LCD : DARK_LCD)
   }
 
-  const state = { interactive, interactiveHero, engaged: false, eng: 0, calm: 0, moving: false, heroGame: false, playing: false, hover: null, trackRef: track, pose: samplePose(track, 0), w: size.w, h: size.h, onscreen: true, attached: null, theme: 'dark', palette }
+  const state = { interactive, interactiveHero, engaged: false, eng: 0, calm: 0, moving: false, heroGame: false, playing: false, hover: null, face: 0, inputT: 0, seenInput: 0, trackRef: track, pose: samplePose(track, 0), w: size.w, h: size.h, onscreen: true, attached: null, theme: 'dark', palette }
   // LCD palette follows the site theme (dark: ink, light: graphite) when the page's default 'ink' is in use and nothing
   // chose one: no ?lcd= / ?palette= in the URL and setPalette() not called. Other palettes passed in stay as given.
   const DARK_LCD = 'ink'
@@ -344,7 +371,15 @@ export async function createScene({
       const engTo = state.engaged ? 1 : 0
       state.eng = ctx.reduced ? engTo : Math.abs(engTo - state.eng) < 0.0005 ? engTo : state.eng + (engTo - state.eng) * (1 - Math.exp(-4 * dt))
       state.moving = state.calm !== calmTo || state.eng !== engTo
-      const idleAmp = 1 - smooth(state.calm)
+      // Facing: while the hero dino game is played the console turns straight to the screen and stops swaying / leaning,
+      // and eases back FACE_HOLD seconds after the last console input. Only rotation, sway and the cursor lean are
+      // overridden (position, scale and the scroll keys still apply).
+      if (state.heroGame && lcd.inputAt !== state.seenInput) { state.seenInput = lcd.inputAt; state.inputT = performance.now() }
+      const faceTo = state.heroGame && performance.now() - state.inputT < FACE_HOLD * 1000 ? 1 : 0
+      state.face = ctx.reduced || Math.abs(faceTo - state.face) < 0.0005 ? faceTo : state.face + (faceTo - state.face) * (1 - Math.exp(-(faceTo ? 5 : 2.5) * dt))
+      state.moving = state.moving || state.face !== faceTo
+      const kf = 1 - smooth(state.face)
+      const idleAmp = (1 - smooth(state.calm)) * kf
       const e = smooth(state.eng)
       const floatY = idle && !ctx.reduced ? Math.sin(t * 0.9) * 0.06 * idleAmp : 0
       const swayZ = idle && !ctx.reduced ? Math.sin(t * 0.6) * 0.012 * idleAmp : 0
@@ -359,10 +394,10 @@ export async function createScene({
       glowMat.opacity = glowLook.opacity * glowFade
       glow.visible = glowMode === 'default' && glowMat.opacity > 0.002
       rig.scale.setScalar(scale)
-      updateFloorGlow(pose, scale, fit, halfW, glowFade, t, ctx.reduced)
+      updateFloorGlow(pose, scale, fit, halfW, glowFade, t, ctx.reduced, ctx.p)
       // cursor lean: smaller angles on the contact pose, and none once engaged
-      const lean = tilt * (1 - e) * (1 - 0.3 * smooth(state.calm))
-      rig.rotation.set(pose.rx * (1 - e) - ctx.pointer.sy * 0.18 * lean, pose.ry * (1 - e) + ctx.pointer.sx * 0.28 * lean, pose.rz * (1 - e) + swayZ * tilt)
+      const lean = tilt * (1 - e) * (1 - 0.3 * smooth(state.calm)) * kf
+      rig.rotation.set(pose.rx * (1 - e) * kf - ctx.pointer.sy * 0.18 * lean, pose.ry * (1 - e) * kf + ctx.pointer.sx * 0.28 * lean, pose.rz * (1 - e) * kf + swayZ * tilt)
       cart.insert(pose.cart)
       cart.update?.(dt)
       if (ctx.reduced) lcd.wake()
@@ -454,12 +489,34 @@ export async function createScene({
     press(ndcOf(e), true)
   }
   const onCancel = (e) => touches.delete(e.pointerId)
+  // lcd.js announces the dino game: a start while the hero START is in charge restarts the facing timer
+  const onGameEvt = (e) => { if (e.detail?.state === 'start' && state.heroGame) state.inputT = performance.now() }
+  // `gb:palette` {name, ms = 6000}: borrow an LCD_PALETTES palette for a while, then restore what was showing
+  let palTimer = 0
+  let palBefore = null
+  const onPalette = (e) => {
+    const name = e.detail?.name
+    if (!LCD_PALETTES[name]) return
+    if (palBefore === null) palBefore = state.palette
+    applyPalette(name)
+    clearTimeout(palTimer)
+    palTimer = setTimeout(() => {
+      const back = !state.paletteExplicit && themedPalette ? (state.theme === 'light' ? LIGHT_LCD : DARK_LCD) : palBefore
+      palBefore = null
+      applyPalette(back)
+    }, Math.max(0, Number(e.detail.ms) || 6000))
+  }
+  window.addEventListener('gb:game', onGameEvt)
+  window.addEventListener('gb:palette', onPalette)
   window.addEventListener('keydown', onKey)
   window.addEventListener('pointerdown', onDown, { passive: true })
   window.addEventListener('pointerup', onUp, { passive: true })
   window.addEventListener('pointercancel', onCancel, { passive: true })
   const dispose = api.dispose
   api.dispose = () => {
+    window.removeEventListener('gb:game', onGameEvt)
+    window.removeEventListener('gb:palette', onPalette)
+    clearTimeout(palTimer)
     window.removeEventListener('pointerdown', onDown)
     window.removeEventListener('pointerup', onUp)
     window.removeEventListener('pointercancel', onCancel)

@@ -26,11 +26,12 @@ const LOOKS = {
 }
 
 const VERT = /* glsl */ `
-  uniform float uFloor;
+  uniform float uFloor, uShift;
   varying vec2 vP;
   void main() {
     vP = mix(position.xy, position.xz, uFloor);
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    gl_Position.y += uShift * gl_Position.w; // rigid screen-space slide (NDC): the page-anchored ?glow=scroll look
   }
 `
 
@@ -94,7 +95,7 @@ export function createFloorGlow(THREE) {
   const group = new THREE.Group()
   group.name = 'floor_glow'
   const U = {
-    uGrid: { value: 0 }, uCell: { value: LCD_PITCH * 3 }, uOpacity: { value: 1 }, uLevel: { value: 1 }, uReach: { value: 1.5 }, uBreath: { value: 0 }, uBase: { value: BASE_Y },
+    uGrid: { value: 0 }, uCell: { value: LCD_PITCH * 3 }, uOpacity: { value: 1 }, uLevel: { value: 1 }, uReach: { value: 1.5 }, uBreath: { value: 0 }, uBase: { value: BASE_Y }, uShift: { value: 0 },
     uDeep: { value: new THREE.Color() }, uHot: { value: new THREE.Color() }, uSpark: { value: new THREE.Color() },
   }
   const make = (floor, origin, geo, opacityKey) => {
@@ -146,6 +147,8 @@ export function createFloorGlow(THREE) {
     setTheme(name) { state.theme = name === 'light' ? 'light' : 'dark'; Object.assign(state.k, LOOKS[state.theme]); apply() },
     /** -1..1 slow breathing offset (pulse variant): widens the climb and lifts the light a touch. */
     setBreath(v) { U.uBreath.value = v },
+    /** Slide both quads up the screen by v (NDC, 2 = the viewport height) without any perspective change. */
+    setShift(v) { U.uShift.value = v },
     setLevel(v) { if (v !== state.level) { state.level = v; apply() } },
     /** Grid cell size in LCD pixels (a whole number) and how far up the backdrop the light climbs (local units). */
     setCell(n) { const c = LCD_PITCH * Math.max(1, Math.round(n)); for (const m of [wall, floor]) m.material.uniforms.uCell.value = c },
