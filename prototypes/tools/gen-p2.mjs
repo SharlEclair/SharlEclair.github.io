@@ -33,7 +33,9 @@ function head(title, id, extra = '') {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(person.name)}. ${esc(person.tagline)}">
-<link rel="icon" href="/favicon.svg">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 ${BOOT}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -114,7 +116,7 @@ function page(id, profile) {
 </section>`
 
   const projs = projects.map((p, i) => project(p, i, profile)).join('\n')
-  return `${head(`${person.name}, ${person.role.toLowerCase()}`, id)}
+  return `${head(`${person.name} | ${person.role}`, id)}
 <body data-profile="${profile}">
 ${topbar(id)}
 <main id="main">
@@ -157,7 +159,7 @@ ${sep(2)}
 }
 
 function archivePage(id) {
-  return `${head(`Projects, ${person.name}`, id)}
+  return `${head(`Projects | ${person.name}`, id)}
 <body>
 ${topbar(id, false)}
 <main id="main" class="archive">

@@ -55,6 +55,10 @@ function onTheme(theme) {
 
 export function initPage({ profile }) {
   initSeps()
+  { // tab title while the tab is in the background
+    const title = document.title
+    document.addEventListener('visibilitychange', () => { document.title = document.hidden ? 'Query still running...' : title })
+  }
   initSettle()
   initNameMorph({ h1: $('.hero--console .hero-copy h1'), brand: $('.top .brand'), reduced: reducedMotion })
   swapConsolePosters(currentTheme())
