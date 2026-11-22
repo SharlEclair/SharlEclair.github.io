@@ -59,13 +59,14 @@ const CODES = {
   treat: () => toast('Treat yo self. Ship the pipeline.'),
   heisenberg: () => { toast('I am the one who orchestrates.'); setTimeout(() => toast('Better call ' + first), 2200) },
   vault: () => { toast('VAULT-TEC: PIP-BOY OK', 'egg-vault'); say(['VAULT-TEC', 'PIP-BOY OK']); palette('night') },
+  pipboy: () => window.dispatchEvent(new CustomEvent('gb:pip')),
   lupus: () => toast('It is never lupus. It is the join.'),
   arcane: () => toast('Progress has a price', 'egg-arcane'),
   cook: () => toast('Mise en place: tools sharpened, data cleaned.'),
   plata: () => toast('Plata o plomo? Prod or staging.'),
-  help: () => toast('currents box purple prx zodiac mirror treat saul vault lupus arcane cook plata', '', 6000),
+  help: () => toast('currents box purple prx zodiac mirror treat saul vault pipboy lupus arcane cook plata', '', 6000),
 }
-const ALIAS = { valorant: 'prx', saul: 'heisenberg' }
+const ALIAS = { valorant: 'prx', saul: 'heisenberg', fallout: 'pipboy' }
 const KEYS = [...Object.keys(CODES), ...Object.keys(ALIAS)]
 
 let buf = ''

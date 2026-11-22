@@ -305,7 +305,29 @@ export async function createScene({
   function modeChanged(m) {
     const playing = m === 'game' || m === 'konami'
     if (playing !== state.playing) { state.playing = playing; onGame?.(playing) }
-    if (!playing) endHeroGame()
+    if (!playing && m !== 'pip') endHeroGame()
+  }
+  /** Hero: swap the attached scene for the LCD and play the Pip-Boy boot (it hands back to the scene when it ends). */
+  function heroPip() {
+    if (!state.attached || state.heroGame) return
+    state.heroGame = true
+    gb.setScreenSource(null)
+    lcd.startPip()
+    if (lcd.mode !== 'pip') endHeroGame()
+  }
+  // `gb:pip` (the `pipboy` easter egg): from the hero scene or the LCD menu
+  const onPip = () => {
+    if (!state.onscreen) return
+    if (state.attached && !state.heroGame) { if (state.interactiveHero) heroPip() } else if (lcd.mode === 'menu' || lcd.mode === 'boot') lcd.startPip()
+  }
+  let heroTaps = []
+  const heroTriple = () => {
+    const now = performance.now()
+    heroTaps = heroTaps.filter((t) => now - t < 900)
+    heroTaps.push(now)
+    if (heroTaps.length < 3) return false
+    heroTaps = []
+    return true
   }
   /** Hero START: swap the attached scene for the LCD and start the dino game. */
   function heroStart() {
@@ -319,7 +341,7 @@ export async function createScene({
     if (!state.heroGame) return
     state.heroGame = false
     if (state.attached) gb.setScreenSource(state.attached.target.texture)
-    if (lcd.mode === 'game') lcd.press('b')
+    if (lcd.mode === 'game' || lcd.mode === 'pip') lcd.press('b')
   }
 
   const api = {
@@ -408,7 +430,7 @@ export async function createScene({
       // and eases back FACE_HOLD seconds after the last console input. Only rotation, sway and the cursor lean are
       // overridden (position, scale and the scroll keys still apply).
       if (state.heroGame && lcd.inputAt !== state.seenInput) { state.seenInput = lcd.inputAt; state.inputT = performance.now() }
-      const faceTo = state.heroGame && performance.now() - state.inputT < FACE_HOLD * 1000 ? 1 : 0
+      const faceTo = state.heroGame && (lcd.mode === 'pip' || performance.now() - state.inputT < FACE_HOLD * 1000) ? 1 : 0
       state.face = ctx.reduced || Math.abs(faceTo - state.face) < 0.0005 ? faceTo : state.face + (faceTo - state.face) * (1 - Math.exp(-(faceTo ? 5 : 2.5) * dt))
       state.moving = state.moving || state.face !== faceTo
       const kf = 1 - smooth(state.face)
@@ -497,7 +519,11 @@ export async function createScene({
     if (!state.onscreen) return
     const { part, px, py } = gb.pickInfo(ndc, camera)
     if (!part) return
-    if (state.attached && !state.heroGame) { if (state.interactiveHero && part === 'start') heroStart(); return }
+    if (state.attached && !state.heroGame) {
+      if (state.interactiveHero && part === 'start') heroStart()
+      else if (state.interactiveHero && part === 'screen' && heroTriple()) heroPip() // three taps on the hero screen: Pip-Boy
+      return
+    }
     if (!(state.heroGame ? state.interactiveHero : state.interactive)) return
     // The click that engages is swallowed: it presses nothing
     if (!state.heroGame && !state.engaged) { state.engaged = true; return }
@@ -542,6 +568,7 @@ export async function createScene({
     }, Math.max(0, Number(e.detail.ms) || 6000))
   }
   window.addEventListener('gb:game', onGameEvt)
+  window.addEventListener('gb:pip', onPip)
   window.addEventListener('gb:palette', onPalette)
   window.addEventListener('keydown', onKey)
   window.addEventListener('pointerdown', onDown, { passive: true })
@@ -550,6 +577,7 @@ export async function createScene({
   const dispose = api.dispose
   api.dispose = () => {
     window.removeEventListener('gb:game', onGameEvt)
+    window.removeEventListener('gb:pip', onPip)
     window.removeEventListener('gb:palette', onPalette)
     clearTimeout(palTimer)
     window.removeEventListener('pointerdown', onDown)

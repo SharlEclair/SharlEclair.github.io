@@ -8,7 +8,8 @@
  *   lcd.press('down' | 'up' | 'a' | 'b' | 'start' | 'left' | 'right')
  *   lcd.tapAt(px, py, { confirm })  // a tap at LCD pixel coords: menu row select (confirm: needs a second tap to open)
  *   lcd.startGame()                 // jump straight into the dino game (the hero START button)
- *   lcd.mode  // 'boot' | 'menu' | 'game' | 'konami'
+ *   lcd.startPip()                  // the Pip-Boy boot animation (three taps on the menu title strip, or `gb:pip`)
+ *   lcd.mode  // 'boot' | 'menu' | 'game' | 'konami' | 'pip'
  *   lcd.inputAt  // performance.now() of the last press / tap (the scene's "facing" timer reads it)
  *
  * Window events: dispatches `gb:game` {detail:{state:'start'|'end'}} when the dino game starts / ends; listens for
@@ -283,8 +284,17 @@ export function createLcd({ items = [], palette = ['#0f380f', '#306230', '#8bac0
     rect(12, y0 + 1, W - 24, hh - 2, 0)
     rows.forEach((ln, i) => text(ln, W / 2 - measureText(ln) / 2, y0 + 6 + i * 10, 3, 1))
   }
+  // Pip-Boy boot (shared/gb/pip.js, loaded on first use): fixed green-on-black, ignores the LCD palette
+  let pip = null
+  const loadPip = () => import('./pip.js').then((m) => { pip = m; s.dirty = true })
+  const endPip = () => setMode(s.pipFrom === 'boot' || !s.pipFrom ? 'menu' : s.pipFrom)
+  function drawPipMode() {
+    if (pip) pip.drawPip(g, s.t)
+    else { g.fillStyle = '#000'; g.fillRect(0, 0, W, H) }
+  }
   function draw() {
     if (s.card) drawCard(s.card)
+    else if (s.mode === 'pip') drawPipMode()
     else if (s.mode === 'boot') drawBoot()
     else if (s.mode === 'game') drawGame()
     else if (s.mode === 'konami') drawSnake()
@@ -311,9 +321,18 @@ export function createLcd({ items = [], palette = ['#0f380f', '#306230', '#8bac0
     inputAt: 0,
     setPalette(p) { pal = p.slice(); s.dirty = true },
     setItems(next) { items = next; s.dirty = true },
+    /** The Pip-Boy boot animation (about 6 s); any press or tap skips it. Not while a game is running. */
+    startPip() {
+      if (s.mode === 'game' || s.mode === 'konami' || s.mode === 'pip') return
+      s.pipFrom = s.mode
+      api.inputAt = performance.now()
+      setMode('pip')
+      loadPip()
+    },
     press(btn) {
       s.armed = -1
       api.inputAt = performance.now()
+      if (s.mode === 'pip') { endPip(); return }
       if (s.mode === 'boot') { setMode('menu'); return }
       if (s.mode === 'menu') {
         s.seq.push(btn)
@@ -347,6 +366,15 @@ export function createLcd({ items = [], palette = ['#0f380f', '#306230', '#8bac0
         s.dirty = true
       }
     },
+    /** Register a tap; true on the third within 900 ms (and resets). */
+    tripleTap() {
+      const now = performance.now()
+      s.taps = (s.taps ?? []).filter((t) => now - t < 900)
+      s.taps.push(now)
+      if (s.taps.length < 3) return false
+      s.taps = []
+      return true
+    },
     /** Jump straight into the dino game's title screen from any mode (the hero START). */
     startGame() { game.state = 'ready'; resetGame(); s.seq = []; setMode('game') },
     /**
@@ -356,9 +384,12 @@ export function createLcd({ items = [], palette = ['#0f380f', '#306230', '#8bac0
      */
     tapAt(px, py, { confirm = false } = {}) {
       api.inputAt = performance.now()
+      if (s.mode === 'pip') { endPip(); return }
       if (s.mode === 'boot') { setMode('menu'); return }
       if (s.mode === 'menu') {
         s.seq = []
+        // three quick taps on the title strip: the Pip-Boy (the rows below open links, so they cannot carry it)
+        if (py < 20) { if (api.tripleTap()) api.startPip(); return }
         if (py >= H - 17 && px > W - 70) { api.press('start'); return }
         const i = Math.floor((py - 20) / 25)
         if (py < 20 || i < 0 || i >= items.length) return
@@ -386,7 +417,13 @@ export function createLcd({ items = [], palette = ['#0f380f', '#306230', '#8bac0
       if (s.card) { if (!s.dirty) return false; draw(); return true }
       if (s.mode === 'boot' && s.t > 2.4) setMode('menu')
       let changed = s.dirty
-      if (s.mode === 'game') {
+      if (s.mode === 'pip') {
+        if (pip && s.t > pip.PIP_DURATION) endPip()
+        else {
+          if (reduced && s.t < 3.8) { s.t = 3.8; s.dirty = true } // reduced motion: hold the finished main screen
+          changed = !reduced || s.dirty
+        }
+      } else if (s.mode === 'game') {
         game.acc += dt
         while (game.acc >= 1 / 30) { game.acc -= 1 / 30; if (game.state === 'run' && !s.say) stepGame() }
         changed = true
@@ -401,7 +438,7 @@ export function createLcd({ items = [], palette = ['#0f380f', '#306230', '#8bac0
       return changed
     },
     /** Replay the boot animation (when the console scrolls back into view). */
-    reboot() { if (s.mode !== 'game' && s.mode !== 'konami') { s.index = 0; setMode('boot') } },
+    reboot() { if (s.mode !== 'game' && s.mode !== 'konami' && s.mode !== 'pip') { s.index = 0; setMode('boot') } },
     /** Skip the boot animation (reduced motion, or when the console is already on). */
     wake() { if (s.mode === 'boot') setMode('menu') },
   }
