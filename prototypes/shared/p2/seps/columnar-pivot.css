@@ -1,0 +1,78 @@
+/* ?sep=columnar-pivot  Row store to column store. --p: 0 = row store, 1 = the flat rule (the default, so no-timeline and
+   reduced-motion get the end state). Cells derive their own eased progress from --p with calc(). */
+@property --p { syntax: '<number>'; inherits: true; initial-value: 1; }
+
+.sep.sep-colpiv {
+  --p: 1; --rh: 1.5rem; --gapx: .4rem; --gapy: .32rem; --padY: 1.5rem; --rot: 1;
+  --t0: #4fc79a; --t1: #5f95d6; --t2: #cfa14e;
+  --chip: color-mix(in srgb, var(--fg) 6%, var(--bg));
+  --rule: color-mix(in srgb, var(--accent) 82%, var(--bg));
+  --R: var(--dR); --CR: var(--dcr);
+  height: calc(var(--R) * var(--rh) + 2 * var(--padY)); overflow: hidden; contain: paint;
+}
+:root[data-theme='light'] .sep.sep-colpiv { --t0: #1b8a62; --t1: #2f68b0; --t2: #a8741a; --chip: color-mix(in srgb, var(--fg) 5%, var(--bg)); }
+
+.sep-colpiv .cp-stage {
+  position: absolute; left: var(--pad); right: var(--pad); top: var(--padY); height: calc(var(--R) * var(--rh));
+  perspective: 72rem; perspective-origin: 50% 50%;
+}
+.sep-colpiv .cp-c {
+  --x0: var(--dx0); --w0: var(--dw0); --r0: var(--dr0); --x1: var(--dx1); --w1: var(--dw1); --r1: var(--dr1);
+  /* own eased progress: the flight (q, s) then the collapse onto the rule (cq, cs) */
+  --q: clamp(0, (var(--p) - .22 - var(--d)) / .36, 1);
+  --s: calc(var(--q) * var(--q) * (3 - 2 * var(--q)));
+  --cq: clamp(0, (var(--p) - .76) / .18, 1);
+  --cs: calc(var(--cq) * var(--cq) * (3 - 2 * var(--cq)));
+  --lift: calc(4 * var(--s) * (1 - var(--s)));
+  --h: calc((var(--rh) - var(--gapy)) * (1 - var(--cs)) + 2px * var(--cs));
+  --row: calc(var(--r0) + (var(--r1) - var(--r0)) * var(--s) + (var(--CR) - var(--r0) - (var(--r1) - var(--r0)) * var(--s)) * var(--cs));
+  --tint: var(--t0);
+  position: absolute; display: block; box-sizing: border-box; font-style: normal;
+  left: calc((var(--x0) + (var(--x1) - var(--x0)) * var(--s)) * 100% + var(--gapx) / 2 * (1 - var(--cs)));
+  width: calc((var(--w0) + (var(--w1) - var(--w0)) * var(--s)) * 100% - var(--gapx) * (1 - var(--cs)));
+  height: var(--h);
+  top: calc(var(--row) * var(--rh) + (var(--rh) - var(--h)) / 2);
+  transform: translateZ(calc(var(--lift) * 1.6rem * var(--rot))) rotateX(calc(var(--lift) * 64deg * var(--rot)));
+  font: 500 .64rem/var(--rh) var(--mono); color: var(--fg); letter-spacing: .01em;
+}
+.sep-colpiv .cp-c.f1 { --tint: var(--t1); }
+.sep-colpiv .cp-c.f2 { --tint: var(--t2); }
+.sep-colpiv .cp-c::before, .sep-colpiv .cp-c::after { content: ''; position: absolute; inset: 0; }
+.sep-colpiv .cp-c::before {
+  background: var(--chip); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tint) 42%, transparent);
+  opacity: calc(1 - var(--cs));
+}
+.sep-colpiv .cp-c::after { background: var(--rule); opacity: var(--cs); }
+.sep-colpiv .cp-c span {
+  position: relative; z-index: 1; display: block; height: 100%; padding: 0 .55rem; overflow: hidden;
+  white-space: nowrap; text-overflow: ellipsis; opacity: max(0, calc(1 - var(--cs) * 2.2));
+}
+.sep-colpiv .cp-c.h::before { background: transparent; box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--tint) 70%, transparent); }
+.sep-colpiv .cp-c.h span { color: var(--tint); font-size: .58rem; letter-spacing: .14em; text-transform: uppercase; padding: 0 .1rem; }
+
+.sep-colpiv .cp-label {
+  position: absolute; z-index: 2; left: 50%; top: calc(var(--padY) + var(--R) * var(--rh) / 2); transform: translate(-50%, -50%);
+  white-space: nowrap; padding: .3rem .8rem; background: var(--bg); color: var(--fg);
+  font: 500 .68rem/1 var(--mono); letter-spacing: .14em; text-transform: uppercase;
+  opacity: clamp(0, (var(--p) - .9) / .07, 1);
+}
+.sep-colpiv .cp-label::before { content: 'next '; color: var(--muted); }
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .sep.sep-colpiv {
+      --p: 0;
+      animation: cp-pivot linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 50%;
+    }
+    @keyframes cp-pivot { from { --p: 0; } to { --p: 1; } }
+  }
+}
+@media (max-width: 640px) {
+  .sep.sep-colpiv { --R: var(--mR); --CR: var(--mcr); --rh: 1.35rem; --gapx: .3rem; --gapy: .28rem; --padY: 1.1rem; --rot: 0; }
+  .sep-colpiv .cp-stage { perspective: none; }
+  .sep-colpiv .cp-c { --x0: var(--mx0); --w0: var(--mw0); --r0: var(--mr0); --x1: var(--mx1); --w1: var(--mw1); --r1: var(--mr1); font-size: .6rem; }
+  .sep-colpiv .cp-c.nm { display: none; }
+  .sep-colpiv .cp-c span { padding: 0 .4rem; }
+}

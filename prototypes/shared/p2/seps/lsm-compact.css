@@ -1,0 +1,6 @@
+/* ?sep=lsm-compact  Compaction. One canvas; the band keeps the page rhythm, the end state is a hairline rule and caption. */
+.sep.sep-lsm { height: clamp(9.5rem, 22svh, 12rem); overflow: hidden; contain: paint; }
+.sep-lsm .lsm-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+@media (max-width: 640px) {
+  .sep.sep-lsm { height: 8.5rem; }
+}

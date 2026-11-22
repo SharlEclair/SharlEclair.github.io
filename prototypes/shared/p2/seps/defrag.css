@@ -1,0 +1,19 @@
+/* ?sep=defrag  Defrag. Canvas cluster map; the DOM only carries the caption. */
+.sep.sep-defrag {
+  --df-1: #4fc79a; --df-2: #5f95d6; --df-3: #cfa14e; --df-4: #a590cf; --df-free: rgba(236, 235, 229, .075);
+  height: clamp(6.5rem, 14svh, 7.5rem); overflow: hidden; contain: paint;
+}
+:root[data-theme='light'] .sep.sep-defrag {
+  --df-1: #1b8a62; --df-2: #2f68b0; --df-3: #a8741a; --df-4: #7660b0; --df-free: rgba(19, 19, 18, .085);
+}
+.sep-defrag .df-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.sep-defrag .df-probe { position: absolute; visibility: hidden; pointer-events: none; width: 0; height: 0; }
+.sep-defrag .df-label {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); white-space: nowrap;
+  padding: .3rem .8rem; background: var(--bg); color: var(--fg);
+  font: 500 .68rem/1 var(--mono); letter-spacing: .14em; text-transform: uppercase;
+}
+.sep-defrag .df-label::before { content: 'next '; color: var(--muted); }
+@media (max-width: 640px) {
+  .sep.sep-defrag { height: clamp(5.5rem, 12svh, 6.5rem); }
+}

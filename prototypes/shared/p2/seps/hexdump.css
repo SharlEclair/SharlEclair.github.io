@@ -1,0 +1,49 @@
+/* ?sep=hexdump  Dump. An LCD-green window of hex bytes that resolves, then collapses to a hairline caption. */
+.sep.sep-hexdump {
+  --hx: #a9d58f;                 /* LCD ink, resolved name bytes */
+  --hx-pad: #6f9a63;             /* resolved pad bytes and offsets */
+  --hx-dim: rgba(169, 213, 143, .24);
+  --hx-panel: color-mix(in srgb, #7fb35e 7%, var(--bg));
+  --hx-gut: color-mix(in srgb, #7fb35e 5%, var(--bg));
+  --hx-line: rgba(169, 213, 143, .34);
+  --hx-scan: rgba(169, 213, 143, .045);
+  height: clamp(9.5rem, 21svh, 11.5rem); overflow: hidden; contain: paint; padding-inline: var(--pad);
+}
+:root[data-theme='light'] .sep.sep-hexdump {
+  --hx: #25401f; --hx-pad: #5d7552; --hx-dim: rgba(37, 64, 31, .26);
+  --hx-panel: color-mix(in srgb, #6c8f4d 9%, var(--bg));
+  --hx-gut: color-mix(in srgb, #6c8f4d 7%, var(--bg));
+  --hx-line: rgba(37, 64, 31, .38); --hx-scan: rgba(37, 64, 31, .05);
+}
+
+.sep-hexdump .hx-stage {
+  position: absolute; inset: 0; font: 500 .74rem/1.8 var(--mono);
+  font-variant-ligatures: none; font-feature-settings: 'liga' 0, 'calt' 0;
+}
+.sep-hexdump .hx-stage > * { position: absolute; left: 0; top: 0; white-space: pre; }
+
+.sep-hexdump .hx-panel {
+  background: var(--hx-panel);
+  background-image: repeating-linear-gradient(0deg, transparent 0 2px, var(--hx-scan) 2px 3px);
+}
+.sep-hexdump .hx-gut { left: 0; top: 0; bottom: 0; position: absolute; background: var(--hx-gut); border-right: 1px solid var(--hx-line); }
+.sep-hexdump .hx-rule { height: 1px; background: var(--hx-line); transform-origin: center; }
+.sep-hexdump .hx-cap { background: var(--bg); }
+
+.sep-hexdump .hx-stage span { line-height: 1.8; color: var(--hx-pad); will-change: transform; }
+.sep-hexdump .hx-off { color: var(--hx-pad); }
+.sep-hexdump .hx-bar { color: var(--hx-dim); }
+.sep-hexdump .hx-rul { color: var(--hx-dim); font-size: .92em; }
+.sep-hexdump .hx-ofs { color: var(--hx-pad); letter-spacing: 0; }
+
+/* bytes: 0 unresolved, 1 being read (inverse cell), 2 settled */
+.sep-hexdump [data-s='0'] { color: var(--hx-dim); }
+.sep-hexdump [data-s='1'] { background: var(--hx); color: var(--hx-panel); }
+.sep-hexdump [data-s='2'] { color: var(--hx-pad); }
+.sep-hexdump [data-s='2'].hx-n { color: var(--hx); font-weight: 700; }
+.sep-hexdump .hx-a.hx-n[data-s='2'] { font-size: 1em; }
+
+@media (max-width: 640px) {
+  .sep.sep-hexdump { height: clamp(7.5rem, 17svh, 8.5rem); }
+  .sep-hexdump .hx-stage { font-size: .66rem; }
+}

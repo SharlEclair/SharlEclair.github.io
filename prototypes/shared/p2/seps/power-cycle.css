@@ -1,0 +1,93 @@
+/* ?sep=power-cycle  Power cycle. --pc: 0 = picture on, 1 = thin rule with the next section's name (the default end state). */
+@property --pc { syntax: '<number>'; inherits: true; initial-value: 1; }
+
+.sep.sep-pc {
+  --pc: 1;
+  --hot: color-mix(in srgb, var(--accent) 26%, var(--fg));
+  --rest: color-mix(in srgb, var(--fg) 40%, transparent);
+  --panel: color-mix(in srgb, var(--accent) 5%, color-mix(in srgb, var(--fg) 3%, var(--bg)));
+  --sw: min(32rem, calc(100% - 2rem));
+  /* phases of --pc: squeeze to a line, shrink to a dot, dot fades, dark gap, line grows back, cools, caption */
+  --sq: clamp(0, (var(--pc) - .08) / .28, 1);
+  --sqe: calc(var(--sq) * var(--sq) * (3 - 2 * var(--sq)));
+  --dt: clamp(0, (var(--pc) - .34) / .18, 1);
+  --dte: calc(var(--dt) * var(--dt) * (3 - 2 * var(--dt)));
+  --fd: clamp(0, (var(--pc) - .52) / .12, 1);
+  --on: clamp(0, (var(--pc) - .72) / .24, 1);
+  --one: calc(1 - (1 - var(--on)) * (1 - var(--on)) * (1 - var(--on)));
+  --cool: clamp(0, (var(--pc) - .86) / .14, 1);
+  --lab: clamp(0, (var(--pc) - .9) / .1, 1);
+  height: clamp(8.5rem, 21svh, 10.5rem);
+  height: round(nearest, clamp(8.5rem, 21svh, 10.5rem), 2px);
+  overflow: hidden; contain: paint;
+}
+:root[data-theme='light'] .sep.sep-pc { --hot: color-mix(in srgb, var(--accent) 40%, var(--fg)); --rest: color-mix(in srgb, var(--fg) 45%, transparent); }
+
+.sep-pc .pc-screen {
+  position: absolute; left: 50%; top: 50%; width: var(--sw); height: 4.6rem; box-sizing: border-box;
+  transform: translate(-50%, -50%) scale(1, calc(1 - .996 * var(--sqe)));
+  opacity: calc(1 - clamp(0, (var(--sq) - .8) / .2, 1));
+  border: 1px solid color-mix(in srgb, var(--fg) 28%, transparent); border-radius: 6px;
+  background: var(--panel);
+  box-shadow: inset 0 0 0 3px var(--bg), inset 0 0 0 4px var(--line);
+}
+/* the picture brightens as it collapses (capped) */
+.sep-pc .pc-screen::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; background: var(--hot);
+  opacity: calc(var(--sqe) * .32);
+}
+.sep-pc .pc-lcd {
+  position: absolute; inset: 0; padding: 0 1.3rem; display: flex; flex-direction: column; justify-content: center; gap: .5rem;
+  border-radius: inherit; overflow: hidden;
+  background: repeating-linear-gradient(0deg, transparent 0 2px, color-mix(in srgb, var(--fg) 4.5%, transparent) 2px 3px);
+}
+.sep-pc .pc-tag { font: 500 .6rem/1 var(--mono); letter-spacing: .22em; text-transform: uppercase; color: var(--accent); }
+.sep-pc .pc-line { font: 400 .76rem/1.5 var(--mono); color: var(--fg); text-wrap: balance; max-width: 44ch; }
+
+.sep-pc .pc-beam {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: calc(var(--sw) * (1 - var(--dte)) + 4px * var(--dte)); height: calc(2px + 2px * var(--dte));
+  background: var(--hot);
+  opacity: calc(clamp(0, (var(--sq) - .6) / .4, 1) * (1 - var(--fd)) * .92);
+}
+:root[data-theme='dark'] .sep-pc .pc-beam { box-shadow: 0 0 10px 1px color-mix(in srgb, var(--accent) 38%, transparent); }
+
+.sep-pc .pc-rule {
+  position: absolute; left: 0; right: 0; top: 50%; height: 1px;
+  transform: scaleX(calc(.012 + .988 * var(--one)));
+  background: color-mix(in srgb, var(--hot) calc((1 - var(--cool)) * 100%), var(--rest));
+  opacity: clamp(0, (var(--pc) - .7) / .03, 1);
+}
+.sep-pc .pc-rule::before {
+  content: ''; position: absolute; left: 0; right: 0; top: -1px; height: 3px; background: var(--hot);
+  opacity: calc((1 - var(--cool)) * .85);
+}
+:root[data-theme='dark'] .sep-pc .pc-rule::before { box-shadow: 0 0 9px 1px color-mix(in srgb, var(--accent) 32%, transparent); }
+
+.sep-pc .pc-label {
+  position: absolute; left: 50%; top: 50%; height: 1.5rem; transform: translate(-50%, -50%);
+  display: flex; align-items: center; gap: .65rem; padding: 0 .9rem; white-space: nowrap; background: var(--bg);
+  font: 500 .68rem/1 var(--mono); letter-spacing: .2em; text-transform: uppercase;
+  color: color-mix(in srgb, var(--hot) calc((1 - var(--lab)) * 100%), var(--fg));
+  opacity: var(--lab);
+}
+.sep-pc .pc-led { width: 6px; height: 6px; background: var(--accent); }
+:root[data-theme='dark'] .sep-pc .pc-led { box-shadow: 0 0 6px color-mix(in srgb, var(--accent) 60%, transparent); }
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .sep.sep-pc {
+      --pc: 0;
+      animation: pc-cycle linear both;
+      animation-timeline: view();
+      animation-range: entry 80% cover 58%;
+    }
+    @keyframes pc-cycle { from { --pc: 0; } to { --pc: 1; } }
+  }
+}
+@media (max-width: 640px) {
+  .sep.sep-pc { height: 8rem; height: round(nearest, 8rem, 2px); --sw: calc(100% - .5rem); }
+  .sep-pc .pc-screen { height: 4.4rem; }
+  .sep-pc .pc-lcd { padding: 0 1rem; gap: .4rem; }
+  .sep-pc .pc-line { font-size: .7rem; }
+}

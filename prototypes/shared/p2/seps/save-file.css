@@ -1,0 +1,70 @@
+/* ?sep=save-file  Save file. --o: list scroll (0 to 1 row), --c: collapse into the rule (0 window, 1 rule), set by the script. */
+.sep.sep-sf {
+  --rh: 2rem; --o: 1; --c: 1; --cells: 20; --n: 20;
+  --panel: color-mix(in srgb, var(--accent) 5%, color-mix(in srgb, var(--fg) 3%, var(--bg)));
+  height: 9.5rem; height: round(nearest, clamp(9rem, 22svh, 11rem), 2px);
+  overflow: hidden; contain: paint;
+}
+.sep-sf .sf-rule {
+  position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: color-mix(in srgb, var(--fg) 40%, transparent);
+  transform: scaleX(1);
+}
+.sep-sf .sf-win {
+  position: absolute; left: 50%; top: 50%; width: min(30rem, 100%); box-sizing: border-box; transform: translate(-50%, -50%);
+  border: 1px solid color-mix(in srgb, var(--fg) calc((1 - var(--c)) * 26%), transparent); border-radius: 6px;
+  background: color-mix(in srgb, var(--panel) calc((1 - var(--c)) * 100%), transparent);
+  font-family: var(--mono); font-variant-ligatures: none;
+}
+.sep-sf .sf-head {
+  height: calc(1.7rem * (1 - var(--c))); overflow: hidden; display: flex; align-items: center; gap: .55rem; padding: 0 .9rem;
+  opacity: clamp(0, 1 - var(--c) * 1.5, 1); box-shadow: 0 1px 0 color-mix(in srgb, var(--fg) 14%, transparent);
+  color: var(--muted); font: 500 .6rem/1 var(--mono); letter-spacing: .22em; text-transform: uppercase;
+}
+.sep-sf .sf-ico { flex: none; color: var(--accent); }
+.sep-sf .sf-ico .k { fill: var(--panel); }
+.sep-sf .sf-pct { margin-left: auto; font-variant-numeric: tabular-nums; letter-spacing: .1em; }
+
+.sep-sf .sf-view {
+  position: relative; overflow: hidden; height: calc(var(--rh) * (2 - var(--c))); border-radius: inherit;
+  background: color-mix(in srgb, var(--bg) calc(var(--c) * 100%), transparent);
+}
+.sep-sf .sf-band {
+  position: absolute; left: 0; right: 0; top: 0; height: var(--rh); opacity: calc(1 - var(--c));
+  background: color-mix(in srgb, var(--accent) 9%, transparent); box-shadow: inset 2px 0 0 var(--accent);
+}
+.sep-sf .sf-caret { position: absolute; left: .8rem; top: calc(var(--rh) / 2 - 5px); color: var(--accent); fill: currentColor; }
+.sep-sf .sf-list { transform: translateY(calc(var(--o) * var(--rh) * -1)); }
+.sep-sf .sf-row {
+  --w: 1; position: relative; height: var(--rh); box-sizing: border-box; display: flex; align-items: center; gap: .6rem;
+  padding: 0 1rem 0 2rem; white-space: nowrap;
+  font: 500 .74rem/1 var(--mono); letter-spacing: .12em; text-transform: uppercase;
+  color: color-mix(in srgb, var(--fg) calc(var(--w) * 100%), var(--muted));
+}
+.sep-sf .sf-row:nth-child(3) { opacity: clamp(0, 1 - var(--c) * 2, 1); }
+.sep-sf .sf-n { font-weight: 500; color: color-mix(in srgb, var(--accent) calc(40% + var(--w) * 60%), var(--muted)); }
+.sep-sf .sf-t { margin-left: .5rem; }
+.sep-sf .sf-lead { flex: 1; align-self: center; height: 0; min-width: .5rem; border-top: 1px dotted color-mix(in srgb, var(--fg) 40%, transparent); }
+.sep-sf .sf-r { font-size: .64rem; letter-spacing: .06em; text-transform: none; color: var(--muted); }
+
+.sep-sf .sf-bar {
+  flex: none; width: calc(var(--cells) * 7px - 2px); height: 8px; color: var(--accent);
+  background: repeating-linear-gradient(90deg, color-mix(in srgb, var(--fg) 16%, transparent) 0 5px, transparent 5px 7px);
+}
+.sep-sf .sf-fill {
+  display: block; height: 100%; width: max(0px, calc(var(--n) * 7px - 2px));
+  background: repeating-linear-gradient(90deg, currentColor 0 5px, transparent 5px 7px);
+}
+.sep-sf .sf-stamp {
+  position: absolute; right: 1.5rem; top: 50%; padding: .28rem .5rem; opacity: 0;
+  transform: translateY(-50%) rotate(-6deg); transform-origin: 50% 50%;
+  border: 1px solid var(--accent); color: var(--accent); background: color-mix(in srgb, var(--panel) 88%, transparent);
+  font: 600 .64rem/1 var(--mono); letter-spacing: .24em;
+}
+
+@media (max-width: 640px) {
+  .sep.sep-sf { height: 8rem; height: round(nearest, 8rem, 2px); }
+  .sep-sf .sf-pct, .sep-sf .sf-pl { display: none; }
+  .sep-sf .sf-row { gap: .45rem; padding: 0 .8rem 0 1.7rem; font-size: .68rem; }
+  .sep-sf .sf-caret { left: .65rem; }
+  .sep-sf .sf-stamp { right: 1rem; }
+}

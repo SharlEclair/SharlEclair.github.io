@@ -1,0 +1,53 @@
+/* ?sep=dag-run  DAG run. Task states are told by shape (open dashed box and circle / ringed box with a pulse / filled box
+   with a check) as well as colour. Colours come from the page variables; the filled state is tuned per theme. */
+.sep.sep-dag {
+  --dr-fill: color-mix(in srgb, var(--accent) 64%, var(--bg));
+  --dr-ink: var(--accent-ink, #04170c);
+  --dr-idle: color-mix(in srgb, var(--muted) 78%, transparent);
+  height: clamp(10.5rem, 25svh, 13.5rem); overflow: hidden; contain: paint;
+}
+:root[data-theme='light'] .sep.sep-dag { --dr-fill: var(--accent); --dr-ink: var(--bg); }
+
+.sep-dag svg.dr { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; display: block; }
+.sep-dag .dr stop { stop-color: var(--dr-fill); }
+
+/* edges: a faint track, then the ink on top, then a small arrowhead */
+.sep-dag .dr-track { fill: none; stroke: var(--dr-idle); stroke-width: 1; opacity: .45; }
+.sep-dag .dr-ink { fill: none; stroke: var(--dr-fill); stroke-width: 1.4; }
+.sep-dag .dr-head { fill: none; stroke: var(--dr-fill); stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; opacity: 0; }
+
+/* nodes */
+.sep-dag .dr-box { fill: var(--bg); stroke: var(--dr-idle); stroke-width: 1; stroke-dasharray: 3 3; }
+.sep-dag .dr-pulse { fill: none; stroke: var(--accent); stroke-width: 1; opacity: 0; }
+.sep-dag .dr-l { font: 500 10.5px var(--mono); letter-spacing: .01em; fill: var(--muted); }
+.sep-dag .dr-s { font: 400 8px var(--mono); letter-spacing: .02em; fill: var(--muted); opacity: .85; }
+.sep-dag .dr.dr-m .dr-l { font-size: 9px; }
+.sep-dag .dr-ico * { fill: none; stroke-width: 1.2; opacity: 0; }
+
+/* queued: hollow, dashed, an open circle */
+.sep-dag .dr-iq { stroke: var(--dr-idle); }
+.sep-dag [data-state='queued'] .dr-iq { opacity: 1; }
+/* running: a solid outline, a ringed dot, the pulse outline */
+.sep-dag [data-state='running'] .dr-box { fill: color-mix(in srgb, var(--accent) 9%, var(--bg)); stroke: var(--accent); stroke-width: 1.3; stroke-dasharray: none; }
+.sep-dag [data-state='running'] .dr-l { fill: var(--fg); }
+.sep-dag [data-state='running'] .dr-s { fill: var(--muted); }
+.sep-dag .dr-ir { stroke: var(--accent); }
+.sep-dag .dr-id { fill: var(--accent) !important; stroke: none !important; }
+.sep-dag [data-state='running'] .dr-ir, .sep-dag [data-state='running'] .dr-id { opacity: 1; }
+/* success: filled, with a check */
+.sep-dag [data-state='success'] .dr-box { fill: var(--dr-fill); stroke: var(--dr-fill); stroke-width: 1; stroke-dasharray: none; }
+.sep-dag [data-state='success'] .dr-l, .sep-dag [data-state='success'] .dr-s { fill: var(--dr-ink); }
+.sep-dag .dr-ic { stroke: var(--dr-ink); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.sep-dag [data-state='success'] .dr-ic { opacity: 1; }
+
+/* the sink's caption, sitting on the stretched rule */
+.sep-dag .dr-pill { opacity: 0; }
+.sep-dag .dr-pr { fill: var(--bg); }
+.sep-dag .dr-pt { font: 500 10.5px var(--mono); letter-spacing: .01em; fill: var(--fg); }
+.sep-dag .dr.dr-m .dr-pt { font-size: 9px; }
+.sep-dag .dr-pk { fill: var(--dr-fill); }
+.sep-dag .dr-pc { fill: none; stroke: var(--dr-fill); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+@media (max-width: 640px) {
+  .sep.sep-dag { height: 11rem; }
+}

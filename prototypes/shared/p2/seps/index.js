@@ -17,6 +17,16 @@
  *   ?sep=strands three labelled strands (blue, teal, violet) braid, then pull taut into one thin line
  *   ?sep=twist   a CSS 3D rope/DNA twist of 64 slices untwists into a thin line
  *   ?sep=termbar a terminal line: a block-character bar fills with the scroll, then collapses to a rule
+ *   ?sep=power-cycle    an LCD frame squeezes to a line, then a dot, and powers back on as a phosphor rule
+ *   ?sep=save-file      a retro SAVE DATA screen: bar fills, SAVED stamps, the next file is selected
+ *   ?sep=lsm-compact    log segments fall into a grid like a falling-block game, rows compact and clear into the rule
+ *   ?sep=dag-run        an Airflow-style DAG: nodes go queued, running, success; the sink stretches into the rule
+ *   ?sep=defrag         a disk-defrag cluster map hops into contiguous runs and packs into one bar
+ *   ?sep=columnar-pivot a row-store table rotates into columns (Parquet) and settles on one header line
+ *   ?sep=hash-ring      a consistent-hashing ring unrolls into a labelled timeline rule
+ *   ?sep=watermark      event-time dots, a watermark sweep, late dots grey out, an emit chip drops in
+ *   ?sep=schema-migrate a table header runs ALTER TABLE steps and settles as the next version
+ *   ?sep=hexdump        an xxd-style dump resolves byte by byte and spells the next section
  *
  * A variant module (shared/p2/seps/<name>.js) exports:
  *   mount(el, { slot, reduced }) -> void | () => void   build inside `el` (the slot); may return a cleanup
@@ -40,6 +50,16 @@ const LOADERS = {
   strands: () => import('./strands.js'),
   twist: () => import('./twist.js'),
   termbar: () => import('./termbar.js'),
+  'power-cycle': () => import('./power-cycle.js'),
+  'save-file': () => import('./save-file.js'),
+  'lsm-compact': () => import('./lsm-compact.js'),
+  'dag-run': () => import('./dag-run.js'),
+  'defrag': () => import('./defrag.js'),
+  'columnar-pivot': () => import('./columnar-pivot.js'),
+  'hash-ring': () => import('./hash-ring.js'),
+  'watermark': () => import('./watermark.js'),
+  'schema-migrate': () => import('./schema-migrate.js'),
+  'hexdump': () => import('./hexdump.js'),
 }
 export const DEFAULT_SEP = 'ascii'
 export const sepNames = Object.keys(LOADERS)

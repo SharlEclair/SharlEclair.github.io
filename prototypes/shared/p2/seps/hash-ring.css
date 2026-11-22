@@ -1,0 +1,26 @@
+/* ?sep=hash-ring  Consistent hashing. A node ring unrolls into a labelled rule. One accent, thin strokes, no glow in light. */
+.sep.sep-hashring { height: clamp(9.5rem, 22svh, 11.5rem); overflow: hidden; contain: paint; }
+.sep-hashring .hr-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; overflow: hidden; }
+.sep-hashring .hr-svg * { vector-effect: none; }
+
+.sep-hashring .hr-ring { fill: none; stroke: color-mix(in srgb, var(--fg) 52%, transparent); stroke-width: 1.1; stroke-linecap: butt; }
+.sep-hashring .hr-minor { fill: none; stroke: color-mix(in srgb, var(--fg) 34%, transparent); stroke-width: 1; }
+.sep-hashring .hr-node { fill: none; stroke: var(--fg); stroke-width: 1.6; stroke-linecap: butt; }
+.sep-hashring .hr-lead { fill: none; stroke: var(--accent); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; opacity: .85; }
+.sep-hashring .hr-stem { fill: none; stroke: color-mix(in srgb, var(--accent) 55%, transparent); stroke-width: 1; }
+.sep-hashring .hr-key { fill: var(--accent); stroke: var(--bg); stroke-width: 1.6; }
+:root:not([data-theme='light']) .sep-hashring .hr-key { filter: drop-shadow(0 0 3px color-mix(in srgb, var(--accent) 55%, transparent)); }
+
+.sep-hashring text { font: 500 .6rem/1 var(--mono); letter-spacing: .06em; fill: var(--muted); text-anchor: middle; white-space: pre; font-variant-ligatures: none; }
+.sep-hashring .hr-lab { fill: var(--fg); }
+.sep-hashring .hr-lab-n { fill: var(--muted); }
+.sep-hashring .hr-next { text-anchor: start; font-size: .64rem; letter-spacing: .16em; }
+.sep-hashring .hr-next .hr-dim { fill: var(--muted); }
+.sep-hashring .hr-next .hr-hi { fill: var(--fg); }
+.sep-hashring .hr-count { text-anchor: end; fill: var(--muted); font-size: .62rem; letter-spacing: .08em; }
+
+@media (max-width: 640px) {
+  .sep.sep-hashring { height: 7.5rem; }
+  .sep-hashring .hr-next { font-size: .58rem; letter-spacing: .12em; }
+  .sep-hashring .hr-count { font-size: .56rem; letter-spacing: .04em; }
+}

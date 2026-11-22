@@ -1,0 +1,37 @@
+/* ?sep=schema-migrate  Migration. A table header runs ALTER TABLE statements, then collapses into one hairline caption. */
+.sep.sep-schema {
+  --rh: 1.8rem;
+  height: clamp(9rem, 21svh, 11rem); overflow: hidden; contain: paint;
+  display: grid; align-items: center; padding-inline: var(--pad);
+}
+.sep-schema .sm-block {
+  position: relative; width: 100%; font: 500 .74rem/1 var(--mono);
+  font-variant-ligatures: none; font-feature-settings: 'liga' 0, 'calt' 0; color: var(--muted);
+}
+.sep-schema .sm-cmd, .sep-schema .sm-title { height: var(--rh); line-height: var(--rh); white-space: pre; }
+.sep-schema .sm-cmd b { font-weight: 500; color: var(--accent); }
+.sep-schema .sm-cur { display: inline-block; width: .6em; height: 1.05em; margin-left: .15em; vertical-align: -.2em; background: var(--accent); }
+
+.sep-schema .sm-title { --hot: 0; font-weight: 700; color: color-mix(in srgb, var(--accent) calc(var(--hot) * 100%), var(--fg)); position: relative; z-index: 2; }
+.sep-schema .sm-title span { display: inline-block; padding: 0 .8rem; margin-left: -.8rem; background: var(--bg); }
+.sep-schema mark { background: var(--accent); color: var(--bg); }
+
+.sep-schema .sm-rule { height: 1px; background: var(--line); transform-origin: left center; }
+.sep-schema .sm-grid { position: relative; height: calc(var(--rh) * 2); }
+.sep-schema .sm-col {
+  position: absolute; left: 0; top: 0; height: 100%; overflow: hidden; white-space: pre; box-sizing: border-box;
+  padding-left: .9em; --hot: 0; --add: 0;
+}
+.sep-schema .sm-col::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 1px;
+  background: color-mix(in srgb, var(--accent) calc(var(--add) * 90%), var(--line));
+}
+.sep-schema .sm-col:first-child::before { opacity: 0; }
+.sep-schema .sm-col .nm, .sep-schema .sm-col .ty { display: block; height: var(--rh); line-height: var(--rh); }
+.sep-schema .sm-col .nm { color: color-mix(in srgb, var(--accent) calc(var(--hot) * 100%), var(--fg)); font-weight: 700; }
+.sep-schema .sm-col .ty { color: color-mix(in srgb, var(--accent) calc(var(--hot) * 100%), var(--muted)); font-weight: 500; letter-spacing: .04em; }
+
+@media (max-width: 640px) {
+  .sep.sep-schema { --rh: 1.55rem; height: clamp(7.5rem, 17svh, 8.5rem); }
+  .sep-schema .sm-block { font-size: .66rem; }
+}

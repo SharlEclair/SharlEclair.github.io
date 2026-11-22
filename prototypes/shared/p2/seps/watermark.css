@@ -1,0 +1,31 @@
+/* ?sep=watermark  Event-time stream: a watermark sweeps, windows close, late events grey out, one emit chip lands in the rule. */
+.sep.sep-watermark { height: clamp(9.5rem, 23svh, 12rem); overflow: hidden; contain: paint; }
+.sep-watermark .wm-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; overflow: hidden; }
+
+.sep-watermark .wm-axis { fill: none; stroke: color-mix(in srgb, var(--fg) 52%, transparent); stroke-width: 1; shape-rendering: crispEdges; }
+.sep-watermark .wm-edge { fill: none; stroke: color-mix(in srgb, var(--fg) 40%, transparent); stroke-width: 1; shape-rendering: crispEdges; }
+.sep-watermark .wm-win { fill: none; stroke-width: 1; }
+.sep-watermark .wm-open { stroke: color-mix(in srgb, var(--fg) 30%, transparent); stroke-dasharray: 3 4; }
+.sep-watermark .wm-shut { stroke: color-mix(in srgb, var(--accent) 60%, transparent); fill: color-mix(in srgb, var(--accent) 6%, transparent); }
+.sep-watermark .wm-ring { fill: none; stroke: var(--muted); stroke-width: 1; stroke-dasharray: 2 2; }
+.sep-watermark .wm-line { fill: none; stroke: var(--accent); stroke-width: 1; shape-rendering: crispEdges; }
+:root:not([data-theme='light']) .sep-watermark .wm-line { filter: drop-shadow(0 0 3px color-mix(in srgb, var(--accent) 60%, transparent)); }
+
+.sep-watermark text { font: 500 .6rem/1 var(--mono); letter-spacing: .06em; fill: var(--muted); text-anchor: middle; white-space: pre; font-variant-ligatures: none; }
+.sep-watermark .wm-flag { text-anchor: start; fill: var(--accent); }
+.sep-watermark .wm-sub { font-size: .55rem; fill: var(--muted); }
+.sep-watermark .wm-late { fill: var(--muted); font-size: .56rem; }
+.sep-watermark .wm-cap { font-size: .62rem; letter-spacing: .08em; }
+.sep-watermark .wm-cap-l { text-anchor: start; }
+.sep-watermark .wm-cap-r { text-anchor: end; }
+
+.sep-watermark .wm-chip-box { fill: var(--bg); stroke: color-mix(in srgb, var(--accent) 70%, transparent); stroke-width: 1; }
+.sep-watermark .wm-chip-text { font-size: .64rem; letter-spacing: .16em; text-anchor: middle; }
+.sep-watermark .wm-chip-text .wm-dim { fill: var(--accent); }
+.sep-watermark .wm-chip-text .wm-hi { fill: var(--fg); }
+
+@media (max-width: 640px) {
+  .sep.sep-watermark { height: 7.5rem; }
+  .sep-watermark .wm-cap { font-size: .56rem; letter-spacing: .04em; }
+  .sep-watermark .wm-chip-text { font-size: .58rem; letter-spacing: .12em; }
+}
