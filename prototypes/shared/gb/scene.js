@@ -468,7 +468,7 @@ export async function createScene({
     },
   }
 
-  const KEYS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', Enter: 'a', ' ': 'a', z: 'a', a: 'a', x: 'b', b: 'b', Escape: 'b', Backspace: 'b', s: 'start' }
+  const KEYS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', Enter: 'a', ' ': 'a', z: 'a', j: 'a', x: 'b', b: 'b', k: 'b', Escape: 'b', Backspace: 'b', q: 'start', w: 'up', a: 'left', s: 'down', d: 'right' }
   const DOM_TARGET = 'a,button,input,textarea,select,label,summary,[role="button"],[role="link"]'
 
   /** May the console take input right now (and which buttons)? */
@@ -480,7 +480,9 @@ export async function createScene({
   }
   function onKey(e) {
     if (e.metaKey || e.ctrlKey || e.altKey) return
-    const btn = KEYS[e.key.length === 1 ? e.key.toLowerCase() : e.key]
+    const k = e.key.length === 1 ? e.key.toLowerCase() : e.key
+    // WASD is the D-pad; S stays START while the hero START is the only thing the console accepts (nothing to move yet)
+    const btn = k === 's' && state.attached && !state.heroGame ? 'start' : KEYS[k]
     if (!btn || !accepts(btn)) return
     // Only steal keys the console uses, and never from form fields or links with focus
     const tag = document.activeElement?.tagName

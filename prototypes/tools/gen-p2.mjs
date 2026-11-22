@@ -146,7 +146,7 @@ ${sep(2)}
 <li><a href="${person.linkedin.url}" target="_blank" rel="noopener">${esc(person.linkedin.label)}<small>Profile</small></a></li>
 <li><a href="${person.github.url}" target="_blank" rel="noopener">${esc(person.github.label)}<small>${esc(person.github.handle)}</small></a></li>
 </ul>
-<p class="hint"><kbd>↑</kbd> <kbd>↓</kbd> choose · <kbd>Enter</kbd> A · <kbd>S</kbd> START plays a hidden game</p>
+<p class="hint"><kbd>↑</kbd> <kbd>↓</kbd> or <kbd>W</kbd> <kbd>S</kbd> choose · <kbd>Enter</kbd> A · <kbd>Q</kbd> START plays a hidden game</p>
 </div>
 <img class="gb-poster contact-poster" src="/posters/gameboy-contact.jpg" alt="A translucent handheld console showing the contact menu: email, LinkedIn and GitHub." width="560" height="1053">
 </section>
