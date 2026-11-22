@@ -11,6 +11,7 @@
  *   7.5-8.0  CRT power-off: squeeze to a line, shrink to a dot, fade
  */
 import { drawText, measureText } from './pixfont.js'
+import { VW, VH, SWING_FPS, BODY_COL, FRAMES } from './pipvault.js'
 
 export const PIP_W = 160
 export const PIP_H = 144
@@ -182,8 +183,7 @@ let T_TYPED = T_HDR // when typing and lingering is over
 }
 const SCROLL_DUR = 0.4
 const T_BOY = T_TYPED + SCROLL_DUR
-const T_RAISE = 5.7 // arm starts to swing
-const RAISE_STEP = 0.07 // seconds per arm keyframe
+const T_RAISE = 5.7 // the arm starts to drop, as in the reference
 const T_OFF = 7.5 // power-off starts
 
 function drawStack(g, t) {
@@ -222,171 +222,35 @@ function drawWall(g, t) {
 
 /* ------------------------------------------------------------------ vault boy */
 
-// Codes: 1 skin, 2 suit, 3 shade, 4 line (black), 5 highlight.
-const SW = 52
-const SH = 58
-const SPRITE_COL = [null, HI, MID, DIM, '#000', BR]
-// left (viewer's) forearm angle in degrees about the elbow: 54 = hand on the hip, 262 = thumb up
-const ARM_KEYS = [54, 105, 155, 210, 262]
-
-function buildSprite(key) {
-  const px = Array.from({ length: SH }, () => new Array(SW).fill(0))
-  const ell = (cx, cy, rx, ry) => (x, y) => ((x + 0.5 - cx) / rx) ** 2 + ((y + 0.5 - cy) / ry) ** 2 <= 1
-  const rect = (x0, y0, x1, y1) => (x, y) => x >= x0 && x <= x1 && y >= y0 && y <= y1
-  const cap = (x0, y0, x1, y1, r) => {
-    const dx = x1 - x0
-    const dy = y1 - y0
-    const l2 = dx * dx + dy * dy || 1
-    return (x, y) => {
-      const u = clamp01(((x + 0.5 - x0) * dx + (y + 0.5 - y0) * dy) / l2)
-      return (x + 0.5 - (x0 + u * dx)) ** 2 + (y + 0.5 - (y0 + u * dy)) ** 2 <= r * r
-    }
-  }
-  const paint = (mask, col, outline = true) => {
-    const m = []
-    for (let y = -1; y <= SH; y += 1) for (let x = -1; x <= SW; x += 1) if (mask(x, y)) m.push([x, y])
-    if (outline) {
-      const set = new Set(m.map(([x, y]) => y * 100 + x))
-      for (let y = 0; y < SH; y += 1)
-        for (let x = 0; x < SW; x += 1)
-          if (px[y][x] && !set.has(y * 100 + x)) {
-            if ([[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => set.has((y + dy) * 100 + x + dx))) px[y][x] = 4
-          }
-    }
-    for (const [x, y] of m) if (x >= 0 && y >= 0 && x < SW && y < SH) px[y][x] = col
-  }
-  const dot = (x, y, col) => {
-    if (x >= 0 && y >= 0 && x < SW && y < SH) px[y][x] = col
-  }
-  const row = (y, x0, x1, col) => {
-    for (let x = x0; x <= x1; x += 1) dot(x, y, col)
-  }
-  const CX = 26 // body centre column
-
-  // legs, apart a little, and boots
-  paint(rect(CX - 7, 44, CX - 2, 55), 2)
-  paint(rect(CX + 1, 44, CX + 6, 55), 2)
-  paint(rect(CX - 9, 55, CX - 2, 57), 3)
-  paint(rect(CX + 1, 55, CX + 8, 57), 3)
-  // torso
-  paint((x, y) => y >= 26 && y <= 46 && x >= CX - 9 + (y > 42 ? 1 : 0) && x <= CX + 9 - (y > 42 ? 1 : 0), 2)
-  // right arm (viewer's right): hand on the hip
-  paint(cap(CX + 8, 30, CX + 17, 37, 3.1), 2)
-  paint(cap(CX + 17, 37, CX + 11, 44, 2.9), 2)
-  paint(ell(CX + 10.5, 44.5, 3.2, 2.8), 1)
-  // left arm: upper arm, forearm swinging about the elbow, hand
-  const E = [CX - 15, 37]
-  paint(cap(CX - 8, 30, E[0], E[1], 3.1), 2)
-  const th = (ARM_KEYS[key] * Math.PI) / 180
-  const len = key === 0 ? 9.2 : 9.5
-  const dx = Math.cos(th)
-  const dy = Math.sin(th)
-  paint(cap(E[0], E[1], E[0] + dx * len * 0.6, E[1] + dy * len * 0.6, 3), 2)
-  const hx = E[0] + dx * len
-  const hy = E[1] + dy * len
-  const rhx = Math.round(hx)
-  const rhy = Math.round(hy)
-  if (key === 4) {
-    paint(cap(hx, hy - 2, hx, hy - 8, 1.5), 1) // thumb
-    paint(ell(hx, hy, 3.4, 3.2), 1) // fist
-    row(rhy - 1, rhx - 1, rhx + 2, 4) // finger creases
-    row(rhy + 1, rhx - 1, rhx + 2, 4)
-    dot(rhx - 1, rhy - 9, 5)
-    dot(rhx - 1, rhy - 8, 5)
-  } else {
-    paint(ell(hx, hy, 3.3, 3.1), 1)
-    if (key === 0) {
-      dot(rhx + 1, rhy, 4)
-      dot(rhx + 1, rhy + 1, 4)
-      dot(rhx, rhy + 2, 4)
-    }
-  }
-  // neck
-  paint(rect(CX - 2, 22, CX + 2, 27), 1)
-  // head and ears
-  paint(ell(CX, 12, 11, 11.5), 1)
-  paint(ell(CX - 11.4, 14, 1.9, 3), 1)
-  paint(ell(CX + 11.4, 14, 1.9, 3), 1)
-  // suit details: V collar, zip, belt
-  for (let i = 0; i < 6; i += 1) {
-    dot(CX - 6 + i, 26 + i, 4)
-    dot(CX + 6 - i, 26 + i, 4)
-    dot(CX - 5 + i, 26 + i, 4)
-    dot(CX + 5 - i, 26 + i, 4)
-  }
-  for (let y = 33; y < 41; y += 1) dot(CX, y, 4)
-  row(41, CX - 8, CX + 8, 3)
-  row(42, CX - 8, CX + 8, 3)
-  row(43, CX - 8, CX + 8, 3)
-  row(40, CX - 8, CX + 8, 4)
-  row(44, CX - 7, CX + 7, 4)
-  dot(CX - 1, 41, 5)
-  dot(CX, 41, 5)
-  dot(CX - 1, 42, 5)
-  dot(CX, 42, 5)
-  // hair: tall cap with sideburns and a swooping quiff
-  const head = ell(CX, 12, 11, 11.5)
-  const hair = (x, y) => head(x, y) && y < 7 + Math.max(0, Math.abs(x + 0.5 - CX) - 8) * 2.2
-  paint((x, y) => hair(x, y) || ell(CX - 2, 3.4, 10.5, 4.4)(x, y) || ell(CX - 8, 2.6, 3.2, 3.2)(x, y), 2)
-  row(2, CX - 8, CX - 3, 5) // gloss
-  row(3, CX - 10, CX - 9, 5)
-  row(4, CX - 2, CX + 6, 3) // hair shade
-  for (let i = 0; i < 4; i += 1) {
-    dot(CX + 3 + i, 2 + i, 4) // strand creases
-    dot(CX + 6 + i, 2 + i, 4)
-  }
-  // brows
-  row(6, CX - 6, CX - 3, 4)
-  row(6, CX + 3, CX + 6, 4)
-  dot(CX - 7, 7, 4)
-  dot(CX + 7, 7, 4)
-  // eyes: small tall ovals with a glint
-  for (const ex of [CX - 5, CX + 3]) {
-    for (let y = 9; y <= 12; y += 1) {
-      dot(ex, y, 4)
-      dot(ex + 1, y, 4)
-    }
-    dot(ex, 9, 5)
-  }
-  // nose
-  dot(CX, 14, 3)
-  dot(CX + 1, 14, 3)
-  dot(CX + 1, 15, 3)
-  // big grin with teeth
-  dot(CX - 7, 16, 4)
-  dot(CX + 7, 16, 4)
-  row(17, CX - 6, CX + 6, 4)
-  row(18, CX - 5, CX + 5, 5)
-  row(19, CX - 5, CX + 5, 4)
-  row(20, CX - 3, CX + 3, 4)
-  return px
-}
-
+// Frames traced from the reference sequence (see pipvault.js): 2 bits per pixel, 0 off .. 3 bright.
+const SW = VW
+const SH = VH
+const SPRITE_COL = [null, DIM, MID, HI]
 const spriteCanvases = []
-function getSprite(key) {
-  if (spriteCanvases[key]) return spriteCanvases[key]
-  const px = buildSprite(key)
+function getSprite(k) {
+  if (spriteCanvases[k]) return spriteCanvases[k]
+  const bin = atob(FRAMES[k])
   const c = makeCanvas(SW, SH)
   const s = c.getContext('2d')
-  for (let y = 0; y < SH; y += 1)
-    for (let x = 0; x < SW; x += 1) {
-      const col = SPRITE_COL[px[y][x]]
-      if (col) {
-        s.fillStyle = col
-        s.fillRect(x, y, 1, 1)
-      }
+  for (let i = 0; i < SW * SH; i += 1) {
+    const v = (bin.charCodeAt(i >> 2) >> (6 - 2 * (i & 3))) & 3
+    if (v) {
+      s.fillStyle = SPRITE_COL[v]
+      s.fillRect(i % SW, (i / SW) | 0, 1, 1)
     }
-  spriteCanvases[key] = c
+  }
+  spriteCanvases[k] = c
   return c
 }
 
-const BOY_X = (PIP_W - SW) / 2
+const BOY_X = Math.round(PIP_W / 2 - BODY_COL)
 const BOY_Y = 34
 const INIT_W = 13 * 4 - 1
 
 function drawBoy(g, t) {
   const lt = t - T_BOY
-  const key = t < T_RAISE ? 0 : Math.min(ARM_KEYS.length - 1, Math.floor((t - T_RAISE) / RAISE_STEP) + 1)
+  // idle pose, then the reference swing: frame 5 is the last one before the arm drops
+  const key = t < T_RAISE ? 0 : Math.min(FRAMES.length - 1, 6 + Math.floor((t - T_RAISE) * SWING_FPS))
   const reveal = clamp01(lt / 0.16)
   const rows = Math.ceil(reveal * SH)
   if (rows > 0) g.drawImage(getSprite(key), 0, 0, SW, rows, BOY_X, BOY_Y, SW, rows)
