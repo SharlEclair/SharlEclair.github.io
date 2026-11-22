@@ -8,7 +8,9 @@
  *                                -drain contracts to a thin line) | scroll: the same floor light, STATIC (no pulse) and
                                 anchored to the page, so it scrolls up with the content while the console leaves instead
                                 of staying fixed | the same as an LED pixel grid | none
- *   ?shell=mono                  the console matches the page: dark smoke case, dark LCD and dark cartridge on the dark
+ *   ?glow=stick                  like scroll, but in the hero the light does not dim as the console moves off: it holds in
+ *                                place while the stage is pinned, then scrolls away with the page
+ *   ?shell=mono                the console matches the page: dark smoke case, dark LCD and dark cartridge on the dark
  *                                theme; pale frosted case, light LCD and light cartridge on the light theme (default:
  *                                blue frosted case in dark, smoke case in light)
  *   ?shell=swap (default)        dark theme: the blue frosted clear case with a light LCD and light cartridge; light theme:
@@ -27,7 +29,7 @@
 const q = typeof location === 'undefined' ? new URLSearchParams() : new URLSearchParams(location.search)
 const pick = (key, allowed, dflt = allowed[0]) => (allowed.includes(q.get(key)) ? q.get(key) : dflt)
 
-export const GLOW_MODES = ['default', 'floor', 'floor-pulse', 'floor-drain', 'scroll', 'grid', 'grid-pulse', 'grid-drain', 'off']
+export const GLOW_MODES = ['default', 'floor', 'floor-pulse', 'floor-drain', 'scroll', 'stick', 'grid', 'grid-pulse', 'grid-drain', 'off']
 export const SHELL_MODES = ['swap', 'default', 'mono', 'pale', 'glass']
 export const PILL_MODES = ['flat', 'gel']
 export const BTN_MODES = ['flat', 'gel']

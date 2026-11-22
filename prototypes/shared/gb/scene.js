@@ -147,6 +147,12 @@ export async function createScene({
   let glowKind = null // 'floor' | 'grid' when the floor light is on
   let glowAnim = '' // '' | 'pulse' | 'drain'
   let glowPinned = false // ?glow=scroll: static floor light anchored to the page (scrolls up with the content)
+  let glowStick = false // ?glow=stick: as scroll, but in the hero it holds still while the stage is pinned and leaves only with the page
+  let heroStage
+  const heroStageTop = () => {
+    if (heroStage === undefined) heroStage = document.querySelector('.hero .stage')
+    return heroStage ? heroStage.getBoundingClientRect().top : null
+  }
   let floorGlow = null
   const ensureFloor = () => {
     if (!floorGlow) {
@@ -158,11 +164,12 @@ export async function createScene({
     return floorGlow
   }
   function setGlow(mode) {
-    glowPinned = mode === 'scroll'
+    glowPinned = mode === 'scroll' || mode === 'stick'
+    glowStick = mode === 'stick'
     const [kind, anim = ''] = String(glowPinned ? 'floor' : mode).split('-')
     glowKind = kind === 'floor' || kind === 'grid' ? kind : null
     glowAnim = glowKind && (anim === 'pulse' || anim === 'drain') ? anim : ''
-    glowMode = glowPinned ? 'scroll' : glowKind ? glowKind + (glowAnim ? '-' + glowAnim : '') : mode === 'off' ? 'off' : 'default'
+    glowMode = glowPinned ? mode :glowKind ? glowKind + (glowAnim ? '-' + glowAnim : '') : mode === 'off' ? 'off' : 'default'
     if (glowKind) ensureFloor().setMode(glowKind)
     if (floorGlow) { floorGlow.group.visible = Boolean(glowKind); floorGlow.setBreath(0) }
     if (glowMode !== 'default') glow.visible = false
@@ -192,11 +199,17 @@ export async function createScene({
       // scrolled since that rest (a rigid NDC shift, so it moves like page content, no perspective change)
       let best = 0
       anchors.forEach((a, i) => { if (Math.abs(p - a.at) < Math.abs(p - anchors[best].at)) best = i })
+      const maxScroll = Math.max(1, document.documentElement.scrollHeight - innerHeight)
+      let dy
+      const top = glowStick ? heroStageTop() : null
+      if (top !== null && top > -state.h) {
+        // hero: the light is part of the pinned stage, so it holds until the stage scrolls away, then rides up with it
+        best = 0
+        dy = Math.max(0, -top)
+      } else dy = (p - anchors[best].at) * maxScroll
       anchorIdx = best
       const a = anchors[best]
       const sc = a.s * fit
-      const maxScroll = Math.max(1, document.documentElement.scrollHeight - innerHeight)
-      const dy = (p - a.at) * maxScroll
       const level = (1 - smooth(clamp01((Math.abs(dy) / state.h - 1) / 0.6))) * fade
       floorGlow.setBreath(0)
       floorGlow.setShift(dy / (state.h / 2))
