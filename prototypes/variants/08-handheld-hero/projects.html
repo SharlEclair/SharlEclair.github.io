@@ -8,12 +8,13 @@
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<script>(function(){var d=document.documentElement;d.classList.add('js');try{var t=localStorage.getItem('portfolio-theme');if(t!=='light'&&t!=='dark')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';d.dataset.theme=t}catch(e){d.dataset.theme='dark'}})()</script>
+<script>(function(){var d=document.documentElement;d.classList.add('js');try{var t=localStorage.getItem('portfolio-theme');if(t!=='light'&&t!=='dark')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';d.dataset.theme=t}catch(e){d.dataset.theme='dark'}try{var q=new URLSearchParams(location.search),f=q.get('font')||'',m=q.get('mono')||(/plex/.test(f)?'plex':''),s=q.get('serif')||(/nineties/.test(f)?'nineties':'');if(m==='plex'){d.dataset.mono='plex';var l=document.createElement('link');l.rel='stylesheet';l.href='https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap';document.head.appendChild(l)}if(s==='nineties')d.dataset.serif='nineties'}catch(e){}})()</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Inter:wght@400..700&family=JetBrains+Mono:ital,wght@0,400..700;1,400&display=swap">
 <link rel="stylesheet" href="/shared/ui/base.css">
 <link rel="stylesheet" href="/shared/p2/page.css">
+<link rel="stylesheet" href="/shared/ui/fonts.css">
 
 </head>
 <body>

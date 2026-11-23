@@ -152,7 +152,7 @@ function glyphAtlas(THREE, glyphs, gw, gh) {
   ctx.fillStyle = '#fff'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  ctx.font = `bold ${Math.round(gh * 0.72)}px "JetBrains Mono", "IBM Plex Mono", Consolas, "Courier New", monospace`
+  ctx.font = `bold ${Math.round(gh * 0.72)}px ${document.documentElement.dataset.mono === 'plex' ? '"IBM Plex Mono", ' : ''}"JetBrains Mono", "IBM Plex Mono", Consolas, "Courier New", monospace`
   for (let i = 0; i < glyphs.length; i++) {
     if (glyphs[i] !== ' ') ctx.fillText(glyphs[i], i * gw + gw / 2, gh / 2 + gh * 0.04)
   }

@@ -1,0 +1,18 @@
+/* Opt-in font swaps for the handheld pages (the BOOT script in each page sets the attributes from the URL):
+ *   ?mono=plex          IBM Plex Mono instead of JetBrains Mono (loaded from Google Fonts by the BOOT script)
+ *   ?serif=nineties     Perfectly Nineties instead of Instrument Serif (files in /fonts, free for personal use)
+ *   ?font=plex-nineties both at once (?font=plex or ?font=nineties for one)
+ * Without any of these the pages render exactly as before; the Perfectly Nineties files are only fetched when it is on. */
+@font-face { font-family: 'Perfectly Nineties'; font-weight: 400; font-style: normal; font-display: swap; src: url('/fonts/perfectly-nineties-regular.otf') format('opentype'); }
+@font-face { font-family: 'Perfectly Nineties'; font-weight: 400; font-style: italic; font-display: swap; src: url('/fonts/perfectly-nineties-regularitalic.otf') format('opentype'); }
+@font-face { font-family: 'Perfectly Nineties'; font-weight: 600; font-style: normal; font-display: swap; src: url('/fonts/perfectly-nineties-semibold.otf') format('opentype'); }
+@font-face { font-family: 'Perfectly Nineties'; font-weight: 600; font-style: italic; font-display: swap; src: url('/fonts/perfectly-nineties-semibolditalic.otf') format('opentype'); }
+@font-face { font-family: 'Perfectly Nineties'; font-weight: 700; font-style: normal; font-display: swap; src: url('/fonts/perfectly-nineties-bold.otf') format('opentype'); }
+@font-face { font-family: 'Perfectly Nineties'; font-weight: 700; font-style: italic; font-display: swap; src: url('/fonts/perfectly-nineties-bolditalic.otf') format('opentype'); }
+@font-face { font-family: 'Perfectly Nineties'; font-weight: 800; font-style: normal; font-display: swap; src: url('/fonts/perfectly-nineties-extrabold.otf') format('opentype'); }
+@font-face { font-family: 'Perfectly Nineties'; font-weight: 800; font-style: italic; font-display: swap; src: url('/fonts/perfectly-nineties-extrabolditalic.otf') format('opentype'); }
+@font-face { font-family: 'Perfectly Nineties'; font-weight: 900; font-style: normal; font-display: swap; src: url('/fonts/perfectly-nineties-black.otf') format('opentype'); }
+@font-face { font-family: 'Perfectly Nineties'; font-weight: 900; font-style: italic; font-display: swap; src: url('/fonts/perfectly-nineties-blackitalic.otf') format('opentype'); }
+
+:root[data-mono='plex'] { --mono: 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace; }
+:root[data-serif='nineties'] { --serif: 'Perfectly Nineties', 'Times New Roman', serif; }

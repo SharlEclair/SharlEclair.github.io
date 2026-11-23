@@ -23,7 +23,7 @@ const icon = {
   moon: '<svg class="i-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.5 14.5A8 8 0 0 1 9.5 4.5a8 8 0 1 0 10 10z"/></svg>',
 }
 
-const BOOT = `<script>(function(){var d=document.documentElement;d.classList.add('js');try{var t=localStorage.getItem('portfolio-theme');if(t!=='light'&&t!=='dark')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';d.dataset.theme=t}catch(e){d.dataset.theme='dark'}})()</script>`
+const BOOT = `<script>(function(){var d=document.documentElement;d.classList.add('js');try{var t=localStorage.getItem('portfolio-theme');if(t!=='light'&&t!=='dark')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';d.dataset.theme=t}catch(e){d.dataset.theme='dark'}try{var q=new URLSearchParams(location.search),f=q.get('font')||'',m=q.get('mono')||(/plex/.test(f)?'plex':''),s=q.get('serif')||(/nineties/.test(f)?'nineties':'');if(m==='plex'){d.dataset.mono='plex';var l=document.createElement('link');l.rel='stylesheet';l.href='https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap';document.head.appendChild(l)}if(s==='nineties')d.dataset.serif='nineties'}catch(e){}})()</script>`
 
 function head(title, id, extra = '') {
   return `<!doctype html>
@@ -42,6 +42,7 @@ ${BOOT}
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Inter:wght@400..700&family=JetBrains+Mono:ital,wght@0,400..700;1,400&display=swap">
 <link rel="stylesheet" href="/shared/ui/base.css">
 <link rel="stylesheet" href="/shared/p2/page.css">
+<link rel="stylesheet" href="/shared/ui/fonts.css">
 ${extra}
 </head>`
 }

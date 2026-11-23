@@ -114,7 +114,7 @@ void main(){
 /** White mono text on a canvas, as a plane mesh in the HUD scene. Sized and tinted per frame by place(). */
 export function makeLabel(THREE, text, { px = 11, weight = 600, spacing = 0.16 } = {}) {
   const S = 2
-  const font = `${weight} ${px * S}px ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace`
+  const font = `${weight} ${px * S}px ${document.documentElement.dataset.mono === 'plex' ? '"IBM Plex Mono", ' : ''}ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace`
   const probe = document.createElement('canvas').getContext('2d')
   probe.font = font
   const track = px * S * spacing
