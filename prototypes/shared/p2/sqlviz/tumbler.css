@@ -1,0 +1,87 @@
+/* ?sql=tumbler  "Tumbler": a sentence is cut into a brass key, the key meets a pin tumbler lock, one pin catches and is
+   filed, the barrel turns and light comes through. Line art drawn like a watch-movement engraving (dark: brass hairlines
+   on near black) or a patent drawing (light: graphite on bone). The page tokens give the stage colours; the --tb-*
+   tokens below are the only tints, so setTheme just flips data-tb-theme. */
+.tb {
+  --tb-brass: #e9c06a;
+  --tb-brass-hi: #f6dc9a;
+  --tb-line: color-mix(in srgb, var(--tb-brass) 58%, transparent);
+  --tb-dim: color-mix(in srgb, var(--tb-brass) 26%, transparent);
+  --tb-steel: color-mix(in srgb, var(--on-stage) 66%, transparent);
+  --tb-steel-dim: color-mix(in srgb, var(--on-stage) 30%, transparent);
+  --tb-key-fill: color-mix(in srgb, var(--tb-brass) 15%, transparent);
+  --tb-pin-fill: color-mix(in srgb, var(--on-stage) 7%, transparent);
+  --tb-void: #040405;
+  --tb-light: #fff0c0;
+  --tb-glow: #f6c870;
+  --tb-hatch: color-mix(in srgb, var(--tb-brass) 52%, transparent);
+  position: absolute; z-index: 1; display: flex; flex-direction: column; justify-content: center;
+  left: max(38%, calc(var(--pad) + min(30rem, 42vw) + .75rem)); right: 1.5%; top: 17%; bottom: 17%;
+  color: var(--on-stage); font-family: var(--mono);
+}
+.tb[data-tb-theme='light'], html[data-theme='light'] .tb:not([data-tb-theme='dark']) {
+  --tb-brass: #7d5a14;
+  --tb-brass-hi: #a97b1f;
+  --tb-line: color-mix(in srgb, var(--on-stage) 62%, transparent);
+  --tb-dim: color-mix(in srgb, var(--on-stage) 24%, transparent);
+  --tb-steel: color-mix(in srgb, var(--on-stage) 74%, transparent);
+  --tb-steel-dim: color-mix(in srgb, var(--on-stage) 32%, transparent);
+  --tb-key-fill: color-mix(in srgb, var(--tb-brass) 14%, transparent);
+  --tb-pin-fill: color-mix(in srgb, var(--on-stage) 5%, transparent);
+  --tb-void: #25252a;
+  --tb-light: #fffdf2;
+  --tb-glow: #b98a2e;
+  --tb-hatch: color-mix(in srgb, var(--on-stage) 30%, transparent);
+}
+.tb-svg { flex: 0 1 auto; min-height: 0; width: 100%; aspect-ratio: 880 / 344; display: block; overflow: visible; }
+
+/* line weights: engraved hairlines, constant on screen; the bow is drawn in user units so it can draw itself on */
+.tb-svg .ln { fill: none; stroke: var(--tb-line); stroke-width: 1; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.tb-svg .ln.dim { stroke: var(--tb-dim); }
+.tb-svg .ln.steel { stroke: var(--tb-steel); }
+.tb-svg .ln.steel-dim { stroke: var(--tb-steel-dim); }
+.tb-svg .ln.hi { stroke: var(--tb-brass); stroke-width: 1.5; }
+.tb-svg .ln.user { vector-effect: none; stroke-width: 1; }
+.tb-svg .ln.datum { stroke: var(--tb-brass); stroke-dasharray: 2 3; opacity: .7; }
+.tb-svg .hatch-l { stroke: var(--tb-hatch); stroke-width: .8; }
+
+/* key */
+.tb-svg .key-body { fill: var(--tb-key-fill); stroke: var(--tb-brass); stroke-width: 1; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.tb-svg .key-edge { fill: none; stroke: var(--tb-brass-hi); stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.tb-svg .key-fill { fill: var(--tb-key-fill); }
+
+/* pins and the file: steel */
+.tb-svg .pin { fill: var(--tb-pin-fill); stroke: var(--tb-steel); stroke-width: 1; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.tb-svg .spring { fill: none; stroke: var(--tb-steel-dim); stroke-width: 1; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.tb-svg .file { fill: var(--stage); stroke: var(--tb-steel); stroke-width: 1; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.tb-svg .file-teeth { fill: none; stroke: var(--tb-steel-dim); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.tb-svg .dust { fill: var(--tb-brass-hi); }
+.tb-svg .shiver { fill: none; stroke: var(--tb-brass-hi); stroke-width: 1; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+
+/* the sentence */
+.tb-svg .ask { font-family: var(--serif); fill: var(--on-stage); letter-spacing: 0; }
+
+/* faceplate */
+.tb-svg .disc { fill: var(--tb-void); stroke: var(--tb-line); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.tb-svg .slot { fill: var(--tb-void); stroke: var(--tb-brass); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.tb-svg .slit { fill: var(--tb-light); }
+.tb-svg .halo-stop { stop-color: var(--tb-glow); }
+.tb-svg .beam-stop { stop-color: var(--tb-light); }
+.tb-svg .engrave { font-family: var(--mono); font-weight: 500; font-size: 9.6px; letter-spacing: .2em; text-transform: uppercase; fill: var(--tb-brass); }
+
+/* caption: the project's own words, one beat at a time, the sentence always after it first appears */
+.tb-cap {
+  margin: .6rem 0 0; display: flex; align-items: baseline; flex-wrap: wrap; gap: .25rem 1rem; min-height: 1.9rem;
+  padding-top: .6rem; border-top: 1px solid var(--tb-dim);
+}
+.tb-ask { font: italic 400 1.2rem/1.2 var(--serif); color: var(--tb-brass-hi); }
+.tb[data-tb-theme='light'] .tb-ask, html[data-theme='light'] .tb:not([data-tb-theme='dark']) .tb-ask { color: var(--tb-brass); }
+.tb-beat { font: 500 .68rem/1.5 var(--mono); letter-spacing: .06em; color: var(--on-stage-muted); }
+
+@media (max-width: 760px) {
+  .tb { left: var(--pad); right: var(--pad); top: 4.4rem; bottom: auto; height: max(16rem, min(22rem, calc(100% - 27rem))); justify-content: flex-start; }
+  .tb-svg { flex: 1 1 auto; aspect-ratio: auto; }
+  .tb-cap { margin-top: .4rem; min-height: 0; gap: .1rem .7rem; }
+  .tb-ask { font-size: 1.05rem; }
+  .tb-beat { font-size: .62rem; }
+}

@@ -1,0 +1,75 @@
+/* ?sql=switchyard  "Switchyard": a signal-box rail yard. Colours are the page stage tokens (--on-stage, --on-stage-muted,
+   --stage-accent, --stage-err, --stage-line, --stage), so html[data-theme] flips dark (phosphor diagram) and light
+   (printed railway diagram on cream) without JS. Red is used for the signal lamp only. */
+.sy {
+  --sy-red: var(--stage-err);
+  --sy-lit: var(--stage-accent);
+  --sy-rail: color-mix(in srgb, var(--on-stage) 72%, transparent);
+  --sy-tie: color-mix(in srgb, var(--on-stage) 34%, transparent);
+  --sy-hair: color-mix(in srgb, var(--on-stage) 30%, transparent);
+  --sy-core: var(--on-stage);
+  --sy-halo-op: .16;
+  position: absolute; z-index: 1; display: flex; flex-direction: column; justify-content: center; gap: .9rem;
+  left: max(38%, calc(var(--pad) + min(30rem, 42vw) + .75rem)); right: 3%; top: 17%; bottom: 20%;
+  color: var(--on-stage); font-family: var(--mono);
+}
+html[data-theme='light'] .sy, .sy[data-sy-theme='light'] { --sy-core: var(--stage-accent); --sy-halo-op: .1; }
+.sy-svg { flex: 0 1 auto; min-height: 0; width: 100%; height: auto; max-height: 100%; display: block; overflow: visible; }
+
+.sy-cap { margin: 0; padding-top: .6rem; border-top: 1px solid var(--sy-hair); font: 500 .64rem/1.55 var(--mono); letter-spacing: .04em; color: var(--on-stage-muted); max-width: 40rem; }
+.sy-stack { display: block; margin-top: .25rem; letter-spacing: .12em; text-transform: uppercase; font-size: .58rem; }
+
+/* tracks: a hairline rail, ties as short hairlines across it (a wide dashed stroke) */
+.sy-svg path, .sy-svg line, .sy-svg rect, .sy-svg circle { pointer-events: none; }
+.sy-rail { fill: none; stroke: var(--sy-rail); stroke-width: 1.3; stroke-linejoin: miter; }
+.sy-tie { fill: none; stroke: var(--sy-tie); stroke-width: 7; stroke-dasharray: 1 8; }
+.sy-mk { fill: none; stroke: #fff; stroke-width: 16; }
+.sy-buf { fill: none; stroke: var(--sy-rail); stroke-width: 1.3; stroke-linejoin: miter; }
+.sy-buf.hot { stroke: var(--on-stage); stroke-width: 1.6; opacity: 0; }
+.sy-platform { fill: color-mix(in srgb, var(--on-stage) 5%, transparent); stroke: var(--sy-hair); stroke-width: 1; }
+
+/* the route lit behind the pulse, and the dashed preview ahead of it */
+.sy-lit { fill: none; stroke: var(--sy-lit); stroke-width: 1.9; stroke-linejoin: miter; }
+.sy-halo { fill: none; stroke: var(--sy-lit); stroke-width: 6; opacity: var(--sy-halo-op); stroke-linejoin: miter; }
+.sy-prev { fill: none; stroke: var(--sy-lit); stroke-width: 3.2; stroke-dasharray: 7 4.5; stroke-linejoin: miter; }
+.sy-prev-halo { fill: none; stroke: var(--sy-lit); stroke-width: 10; opacity: .15; }
+.sy-head-dot { fill: var(--sy-lit); }
+
+/* points */
+.sy-blade { stroke: var(--on-stage); stroke-width: 2.6; stroke-linecap: butt; }
+.sy-stem { fill: none; stroke: var(--sy-hair); stroke-width: 1; }
+.sy-mach { fill: var(--stage); stroke: var(--on-stage-muted); stroke-width: 1; }
+.sy-mach-lit { fill: var(--sy-lit); opacity: 0; }
+
+/* the signal */
+.sy-mast { stroke: var(--sy-rail); stroke-width: 1.3; fill: none; }
+.sy-head { fill: var(--stage); stroke: var(--sy-rail); stroke-width: 1.2; }
+.sy-lamp-red { fill: var(--sy-red); }
+.sy-lamp-green { fill: var(--sy-lit); }
+.sy-engr { font-family: var(--mono); font-weight: 600; letter-spacing: .2em; fill: var(--on-stage-muted); text-transform: uppercase; }
+.sy-engr.plain { font-weight: 500; letter-spacing: .14em; text-transform: none; }
+
+/* the pulse and the junction rings */
+.sy-core { fill: var(--sy-core); }
+.sy-ring { fill: none; stroke: var(--sy-lit); stroke-width: 1.2; }
+
+/* the board at the end of the line */
+.sy-board { fill: var(--stage); stroke: var(--on-stage); stroke-width: 1.2; }
+.sy-board-in { fill: none; stroke: var(--sy-lit); stroke-width: 1; opacity: .85; }
+.sy-board-txt { font-family: var(--mono); font-weight: 700; letter-spacing: .06em; fill: var(--on-stage); }
+
+/* waiting at the red signal: the lamp breathes, the pulse throbs (compositor friendly, off for reduced motion) */
+.sy-breath[data-wait='1'] { animation: sy-breathe 2.2s ease-in-out infinite; }
+.sy-throb { transform-box: fill-box; transform-origin: center; }
+.sy[data-waiting] .sy-throb { animation: sy-throb 1.6s ease-in-out infinite; }
+@keyframes sy-breathe { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+@keyframes sy-throb { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.35); } }
+@media (prefers-reduced-motion: reduce) {
+  .sy-breath[data-wait='1'], .sy[data-waiting] .sy-throb { animation: none; }
+}
+
+@media (max-width: 760px) {
+  .sy { left: var(--pad); right: var(--pad); top: .6rem; bottom: auto; height: min(27rem, calc(100% - 22.5rem)); justify-content: flex-start; gap: 0; }
+  /* the project copy right below carries this sentence and the stack, so the caption stays as text for readers only */
+  .sy-cap { position: absolute; width: 1px; height: 1px; margin: 0; padding: 0; border: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}

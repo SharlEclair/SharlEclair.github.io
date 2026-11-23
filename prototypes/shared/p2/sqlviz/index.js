@@ -7,6 +7,8 @@
  *   barrel    an interactive ASCII database barrel wrapped in the query text; a red crack healed by a scan ring
  *   proof     Proof Mark: a proofreader's red pen corrects the query, then the score
  *   ribbon    the original WebGL query ribbon over a contour landscape
+ *   tumbler   a sentence melts into a brass key, a safety gate holds, a quiet fix, the lock turns and light comes through
+ *   switchyard a rail yard of converging tracks: a pulse waits at a red signal, the points are thrown, it runs out clean
  *
  * A variant module (shared/p2/sqlviz/<name>.js) exports
  *   mount(el, { runway, theme, reduced, progress }) -> { setTheme(theme), dispose() }
@@ -17,7 +19,7 @@
  */
 import { stableVh } from '/shared/ui/viewport.js'
 
-export const SQL_VARIANTS = ['squiggle', 'ten', 'loop', 'barrel', 'proof', 'ribbon']
+export const SQL_VARIANTS = ['squiggle', 'ten', 'loop', 'barrel', 'proof', 'ribbon', 'tumbler', 'switchyard']
 export const DEFAULT_SQL = 'loop'
 
 export function sqlVariant() {
@@ -31,6 +33,8 @@ const LOADERS = {
   loop: () => import('./loop.js'),
   barrel: () => import('./barrel.js'),
   proof: () => import('./proof.js'),
+  tumbler: () => import('./tumbler.js'),
+  switchyard: () => import('./switchyard.js'),
 }
 
 const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v))

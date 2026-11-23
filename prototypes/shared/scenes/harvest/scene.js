@@ -64,12 +64,14 @@ const ELEV = (56 * Math.PI) / 180
 const SAT_S = 2.0, SAT_Y = 15, SAT_Z = -21
 const SAT_X0 = -66, SAT_X1 = 70
 
-/** `?harvest=chart|plates|ridge|bars2d` swap in a data-field variant (shared/scenes/harvest/variants.js). Default and look 'lcd' are untouched. */
+/** `?harvest=chart|plates|ridge|bars2d` swap in a data-field variant (shared/scenes/harvest/variants.js); `orbit-25|orbit-mid|orbit-3d`
+ *  swap in the satellite-over-Earth scene (orbit.js). Default and look 'lcd' are untouched. */
 export async function createScene(opts = {}) {
   // chart is the default; ?harvest=classic gives the original scene
   const asked = typeof location === 'undefined' ? null : new URLSearchParams(location.search).get('harvest')
   const v = opts.look === 'lcd' || typeof location === 'undefined' || asked === 'classic' ? null : asked ?? 'chart'
   if (v === 'chart' || v === 'plates' || v === 'ridge' || v === 'bars2d') return (await import('./variants.js')).createVariantScene({ ...opts, mode: v, beats })
+  if (v === 'orbit-25' || v === 'orbit-mid' || v === 'orbit-3d') return (await import('./orbit.js')).createOrbitScene({ ...opts, tier: v.slice(6), beats })
   return createDefaultScene(opts)
 }
 
